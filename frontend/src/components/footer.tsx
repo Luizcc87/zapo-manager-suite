@@ -18,20 +18,8 @@ function Footer() {
 
   const links = [
     {
-      name: "Discord",
-      url: "https://evolution-api.com/discord",
-    },
-    {
-      name: "Postman",
-      url: "https://evolution-api.com/postman",
-    },
-    {
       name: "GitHub",
-      url: "https://github.com/EvolutionAPI/evolution-api",
-    },
-    {
-      name: "Docs",
-      url: "https://docs.evolutionfoundation.com.br/",
+      url: "https://github.com/Luizcc87/zapo-manager-suite",
     },
   ];
 

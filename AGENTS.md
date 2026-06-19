@@ -1,6 +1,12 @@
 # Guia para Desenvolvedores e Agentes de IA (AGENTS.md)
 
-Este documento descreve as diretrizes arquiteturais, os padrões de código e a estratégia de sincronização com o upstream para o projeto **Zapo-Manager**. 
+Este documento descreve as diretrizes arquiteturais, os padrões de código e a estratégia de sincronização com o upstream para o projeto **Zapo-Manager**.
+
+**Repositório:** `git@github.com:Luizcc87/zapo-manager-suite.git`
+Clone simples — **sem** `--recurse-submodules`:
+```powershell
+git clone https://github.com/Luizcc87/zapo-manager-suite.git
+```
 
 ---
 
@@ -15,9 +21,13 @@ O frontend (`frontend/`) e o backend (`backend/`) são mantidos dentro do mesmo 
 3.  **Atualização de Upstream do Frontend:**
     Como o frontend é gerenciado via `git subtree`, para sincronizar o painel com as novas releases do mantenedor original, execute na raiz do monorepo:
     ```powershell
+    # Configurar remote uma única vez (caso não exista)
+    git remote add upstream-frontend https://github.com/evolution-foundation/evolution-manager-v2.git
+
     git fetch upstream-frontend
     git subtree pull --prefix=frontend upstream-frontend main --squash
     ```
+    Ver fluxo completo (branch de teste, resolução de conflitos) em `docs/SYNC-UPSTREAM.md`.
 
 ---
 

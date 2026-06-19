@@ -17,7 +17,7 @@ export function IntegrationDisabled({ name, envVar }: IntegrationDisabledProps) 
         Esta integração está desativada no servidor. Para habilitá-la, defina{" "}
         <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{envVar}=true</code>{" "}
         no arquivo <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">.env</code>{" "}
-        do evolution-api e reinicie o serviço.
+        do Zapo e reinicie o serviço.
       </p>
     </div>
   );

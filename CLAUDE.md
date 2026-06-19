@@ -4,7 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-**zapo-manager** é um fork do Evolution Manager v2 — painel web React para gerenciar instâncias WhatsApp via Evolution API. Todo o código ativo está em `frontend/`.
+**zapo-manager** (repositório: `zapo-manager-suite`) é um fork do Evolution Manager v2 — painel web React para gerenciar instâncias WhatsApp via Evolution API.
+
+Estrutura do monorepo:
+- `frontend/` — painel React (subtree do `evolution-manager-v2`; **não é submódulo**)
+- `backend/` — servidor Node.js com Prisma (zapo-js)
+- `docs/` — documentação operacional
+
+### Git remotes
+
+| Remote | URL | Propósito |
+|---|---|---|
+| `origin` | `git@github.com:Luizcc87/zapo-manager-suite.git` | repositório principal |
+| `upstream-frontend` | `https://github.com/evolution-foundation/evolution-manager-v2.git` | sync de atualizações do painel |
+
+Clone simples (sem `--recurse-submodules`):
+```bash
+git clone https://github.com/Luizcc87/zapo-manager-suite.git
+```
+
+Para sincronizar `frontend/` com o upstream, ver [docs/SYNC-UPSTREAM.md](docs/SYNC-UPSTREAM.md).
 
 ## Commands
 
