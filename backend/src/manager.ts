@@ -148,6 +148,9 @@ export class ZapoManager {
     let providersConfig: any = {
       auth: pgStore ? 'pg' : 'sqlite',
       signal: pgStore ? 'pg' : 'sqlite',
+      preKey: pgStore ? 'pg' : 'sqlite',
+      session: pgStore ? 'pg' : 'sqlite',
+      identity: pgStore ? 'pg' : 'sqlite',
       senderKey: pgStore ? 'pg' : 'sqlite',
       appState: pgStore ? 'pg' : 'sqlite',
       privacyToken: pgStore ? 'pg' : 'sqlite',
@@ -160,7 +163,7 @@ export class ZapoManager {
       redisClient = new Redis(process.env.REDIS_URL);
       const redisStore = createRedisStore({
         redis: redisClient,
-        keyPrefix: `wa:${instanceName}:`
+        keyPrefix: `wa:${instanceName.replace(/[^a-zA-Z0-9_]/g, '_')}:`
       });
       storeBackend = {
         pg: pgStore,
@@ -308,6 +311,77 @@ export class ZapoManager {
   static async deleteClient(instanceName: string) {
     await this.disconnectClient(instanceName);
     await prisma.instance.delete({ where: { instanceName } });
+  }
+
+  static async saveCredentials(instanceName: string, credentials: any) {
+    let pgStore: any = null;
+    let redisClient: any = null;
+    let storeBackend: any = null;
+
+    const dbUrl = process.env.DATABASE_URL || '';
+    if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
+      pgStore = createPostgresStore({
+        pool: new Pool({ connectionString: dbUrl }),
+        tablePrefix: 'wa_'
+      });
+      storeBackend = pgStore;
+    } else {
+      const sqlitePath = path.join(process.cwd(), '.auth', `${instanceName}.sqlite`);
+      const dir = path.dirname(sqlitePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      
+      storeBackend = createSqliteStore({ path: sqlitePath });
+    }
+
+    let providersConfig: any = {
+      auth: pgStore ? 'pg' : 'sqlite',
+      signal: pgStore ? 'pg' : 'sqlite',
+      preKey: pgStore ? 'pg' : 'sqlite',
+      session: pgStore ? 'pg' : 'sqlite',
+      identity: pgStore ? 'pg' : 'sqlite',
+      senderKey: pgStore ? 'pg' : 'sqlite',
+      appState: pgStore ? 'pg' : 'sqlite',
+      privacyToken: pgStore ? 'pg' : 'sqlite',
+      messages: 'none',
+      threads: 'none',
+      contacts: 'none'
+    };
+
+    if (process.env.REDIS_URL && pgStore) {
+      redisClient = new Redis(process.env.REDIS_URL);
+      const redisStore = createRedisStore({
+        redis: redisClient,
+        keyPrefix: `wa:${instanceName.replace(/[^a-zA-Z0-9_]/g, '_')}:`
+      });
+      storeBackend = {
+        pg: pgStore,
+        redis: redisStore
+      };
+      providersConfig = {
+        ...providersConfig,
+        auth: 'redis',
+        signal: 'redis'
+      };
+    }
+
+    const store = createStore({
+      backends: pgStore ? storeBackend : { sqlite: storeBackend },
+      providers: providersConfig
+    });
+
+    try {
+      const session = store.session(instanceName);
+      await session.auth.save(credentials);
+      await session.destroy();
+    } finally {
+      if (redisClient) {
+        try { await redisClient.quit(); } catch (e) {}
+      }
+      if (pgStore) {
+        try { await pgStore.destroy(); } catch (e) {}
+      }
+      try { await store.destroy(); } catch (e) {}
+    }
   }
 
   private static async sendWebhook(instanceName: string, event: string, payload: any) {

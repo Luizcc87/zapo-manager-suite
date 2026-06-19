@@ -16,6 +16,7 @@
     "@zapo-js/store-postgres": "^1.0.0",
     "@zapo-js/store-redis": "^1.0.0",
     "@zapo-js/store-sqlite": "^1.0.0",
+    "@whiskeysockets/baileys": "6.6.0",
     "better-sqlite3": "^11.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
