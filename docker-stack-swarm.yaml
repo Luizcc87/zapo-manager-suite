@@ -23,6 +23,22 @@ version: '3.8'
 #                      Exemplo: export WEBHOOK_URL=https://seu-dominio.com/webhook/zapo
 #                      Deixar vazio se não usar: export WEBHOOK_URL=
 #
+# ─── CLOUDFLARE TUNNEL ────────────────────────────────────────────────────────
+#   Para expor o painel via Cloudflare Tunnel, crie uma rota pública apontando
+#   para o serviço interno do Swarm:
+#
+#   Nome do serviço (DNS interno do Swarm):  zapo_app
+#   Porta:                                   8080
+#   URL de destino no tunnel:                http://zapo_app:8080
+#
+#   O cloudflared deve rodar na mesma rede overlay (network_swarm_public) ou
+#   no host com acesso à porta publicada.
+#
+#   Exemplo de config no dashboard Cloudflare Tunnel:
+#     Public hostname : zapo.seu-dominio.com
+#     Service type    : HTTP
+#     URL             : zapo_app:8080
+#
 # ───────────────────────────────────────────────────────────────────────────────
 
 services:
