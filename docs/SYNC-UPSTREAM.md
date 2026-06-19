@@ -4,17 +4,6 @@ Dois upstreams independentes para rastrear:
 
 | Upstream | Tipo | Afeta |
 |---|---|---|
-| `github.com/evolution-foundation/evolution-manager-v2` | git submodule | `frontend/` |
-| `github.com/vinikjkkj/zapo` | pacotes npm | `backend/` |
-
----
-
-# Sincronização com Upstreams
-
-Dois upstreams independentes para rastrear:
-
-| Upstream | Tipo | Afeta |
-|---|---|---|
 | `github.com/evolution-foundation/evolution-manager-v2` | git subtree | `frontend/` |
 | `github.com/vinikjkkj/zapo` | pacotes npm | `backend/` |
 
