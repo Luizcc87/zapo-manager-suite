@@ -1,0 +1,39 @@
+{
+  "name": "zapo-manager-backend",
+  "version": "1.0.0",
+  "description": "API Gateway for Zapo WhatsApp client emulating Evolution API v2",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0",
+    "@zapo-js/media-utils": "^1.0.0",
+    "@zapo-js/store-postgres": "^1.0.0",
+    "@zapo-js/store-redis": "^1.0.0",
+    "@zapo-js/store-sqlite": "^1.0.0",
+    "better-sqlite3": "^11.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ioredis": "^5.4.1",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.13.1",
+    "sharp": "^0.33.5",
+    "zapo-js": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^20.17.9",
+    "@types/pg": "^8.20.0",
+    "prisma": "^6.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

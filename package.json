@@ -1,0 +1,17 @@
+{
+  "name": "zapo-manager-root",
+  "version": "1.0.0",
+  "description": "Root orchestrator for Zapo-Manager (Backend and Evolution Manager v2)",
+  "scripts": {
+    "postinstall": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "npx concurrently -n \"backend,frontend\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:all": "npm run build:backend && npm run build:frontend"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

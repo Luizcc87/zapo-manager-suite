@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  zapo-manager-app:
+    image: zapo-manager:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://zapo_user:zapo_pass@postgres:5432/zapo_db?schema=public
+      - REDIS_URL=redis://redis:6379/0
+      - GLOBAL_API_KEY=global_key
+      - WEBHOOK_URL=http://your-webhook-endpoint.com/webhook
+      - PORT=8080
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first # Garante que a réplica antiga pare ANTES da nova iniciar (Swarm Safety)
+    networks:
+      - zapo-network
+    depends_on:
+      - postgres
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - zapo-network
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=zapo_user
+      - POSTGRES_PASSWORD=zapo_pass
+      - POSTGRES_DB=zapo_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - zapo-network
+
+networks:
+  zapo-network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  redis-data:
+  postgres-data:
