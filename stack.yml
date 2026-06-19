@@ -1,0 +1,79 @@
+version: '3.8'
+
+# Docker Swarm stack — zapo-manager
+#
+# Deploy:
+#   docker stack deploy -c stack.yml zapo --with-registry-auth
+#
+# Variáveis de ambiente obrigatórias antes do deploy:
+#   export GLOBAL_API_KEY=<chave-global>
+#   export POSTGRES_PASSWORD=<senha-segura>
+#
+# Rede network_swarm_public deve existir no Swarm:
+#   docker network create --driver overlay --attachable network_swarm_public
+
+services:
+
+  app:
+    image: lc1868/zapo-manager:latest
+    environment:
+      - DATABASE_URL=postgresql://zapo:${POSTGRES_PASSWORD:-zapo}@zapo-db:5432/zapo?schema=public
+      - REDIS_URL=redis://zapo-redis:6379/0
+      - GLOBAL_API_KEY=${GLOBAL_API_KEY}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - PORT=8080
+      - NODE_ENV=production
+    networks:
+      - network_swarm_public
+      - zapo-internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first   # Swarm Safety: libera Redis lock antes de subir nova réplica
+
+  zapo-db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=zapo
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-zapo}
+      - POSTGRES_DB=zapo
+    volumes:
+      - zapo-db-data:/var/lib/postgresql/data
+    networks:
+      - zapo-internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+  zapo-redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - zapo-redis-data:/data
+    networks:
+      - zapo-internal
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+networks:
+  network_swarm_public:
+    external: true
+    name: network_swarm_public
+  zapo-internal:
+    driver: overlay
+
+volumes:
+  zapo-db-data:
+  zapo-redis-data:
