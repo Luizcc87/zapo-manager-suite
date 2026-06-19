@@ -6,19 +6,17 @@ Este documento descreve as diretrizes arquiteturais, os padrões de código e a 
 
 ## 🎯 Filosofia de Integração e Upstream Sync
 
-O frontend (`zapo-manager/frontend`) e o backend (`zapo-manager/backend`) devem permanecer **isolados**.
+O frontend (`frontend/`) e o backend (`backend/`) são mantidos dentro do mesmo repositório (monorepo), mas devem permanecer **arquiteturalmente isolados**.
 
 1.  **Modificação Mínima no Frontend:**
     Para que possamos realizar atualizações frequentes a partir do repositório oficial do mantenedor original (`evolution-foundation/evolution-manager-v2`), **não modifique o código React/Vite** a menos que seja estritamente necessário.
 2.  **Resolução de Incompatibilidades no Backend:**
-    Qualquer nova funcionalidade exibida na UI do Evolution Manager v2 deve ser tratada no backend emulando os payloads esperados pela Evolution API v2. Se o Manager v2 solicitar um endpoint inexistente ou um formato específico, intercepte-o e molde o retorno em `zapo-manager/backend/src/routes`.
+    Qualquer nova funcionalidade exibida na UI do Evolution Manager v2 deve ser tratada no backend emulando os payloads esperados pela Evolution API v2. Se o Manager v2 solicitar um endpoint inexistente ou um formato específico, intercepte-o e molde o retorno em `backend/src/routes`.
 3.  **Atualização de Upstream do Frontend:**
-    Para atualizar o painel visual com novas releases do mantenedor original:
-    ```bash
-    cd zapo-manager/frontend
-    git remote add upstream https://github.com/evolution-foundation/evolution-manager-v2.git 2>/dev/null
-    git fetch upstream
-    git merge upstream/main  # ou a branch estável equivalente
+    Como o frontend é gerenciado via `git subtree`, para sincronizar o painel com as novas releases do mantenedor original, execute na raiz do monorepo:
+    ```powershell
+    git fetch upstream-frontend
+    git subtree pull --prefix=frontend upstream-frontend main --squash
     ```
 
 ---

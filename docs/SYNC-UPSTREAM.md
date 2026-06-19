@@ -9,117 +9,65 @@ Dois upstreams independentes para rastrear:
 
 ---
 
-## 1. Frontend — git submodule (evolution-manager-v2)
+# Sincronização com Upstreams
 
-O `frontend/` é um git submodule rastreando o repo original:
+Dois upstreams independentes para rastrear:
+
+| Upstream | Tipo | Afeta |
+|---|---|---|
+| `github.com/evolution-foundation/evolution-manager-v2` | git subtree | `frontend/` |
+| `github.com/vinikjkkj/zapo` | pacotes npm | `backend/` |
+
+---
+
+## 1. Frontend — git subtree (evolution-manager-v2)
+
+O `frontend/` é integrado ao monorepo como um **subtree** mapeando o repositório original:
 `https://github.com/evolution-foundation/evolution-manager-v2`
 
 ### Estrutura de remotes
 
 ```
-upstream (evolution-foundation/evolution-manager-v2)
-    ↓  git fetch + merge
-frontend/ (submodule — fork local com customizações zapo)
-    ↓  git add frontend && commit
-zapo-manager/ (repo principal)
+upstream-frontend (evolution-foundation/evolution-manager-v2)
+    ↓  git fetch + git subtree pull --squash
+zapo-manager-suite/ (monorepo completo)
 ```
 
 ## Clonar o projeto pela primeira vez
 
-```bash
-git clone --recurse-submodules https://github.com/SEU-USER/zapo-manager
-```
+Diferente de submódulos, o monorepo com subtree não exige parâmetros adicionais ou inicializações recursivas:
 
-Se já clonou sem `--recurse-submodules`:
-
-```bash
-git submodule update --init --recursive
+```powershell
+git clone https://github.com/Luizcc87/zapo-manager-suite.git
 ```
 
 ## Sincronizar atualizações do upstream
 
-```bash
-cd frontend
-git fetch origin
-git log HEAD..origin/main --oneline   # ver o que vai entrar
-git merge origin/main                 # aplicar
-```
+Para buscar as novidades do painel oficial e mesclá-las no monorepo, siga estas etapas:
 
-Resolver conflitos se houver (customizações zapo vs mudanças upstream), depois:
+1. **Obter as atualizações do upstream**:
+   ```powershell
+   git fetch upstream-frontend
+   ```
 
-```bash
-cd ..
-git add frontend
-git commit -m "chore: sync frontend with upstream vX.Y.Z"
-```
-
-## Adicionar upstream como remote separado (opcional mas recomendado)
-
-Se o submodule apontar para um fork seu no GitHub em vez do repo original:
-
-```bash
-cd frontend
-git remote add upstream https://github.com/evolution-foundation/evolution-manager-v2
-```
-
-Fluxo de sync passa a ser:
-
-```bash
-cd frontend
-git fetch upstream
-git merge upstream/main
-cd ..
-git add frontend
-git commit -m "chore: sync frontend with upstream"
-```
-
-## Ver estado do submodule
-
-```bash
-# Commit que o submodule está apontando vs HEAD do upstream
-git submodule status
-
-# Log de commits pendentes no upstream
-git -C frontend log HEAD..origin/main --oneline
-```
-
-## Atualizar .gitmodules para apontar para fork próprio
-
-Após criar fork em `github.com/SEU-USER/evolution-manager-v2`:
-
-```bash
-# Atualizar URL no .gitmodules
-git config -f .gitmodules submodule.frontend.url https://github.com/SEU-USER/evolution-manager-v2
-git config -f .git/config submodule.frontend.url https://github.com/SEU-USER/evolution-manager-v2
-
-# Aplicar
-git submodule sync
-git add .gitmodules
-git commit -m "chore: point frontend submodule to own fork"
-```
-
-Adicionar upstream no frontend:
-
-```bash
-cd frontend
-git remote add upstream https://github.com/evolution-foundation/evolution-manager-v2
-git push origin main   # subir customizações para o fork
-```
-
-## Publicar customizações zapo no fork
-
-```bash
-cd frontend
-# após fazer mudanças no frontend
-git add .
-git commit -m "feat: customização zapo"
-git push origin main   # push para SEU fork
-
-cd ..
-git add frontend       # atualizar o gitlink no repo principal
-git commit -m "chore: update frontend submodule"
-git push origin master
-```
+2. **Testar e mesclar em uma branch descartável (Recomendado)**:
+   Antes de atualizar o `master`, crie uma branch temporária para validar possíveis conflitos:
+   ```powershell
+   git checkout -b sync/test-subtree-pull
+   git subtree pull --prefix=frontend upstream-frontend main --squash
+   ```
+   * **Se houver conflitos**: Resolva-os dentro da pasta `frontend/`, rode os testes locais e, se estiver tudo correto, faça o merge. Caso queira desistir e resetar o estado, aborte com:
+     ```powershell
+     git merge --abort
+     git checkout master
+     git branch -D sync/test-subtree-pull
+     ```
+   * **Se o pull for limpo e bem-sucedido**: Você pode prosseguir com o merge real na branch principal:
+     ```powershell
+     git checkout master
+     git subtree pull --prefix=frontend upstream-frontend main --squash
+     git branch -D sync/test-subtree-pull
+     ```
 
 ---
 
@@ -188,16 +136,14 @@ Changelog e breaking changes aparecem lá antes de chegar no npm.
 
 ## Resumo dos comandos do dia a dia
 
-### Frontend (submodule)
+### Frontend (subtree)
 
 | Ação | Comando |
 |---|---|
-| Buscar atualizações upstream | `git -C frontend fetch upstream` |
-| Aplicar atualizações | `git -C frontend merge upstream/main` |
-| Commitar atualização no principal | `git add frontend && git commit` |
-| Ver o que mudou no upstream | `git -C frontend log HEAD..upstream/main --oneline` |
-| Estado do submodule | `git submodule status` |
-| Publicar customizações | `git -C frontend push origin main` |
+| Configurar remote oficial (se necessário) | `git remote add upstream-frontend https://github.com/evolution-foundation/evolution-manager-v2.git` |
+| Buscar atualizações upstream | `git fetch upstream-frontend` |
+| Mesclar atualizações com squash | `git subtree pull --prefix=frontend upstream-frontend main --squash` |
+| Ver o que mudou no upstream | `git log master..upstream-frontend/main --oneline` |
 
 ### Backend (npm)
 
