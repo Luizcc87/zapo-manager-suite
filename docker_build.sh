@@ -10,7 +10,7 @@ echo "=== Iniciando compilação multi-arch (linux/amd64, linux/arm64) ==="
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   -t zapo-manager:latest \
-  -f zapo-manager/Dockerfile \
+  -f Dockerfile \
   --push \
   .
 

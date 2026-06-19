@@ -1,17 +1,17 @@
 # Stage 1: Build the React Frontend (Evolution Manager v2)
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app
-COPY zapo-manager/frontend/package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci
-COPY zapo-manager/frontend/ ./
+COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Build the TypeScript Backend
 FROM node:22-alpine AS backend-builder
 WORKDIR /app
-COPY zapo-manager/backend/package*.json ./
+COPY backend/package*.json ./
 RUN npm ci
-COPY zapo-manager/backend/ ./
+COPY backend/ ./
 RUN npx prisma generate
 RUN npm run build
 
@@ -29,8 +29,8 @@ RUN apk add --no-cache \
     libc6-compat
 
 # Copiar arquivos de configuração do backend
-COPY zapo-manager/backend/package*.json ./
-COPY zapo-manager/backend/prisma ./prisma/
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma/
 
 # Instalar dependências de produção (compilando nativos para a arquitetura do container)
 RUN npm ci --only=production && npx prisma generate
