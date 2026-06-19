@@ -1,132 +1,128 @@
-# Zapo-Manager
+<div align="center">
 
-Este repositório contém o **Zapo-Manager**: uma solução unificada de gerenciamento do WhatsApp Web que integra o painel administrativo oficial do **Evolution Manager v2** com um backend customizado baseado na biblioteca **Zapo** (`zapo-js`), emulando as rotas da **Evolution API v2**.
+<img src="frontend/public/assets/images/zapo-manager-logo-light.svg" alt="Zapo Manager" width="420"/>
 
-O projeto é otimizado para rodar em clusters **Docker Swarm** com suporte a arquiteturas **x86_64** (amd64) e **ARM64** (arm64), além de possuir mecanismos robustos de lock distribuído para mitigar banimentos e conflitos de sessão.
+**Painel web para gerenciamento de instâncias WhatsApp via Zapo API**
 
----
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](frontend/LICENSE)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Swarm%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
-## 📁 Estrutura do Projeto
+[GitHub](https://github.com/Luizcc87) · [Reportar Issue](https://github.com/Luizcc87/zapo-manager/issues) · [Docs](docs/)
 
-O ecossistema Zapo-Manager é composto por dois módulos principais:
-
-*   **`zapo-manager/backend/`**: Servidor Node.js + TypeScript + Express + Prisma. Ele emula as rotas REST da Evolution API v2 para gerenciamento de instâncias (criar, conectar, QR code) e envio/recebimento de mensagens, servindo também os arquivos estáticos do frontend.
-*   **`zapo-manager/frontend/`**: Interface administrativa SPA em React + Tailwind CSS clonada diretamente do repositório dos mantenedores originais do Evolution Manager v2.
-
----
-
-## ⚙️ Variáveis de Ambiente (Backend)
-
-Crie um arquivo `.env` dentro de `zapo-manager/backend/` ou passe-as diretamente no contêiner:
-
-| Variável | Descrição | Valor Padrão / Exemplo |
-| :--- | :--- | :--- |
-| `PORT` | Porta em que o gateway Express irá rodar. | `8080` |
-| `GLOBAL_API_KEY` | Token global de autenticação (usado no header `apikey`). | `global_key` |
-| `DATABASE_URL` | Banco de dados PostgreSQL (Prisma) ou SQLite fallback. | `postgresql://user:pass@localhost:5432/db` |
-| `REDIS_URL` | Redis usado para cache de sinal e locks distribuídos. | `redis://localhost:6379/0` |
-| `WEBHOOK_URL` | URL global de destino para envio de webhooks de conexão/mensagens. | `http://seu-webhook.com/webhook` |
+</div>
 
 ---
 
-## 🚀 Como Executar em Desenvolvimento (Local Dev)
+## Sobre
 
-Você tem duas formas de rodar e debugar a aplicação em desenvolvimento local:
+**Zapo Manager** é um painel administrativo React que conecta ao backend [Zapo](https://github.com/vinikjkkj/zapo) (`zapo-js`) — uma implementação Node.js da Evolution API v2 baseada na biblioteca Baileys.
 
-### Método A: Execução Simplificada (Orquestrada a partir da Raiz)
-Se você estiver diretamente dentro do diretório `zapo-manager/`, você pode instalar as dependências e iniciar o frontend e o backend simultaneamente com apenas dois comandos, sem precisar navegar por outras pastas:
+O sistema é composto por dois módulos:
 
-1.  **Instalar dependências de ambos os projetos:**
-    ```bash
-    npm install
-    ```
-    *(Este comando roda a instalação do root, backend e frontend sequencialmente).*
-2.  **Preparar o banco de dados local (Prisma):**
-    Navegue até a pasta `backend/` para preparar o banco de dados (seja SQLite ou Postgres):
-    ```bash
-    cd backend
-    npx prisma db push
-    cd ..
-    ```
-3.  **Iniciar Frontend e Backend simultaneamente:**
-    ```bash
-    npm run dev
-    ```
-    *(Este comando iniciará o backend na porta `8080` e o frontend na porta `5173` usando `concurrently`).*
+| Módulo | Stack | Função |
+|---|---|---|
+| `backend/` | Node.js · TypeScript · Express · Prisma · Redis | Emula a API REST da Evolution API v2, gerencia sessões WhatsApp, distribui webhooks |
+| `frontend/` | React 18 · Vite · Tailwind CSS 4 · TanStack Query | SPA administrativa — dashboard, chat, integrações, configurações |
+
+Projetado para rodar em **Docker Swarm** com suporte a **x86_64** e **ARM64**, com lock distribuído Redis para evitar conflitos de sessão e banimentos.
 
 ---
 
-### Método B: Execução Manual (Passo a Passo)
-Caso prefira rodar e analisar cada serviço em terminais separados:
+## Funcionalidades
 
-#### Passo 1: Preparar e Iniciar o Backend
-1.  Navegue até a pasta do backend:
-    ```bash
-    cd zapo-manager/backend
-    ```
-2.  Instale as dependências:
-    ```bash
-    npm install
-    ```
-3.  Gere o cliente do Prisma ORM e prepare o banco:
-    ```bash
-    npx prisma generate
-    npx prisma db push
-    ```
-4.  Inicie o servidor em modo de desenvolvimento:
-    ```bash
-    npm run dev
-    ```
-    *O servidor estará escutando em `http://localhost:8080`.*
-
-#### Passo 2: Preparar e Iniciar o Frontend
-1.  Navegue até a pasta do frontend (em uma nova janela do terminal):
-    ```bash
-    cd zapo-manager/frontend
-    ```
-2.  Instale as dependências:
-    ```bash
-    npm install
-    ```
-3.  Inicie o servidor de desenvolvimento do Vite:
-    ```bash
-    npm run dev
-    ```
-    *O painel administrativo estará acessível no navegador em `http://localhost:5173`.*
+- Gerenciamento de múltiplas instâncias WhatsApp
+- Interface de chat com histórico e busca
+- Registro de número primário via SMS/OTP (Baileys)
+- Integrações: OpenAI · Dify · Typebot · Chatwoot · Flowise · N8N · Webhooks · RabbitMQ · SQS · WebSocket
+- Tema claro/escuro
+- i18n: PT-BR · EN-US · ES-ES · FR-FR
+- Lock distribuído Redis (Swarm-safe)
 
 ---
 
-### Passo 3: Acessar a Interface
-Ao carregar a tela de Login em `http://localhost:5173`, insira o endereço do seu backend local (`http://localhost:8080`) e utilize a sua `GLOBAL_API_KEY` (`global_key`) para se autenticar.
+## Quick Start
 
----
+### Docker Compose (recomendado)
 
-## 🐳 Execução em Produção e Dockerização
+```bash
+git clone https://github.com/Luizcc87/zapo-manager.git
+cd zapo-manager
 
-O Zapo-Manager foi projetado para facilitar a distribuição e implantação estável.
+# Copie e ajuste as variáveis
+cp backend/.env.example backend/.env
 
-### Opção A: Docker Compose Local
-Para rodar toda a infraestrutura (Postgres + Redis + Zapo-Manager Gateway) localmente em um único comando:
-1.  Na pasta `zapo-manager`, execute:
-    ```bash
-    docker-compose up -d --build
-    ```
-2.  Acesse o painel visual diretamente em `http://localhost:8080`.
+# Suba todos os serviços (app + PostgreSQL + Redis)
+docker-compose up -d --build
+```
 
-### Opção B: Docker Swarm (Arquitetura Distribuída)
-Em clusters Swarm, a escalabilidade horizontal irrestrita de conexões de WhatsApp pode levar a loops de reconexão e banimentos. Por isso:
-*   O serviço `zapo-manager-app` é configurado com `deploy.replicas: 1`.
-*   A estratégia de update é definida como `order: stop-first`, assegurando que a réplica antiga desconecte e pare totalmente antes que a nova suba.
-*   O backend utiliza o lock distribuído no Redis (`lock:zapo:<instancia>`) para garantir que apenas um contêiner no cluster consiga inicializar o socket com o WhatsApp por vez.
+Acesse `http://localhost:8080` → use a `GLOBAL_API_KEY` definida no `.env`.
 
-Realize o deploy da stack:
+### Docker Swarm
+
 ```bash
 docker stack deploy -c docker-compose.yml zapo-stack
 ```
 
-### Compilação Multi-Arquitetura (x86 / ARM)
-Se você estiver implantando em uma infraestrutura híbrida (como servidores x86 em nuvem com nós locais em Raspberry Pi / ARM), você pode compilar imagens Docker universais utilizando o script `docker_build.sh`:
+> O serviço é configurado com `replicas: 1` e `order: stop-first` para garantir que apenas uma instância conecte ao WhatsApp por vez.
+
+### Build Multi-Arquitetura (x86 + ARM64)
+
 ```bash
 sh docker_build.sh
 ```
-*Este script inicializa o `docker buildx` para gerar e empurrar imagens otimizadas com compilação nativa de dependências binárias (`sharp`, `better-sqlite3`) para ambas as plataformas.*
+
+---
+
+## Variáveis de Ambiente
+
+Configure em `backend/.env`:
+
+| Variável | Descrição | Exemplo |
+|---|---|---|
+| `PORT` | Porta do servidor Express | `8080` |
+| `GLOBAL_API_KEY` | Token de autenticação global (header `apikey`) | `minha_chave_secreta` |
+| `DATABASE_URL` | PostgreSQL via Prisma | `postgresql://user:pass@localhost:5432/zapo_db` |
+| `REDIS_URL` | Redis para cache e locks distribuídos | `redis://localhost:6379/0` |
+| `WEBHOOK_URL` | Destino global para webhooks de eventos | `https://meu-webhook.com/hook` |
+
+---
+
+## Desenvolvimento Local
+
+```bash
+npm install        # instala root + backend + frontend
+cd backend && npx prisma db push && cd ..
+npm run dev        # backend :8080 + frontend :5173
+```
+
+Documentação detalhada: [docs/DEV_SETUP.md](docs/DEV_SETUP.md)
+
+---
+
+## Hospedagem Recomendada
+
+Para hospedar o Zapo Manager em produção, recomendamos a **Hostinger** — VPS acessíveis com suporte a Docker e excelente custo-benefício no Brasil.
+
+👉 **[Conheça os planos da Hostinger](https://www.hostinger.com/br?REFERRALCODE=PHGLUIZCCVNL)**
+
+---
+
+## Licença e Créditos
+
+Este projeto é distribuído sob a **Apache License 2.0**.
+
+- Frontend baseado no [Evolution Manager v2](https://github.com/EvolutionAPI/evolution-manager-v2) © 2025 Evolution API Team — mantida a notificação de uso conforme exigido pela licença.
+- Backend baseado na biblioteca [Zapo](https://github.com/vinikjkkj/zapo) © 2026 vinikjkkj — licença MIT.
+
+Consulte [frontend/LICENSE](frontend/LICENSE) para os termos completos.
+
+---
+
+<div align="center">
+
+Feito por [Luiz Ceconi](https://github.com/Luizcc87)
+
+</div>
