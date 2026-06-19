@@ -16,30 +16,57 @@
 
 ---
 
-## Sobre
+## O que é a Zapo API?
 
-**Zapo Manager** é um painel administrativo React que conecta ao backend [Zapo](https://github.com/vinikjkkj/zapo) (`zapo-js`) — uma implementação Node.js da Evolution API v2 baseada na biblioteca Baileys.
+[Zapo](https://github.com/vinikjkkj/zapo) (`zapo-js`) é uma biblioteca Node.js que implementa o protocolo nativo do WhatsApp — o mesmo protocolo que o aplicativo oficial usa no celular. É **compatível com a API REST da Evolution API v2**, funcionando como um drop-in replacement.
 
-O sistema é composto por dois módulos:
+### Por que Zapo é diferente das outras APIs de WhatsApp?
+
+A maioria das APIs de WhatsApp (incluindo a Evolution API clássica) usa **WebSocket**, emulando uma aba de navegador (Chrome/Safari). O Zapo usa **TCP Socket direto**, emulando o protocolo nativo de um aplicativo Android. Isso tem impacto direto em estabilidade e risco de banimento.
+
+### Modos de Conexão
+
+| | WhatsApp Web (padrão do mercado) | Zapo Mobile — Companion | Zapo Mobile — Primário |
+|---|---|---|---|
+| **Protocolo** | WebSocket (navegador) | **TCP nativo (app Android)** | **TCP nativo (app Android)** |
+| **Emula** | Chrome/Firefox | Tablet Android | Celular Android (conta master) |
+| **QR Code** | Sim | Sim | **Não** |
+| **Celular físico necessário** | Sempre ligado | Pode ser desligado | **Não existe** |
+| **Risco de ban** | Médio | **Muito baixo** | **Extremamente baixo** |
+| **Estabilidade** | Média | **Altíssima** | **Altíssima** |
+
+**Companion (recomendado):** escaneie QR Code pelo celular uma vez — o Zapo roda de forma independente no servidor. Celular pode ser desligado.
+
+**Primário:** o Zapo assume a identidade do celular principal. Sem QR Code, sem celular físico. Ideal para números dedicados a automação. ⚠️ Desloga o app do celular físico.
+
+> Documentação completa dos modos: [docs/zapo_connection_modes.md](docs/zapo_connection_modes.md)
+
+### Lock Distribuído (Swarm-safe)
+
+O backend usa **locks Redis** (`lock:zapo:<instancia>`) para garantir que apenas um container conecte ao WhatsApp por vez — prevenindo banimentos por dupla conexão em ambientes com múltiplas réplicas.
+
+---
+
+## Sobre este projeto
+
+**Zapo Manager** é o painel administrativo que expõe e gerencia a Zapo API. O sistema é composto por dois módulos:
 
 | Módulo | Stack | Função |
 |---|---|---|
 | `backend/` | Node.js · TypeScript · Express · Prisma · Redis | Emula a API REST da Evolution API v2, gerencia sessões WhatsApp, distribui webhooks |
 | `frontend/` | React 18 · Vite · Tailwind CSS 4 · TanStack Query | SPA administrativa — dashboard, chat, integrações, configurações |
 
-Projetado para rodar em **Docker Swarm** com suporte a **x86_64** e **ARM64**, com lock distribuído Redis para evitar conflitos de sessão e banimentos.
+Projetado para rodar em **Docker Swarm** com suporte a **x86_64** e **ARM64**.
 
 ---
 
-## Funcionalidades
+## Funcionalidades do Painel
 
-- Gerenciamento de múltiplas instâncias WhatsApp
+- Dashboard com múltiplas instâncias WhatsApp
 - Interface de chat com histórico e busca
-- Registro de número primário via SMS/OTP (Baileys)
+- Registro de número primário via SMS/OTP
 - Integrações: OpenAI · Dify · Typebot · Chatwoot · Flowise · N8N · Webhooks · RabbitMQ · SQS · WebSocket
-- Tema claro/escuro
-- i18n: PT-BR · EN-US · ES-ES · FR-FR
-- Lock distribuído Redis (Swarm-safe)
+- Tema claro/escuro · i18n: PT-BR · EN-US · ES-ES · FR-FR
 
 ---
 
