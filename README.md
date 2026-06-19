@@ -120,9 +120,9 @@ Configure em `backend/.env`:
 ## Desenvolvimento Local
 
 ```bash
-npm install        # instala root + backend + frontend
-cd backend && npx prisma db push && cd ..
-npm run dev        # backend :8080 + frontend :5173
+npm install        # instala dependências (root + backend + frontend)
+# Garanta que o PostgreSQL e o Redis estejam em execução antes do próximo comando
+npm run dev        # inicia backend :8080 + frontend :5173 (migrations rodam automaticamente)
 ```
 
 Documentação detalhada: [docs/DEV_SETUP.md](docs/DEV_SETUP.md)
@@ -141,8 +141,8 @@ Para hospedar o Zapo Manager em produção, recomendamos a **Hostinger** — VPS
 
 Este projeto é distribuído sob a **Apache License 2.0**.
 
-- Frontend baseado no [Evolution Manager v2](https://github.com/EvolutionAPI/evolution-manager-v2) © 2025 Evolution API Team — mantida a notificação de uso conforme exigido pela licença.
-- Backend baseado na biblioteca [Zapo](https://github.com/vinikjkkj/zapo) © 2026 vinikjkkj — licença MIT.
+- Frontend baseado no [Evolution Manager v2](https://github.com/EvolutionAPI/evolution-manager-v2) © 2025 Evolution API Team.
+- Backend baseado na biblioteca [Zapo](https://github.com/vinikjkkj/zapo) © 2026 vinikjkkj (MIT).
 
 Consulte [frontend/LICENSE](frontend/LICENSE) para os termos completos.
 
@@ -150,6 +150,6 @@ Consulte [frontend/LICENSE](frontend/LICENSE) para os termos completos.
 
 <div align="center">
 
-Feito por [Luiz Ceconi](https://github.com/Luizcc87)
+Feito por [Luiz Carlos Ceconi](https://github.com/Luizcc87)
 
 </div>

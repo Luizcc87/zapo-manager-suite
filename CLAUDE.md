@@ -95,11 +95,11 @@ Cada integração em `src/lib/queries/<integration>/` tem estrutura uniforme:
 ### Como criar uma migration
 
 ```bash
-# 1. Criar diretório com timestamp + nome descritivo
-mkdir backend/prisma/migrations/YYYYMMDDHHMMSS_nome_da_mudanca
+# 1. Gerar o scaffold da migration com timestamp automático usando a flag --create-only
+cd backend
+npx prisma migrate dev --create-only --name nome_da_mudanca
 
-# 2. Criar o arquivo SQL idempotente dentro
-touch backend/prisma/migrations/YYYYMMDDHHMMSS_nome_da_mudanca/migration.sql
+# 2. Editar o arquivo migration.sql gerado dentro da nova pasta para garantir que seja idempotente
 ```
 
 ### Regras do SQL da migration
@@ -124,10 +124,11 @@ ALTER TABLE "MinhaTabela" ADD COLUMN IF NOT EXISTS "novaColuna" TEXT;
 
 ### Fluxo completo ao alterar schema
 
-1. Editar `backend/prisma/schema.prisma` com a mudança desejada
-2. Criar migration SQL idempotente em `backend/prisma/migrations/<timestamp>_<nome>/migration.sql`
-3. Parar o dev server e rodar `npx prisma generate` no `backend/` para regenerar o client
-4. Reiniciar — `prisma migrate deploy` aplica automaticamente no bootstrap
+1. Editar `backend/prisma/schema.prisma` com a mudança desejada.
+2. Gerar a migration com `npx prisma migrate dev --create-only --name <nome_da_mudanca>`.
+3. Ajustar o arquivo SQL gerado para ser idempotente.
+4. Parar o dev server e rodar `npx prisma generate` no `backend/` para regenerar o client.
+5. Reiniciar — `prisma migrate deploy` aplica as alterações automaticamente no bootstrap.
 
 ### Atenção: Prisma Client gerado
 

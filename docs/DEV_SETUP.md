@@ -15,14 +15,13 @@ Na raiz do repositório:
 # Instala dependências de todos os projetos
 npm install
 
-# Prepara o banco de dados (na primeira execução)
-cd backend && npx prisma db push && cd ..
-
-# Inicia backend (porta 8080) + frontend (porta 5173) simultaneamente
+# Inicia backend (porta 8080) + frontend (porta 5173) simultaneamente.
+# Certifique-se de que o PostgreSQL e Redis estejam em execução.
+# As migrations serão aplicadas automaticamente no bootstrap do backend.
 npm run dev
 ```
 
-Acesse `http://localhost:5173` → informe `http://localhost:8080` como URL da API e use a `GLOBAL_API_KEY` configurada no `.env`.
+Acessem `http://localhost:5173` → informe `http://localhost:8080` como URL da API e use a `GLOBAL_API_KEY` configurada no `.env`.
 
 ## Método B: Serviços Separados
 
@@ -34,9 +33,9 @@ Acesse `http://localhost:5173` → informe `http://localhost:8080` como URL da A
 cd backend
 npm install
 npx prisma generate
-npx prisma db push
 npm run dev
 # Escuta em http://localhost:8080
+# As migrations serão aplicadas automaticamente no bootstrap do backend.
 ```
 
 ### Frontend

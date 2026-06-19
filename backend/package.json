@@ -8,7 +8,8 @@
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy"
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:status": "prisma migrate status"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
