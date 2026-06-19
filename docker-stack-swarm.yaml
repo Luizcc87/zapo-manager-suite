@@ -2,15 +2,28 @@ version: '3.8'
 
 # Docker Swarm stack — zapo-manager
 #
-# Deploy:
-#   docker stack deploy -c stack.yml zapo --with-registry-auth
+# ─── DEPLOY ────────────────────────────────────────────────────────────────────
+#   docker stack deploy -c docker-stack-swarm.yaml zapo --with-registry-auth
 #
-# Variáveis de ambiente obrigatórias antes do deploy:
-#   export GLOBAL_API_KEY=<chave-global>
-#   export POSTGRES_PASSWORD=<senha-segura>
-#
-# Rede network_swarm_public deve existir no Swarm:
+# ─── PRÉ-REQUISITO: rede pública ───────────────────────────────────────────────
 #   docker network create --driver overlay --attachable network_swarm_public
+#
+# ─── VARIÁVEIS DE AMBIENTE (exportar antes do deploy) ─────────────────────────
+#
+#   GLOBAL_API_KEY   — chave mestra da API; qualquer cliente precisa dela no
+#                      header "apikey". Use 32+ caracteres aleatórios.
+#                      Gerar: openssl rand -hex 32
+#                      Exemplo: export GLOBAL_API_KEY=a3f8c2d1e4b7091f6a2e5d8c3b0f4a7e9d2c1b8a5f3e6d9c2b0a7f4e1d8c5b2
+#
+#   POSTGRES_PASSWORD — senha do banco de dados PostgreSQL.
+#                      Gerar: openssl rand -base64 24
+#                      Exemplo: export POSTGRES_PASSWORD=K7mP2xQnR9vLdJhF4sTuYwZcB1eN8oAg
+#
+#   WEBHOOK_URL      — URL de destino para eventos WhatsApp (opcional).
+#                      Exemplo: export WEBHOOK_URL=https://seu-dominio.com/webhook/zapo
+#                      Deixar vazio se não usar: export WEBHOOK_URL=
+#
+# ───────────────────────────────────────────────────────────────────────────────
 
 services:
 
