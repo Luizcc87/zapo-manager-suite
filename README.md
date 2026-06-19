@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/public/assets/images/zapo-manager-logo-light.svg" alt="Zapo Manager" width="420"/>
+<img src="frontend/public/assets/images/zapo-manager-logo-light.svg" alt="Zapo Manager Suite" width="420"/>
 
 **Painel web para gerenciamento de instâncias WhatsApp via Zapo API**
 
@@ -10,7 +10,7 @@
 [![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Swarm%20ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
 
-[GitHub](https://github.com/Luizcc87) · [Reportar Issue](https://github.com/Luizcc87/zapo-manager/issues) · [Docs](docs/)
+[GitHub](https://github.com/Luizcc87) · [Reportar Issue](https://github.com/Luizcc87/zapo-manager-suite/issues) · [Docs](docs/)
 
 </div>
 
@@ -49,7 +49,7 @@ O backend usa **locks Redis** (`lock:zapo:<instancia>`) para garantir que apenas
 
 ## Sobre este projeto
 
-**Zapo Manager** é o painel administrativo que expõe e gerencia a Zapo API. O sistema é composto por dois módulos:
+**Zapo Manager Suite** é a suíte completa de gerenciamento administrativo para a Zapo API. O sistema é composto por dois módulos:
 
 | Módulo | Stack | Função |
 |---|---|---|
@@ -75,8 +75,8 @@ Projetado para rodar em **Docker Swarm** com suporte a **x86_64** e **ARM64**.
 ### Docker Compose (recomendado)
 
 ```bash
-git clone https://github.com/Luizcc87/zapo-manager.git
-cd zapo-manager
+git clone https://github.com/Luizcc87/zapo-manager-suite.git
+cd zapo-manager-suite
 
 # Copie e ajuste as variáveis
 cp backend/.env.example backend/.env
