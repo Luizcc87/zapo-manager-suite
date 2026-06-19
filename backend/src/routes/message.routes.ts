@@ -20,8 +20,13 @@ function formatJid(num: string): string {
 // Salva o buffer em arquivo temporário para processamento seguro no sharp/ffmpeg
 function saveTempFile(buffer: Buffer, originalname: string): string {
   const tempDir = os.tmpdir();
-  const filename = `zapo_${Date.now()}_${originalname.replace(/\s+/g, '_')}`;
+  const safeName = path.basename(originalname).replace(/[^A-Za-z0-9._-]/g, '_');
+  const filename = `zapo_${Date.now()}_${safeName}`;
   const tempPath = path.join(tempDir, filename);
+  // Garantia extra: o path resolvido deve estar dentro do tempDir
+  if (!tempPath.startsWith(fs.realpathSync(tempDir))) {
+    throw new Error('Invalid file path');
+  }
   fs.writeFileSync(tempPath, buffer);
   return tempPath;
 }
@@ -30,7 +35,7 @@ function saveTempFile(buffer: Buffer, originalname: string): string {
 async function checkInstanceApiKey(req: Request, res: Response, next: any) {
   try {
     const { instanceName } = req.params;
-    const requestKey = req.get('apikey') || req.query.apikey as string;
+    const requestKey = req.get('apikey');
     
     if (!instanceName) {
       return res.status(400).json({ error: 'instanceName parameter is required' });

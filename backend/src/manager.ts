@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import Redis from 'ioredis';
 import * as path from 'path';
 import * as fs from 'fs';
+import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 const activeClients = new Map<string, {
@@ -87,7 +88,7 @@ export class ZapoManager {
   static async createClient(instanceName: string, mobileTransport = false, deviceInfo?: any, customApiKey?: string) {
     let instance = await prisma.instance.findUnique({ where: { instanceName } });
     if (!instance) {
-      const apiKey = customApiKey || 'apikey_' + Math.random().toString(36).substring(2, 15);
+      const apiKey = customApiKey || 'apikey_' + randomBytes(32).toString('hex');
       instance = await prisma.instance.create({
         data: {
           instanceName,

@@ -8,8 +8,8 @@ const router = Router();
 // Middleware de Autenticação Global da Evolution
 // O Manager envia o Token global no header "apikey"
 function checkGlobalApiKey(req: Request, res: Response, next: any) {
-  const globalApiKey = process.env.GLOBAL_API_KEY || 'global_key';
-  const requestKey = req.get('apikey') || req.query.apikey as string;
+  const globalApiKey = process.env.GLOBAL_API_KEY;
+  const requestKey = req.get('apikey');
   
   if (requestKey !== globalApiKey) {
     return res.status(401).json({ error: 'Unauthorized: Invalid Global API Key' });
@@ -22,7 +22,7 @@ function checkGlobalApiKey(req: Request, res: Response, next: any) {
 async function checkInstanceApiKey(req: Request, res: Response, next: any) {
   try {
     const { instanceName } = req.params;
-    const requestKey = req.get('apikey') || req.query.apikey as string;
+    const requestKey = req.get('apikey');
     
     if (!instanceName) {
       return res.status(400).json({ error: 'instanceName parameter is required' });

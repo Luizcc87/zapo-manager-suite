@@ -50,8 +50,8 @@ app.get('/', (req, res, next) => {
 
 // Rota POST /verify-creds para verificação da API Key global
 app.post('/verify-creds', (req, res) => {
-  const globalApiKey = process.env.GLOBAL_API_KEY || 'global_key';
-  const requestKey = req.get('apikey') || req.query.apikey as string;
+  const globalApiKey = process.env.GLOBAL_API_KEY;
+  const requestKey = req.get('apikey');
   
   if (requestKey !== globalApiKey) {
     return res.status(401).json({ error: 'Unauthorized: Invalid Global API Key' });
@@ -83,6 +83,11 @@ app.get('*', (req, res, next) => {
 });
 
 async function bootstrap() {
+  if (!process.env.GLOBAL_API_KEY) {
+    console.error('[Zapo-Manager] FATAL: GLOBAL_API_KEY não definida. Configure a variável de ambiente antes de iniciar.');
+    process.exit(1);
+  }
+
   try {
     // Carregar e reconectar instâncias ativas do banco de dados na inicialização
     await ZapoManager.loadAll();
