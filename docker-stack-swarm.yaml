@@ -13,7 +13,7 @@ version: '3.8'
 #   GLOBAL_API_KEY   — chave mestra da API; qualquer cliente precisa dela no
 #                      header "apikey". Use 32+ caracteres aleatórios.
 #                      Gerar: openssl rand -hex 32
-#                      Exemplo: export GLOBAL_API_KEY=a3f8c2d1e4b7091f6a2e5d8c3b0f4a7e9d2c1b8a5f3e6d9c2b0a7f4e1d8c5b2
+#                      Exemplo: export GLOBAL_API_KEY=2b78db0871abc2123b1fa369482860feb94f2f3d3c65a93cb7b1a1a27dd84e9f
 #
 #   POSTGRES_PASSWORD — senha do banco de dados PostgreSQL.
 #                      Gerar: openssl rand -base64 24
@@ -48,7 +48,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://zapo:${POSTGRES_PASSWORD:-zapo}@zapo-db:5432/zapo?schema=public
       - REDIS_URL=redis://zapo-redis:6379/0
-      - GLOBAL_API_KEY=${GLOBAL_API_KEY}
+      - GLOBAL_API_KEY=${GLOBAL_API_KEY:?GLOBAL_API_KEY obrigatorio. Gere com: openssl rand -hex 32}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - PORT=8080
       - NODE_ENV=production
@@ -68,7 +68,7 @@ services:
         order: stop-first   # Swarm Safety: libera Redis lock antes de subir nova réplica
 
   zapo-db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_USER=zapo
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-zapo}
