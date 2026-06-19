@@ -82,6 +82,59 @@ Cada integração em `src/lib/queries/<integration>/` tem estrutura uniforme:
 - `EmbedColorsContext` — customização de cores do embed
 - `ReplyingMessageContext` — mensagem sendo respondida no chat
 
+## Backend Database Migrations
+
+**Regra:** toda mudança de schema Prisma **deve** ter uma migration SQL manual em `backend/prisma/migrations/`.
+
+### Por quê manual?
+
+- `prisma migrate dev` reseta o banco em ambientes com tabelas pré-existentes — **nunca rodar em produção**
+- `prisma db push` destrói dados ao detectar divergências — **proibido**
+- O backend roda `prisma migrate deploy` automaticamente no startup (ver `main.ts`) — migrations são aplicadas em todo deploy/redeploy sem intervenção manual
+
+### Como criar uma migration
+
+```bash
+# 1. Criar diretório com timestamp + nome descritivo
+mkdir backend/prisma/migrations/YYYYMMDDHHMMSS_nome_da_mudanca
+
+# 2. Criar o arquivo SQL idempotente dentro
+touch backend/prisma/migrations/YYYYMMDDHHMMSS_nome_da_mudanca/migration.sql
+```
+
+### Regras do SQL da migration
+
+Toda migration **deve ser idempotente** para funcionar em DB novo e em DB existente:
+
+```sql
+-- Tabela nova
+CREATE TABLE IF NOT EXISTS "MinhaTabela" ( ... );
+
+-- Índice novo
+CREATE UNIQUE INDEX IF NOT EXISTS "MinhaTabela_campo_key" ON "MinhaTabela"("campo");
+
+-- Coluna nova em tabela existente
+ALTER TABLE "MinhaTabela" ADD COLUMN IF NOT EXISTS "novaColuna" TEXT;
+
+-- NUNCA usar:
+-- DROP TABLE ...
+-- ALTER TABLE ... DROP COLUMN ...
+-- (mudanças destrutivas exigem aprovação explícita e backup)
+```
+
+### Fluxo completo ao alterar schema
+
+1. Editar `backend/prisma/schema.prisma` com a mudança desejada
+2. Criar migration SQL idempotente em `backend/prisma/migrations/<timestamp>_<nome>/migration.sql`
+3. Parar o dev server e rodar `npx prisma generate` no `backend/` para regenerar o client
+4. Reiniciar — `prisma migrate deploy` aplica automaticamente no bootstrap
+
+### Atenção: Prisma Client gerado
+
+O arquivo `query_engine-windows.dll.node` fica locked enquanto o dev server roda. `npx prisma generate` falha com `EPERM` se o servidor estiver ativo. Solução: parar o servidor → gerar → reiniciar.
+
+Enquanto o client não for regenerado após uma mudança de schema, usar `$executeRaw`/`$queryRaw` para acessar campos novos (ex: `registeredPhone`).
+
 ## Docker
 
 ```bash

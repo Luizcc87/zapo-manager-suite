@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import { execFileSync } from 'child_process';
 import instanceRouter from './routes/instance.routes';
 import messageRouter from './routes/message.routes';
 import { ZapoManager } from './manager';
@@ -89,6 +90,9 @@ async function bootstrap() {
   }
 
   try {
+    console.log('[Zapo-Manager] Aplicando migrations...');
+    execFileSync('npx', ['prisma', 'migrate', 'deploy'], { stdio: 'inherit', cwd: path.join(__dirname, '..'), shell: true });
+
     // Carregar e reconectar instâncias ativas do banco de dados na inicialização
     await ZapoManager.loadAll();
     
