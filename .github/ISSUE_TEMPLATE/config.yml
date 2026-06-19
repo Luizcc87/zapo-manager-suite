@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discord Community
+    url: https://evolution-api.com/discord
+    about: Join our Discord community for general questions and discussions
+  - name: 📖 Documentation
+    url: https://doc.evolution-api.com
+    about: Check our comprehensive documentation for guides and API reference
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/EvolutionAPI/evolution-manager-v2/security/advisories/new
+    about: Please report security vulnerabilities privately via GitHub Security Advisories
+  - name: 💼 Commercial Support
+    url: https://evolution-api.com/contact
+    about: Get professional support and custom solutions

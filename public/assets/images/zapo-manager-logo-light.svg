@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 220" width="940" height="220">
+  <defs>
+    <linearGradient id="g-green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1C9200"/>
+      <stop offset="100%" stop-color="#82E600"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hexagon border (pointy-top, center 110,110, R=96) -->
+  <polygon
+    points="110,14 193.1,62 193.1,158 110,206 26.9,158 26.9,62"
+    fill="none"
+    stroke="url(#g-green)"
+    stroke-width="9"
+    stroke-linejoin="round"/>
+
+  <!-- Z letter -->
+  <text
+    x="110" y="158"
+    text-anchor="middle"
+    font-family="Nunito, Poppins, 'Arial Rounded MT Bold', 'Helvetica Neue', Arial, sans-serif"
+    font-size="122"
+    font-weight="900"
+    fill="url(#g-green)">Z</text>
+
+  <!-- "zapo" wordmark -->
+  <text
+    x="222" y="158"
+    font-family="Nunito, Poppins, 'Helvetica Neue', Arial, sans-serif"
+    font-size="132"
+    font-weight="700"
+    fill="#262E2C"
+    stroke="white"
+    stroke-width="6"
+    paint-order="stroke fill">zapo</text>
+
+  <!-- "manager" wordmark — baseline-aligned, verde, peso leve -->
+  <text
+    x="535" y="158"
+    font-family="Nunito, Poppins, 'Helvetica Neue', Arial, sans-serif"
+    font-size="86"
+    font-weight="400"
+    fill="#2AAD00">manager</text>
+</svg>

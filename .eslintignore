@@ -1,0 +1,9 @@
+dist/
+node_modules/
+build/
+*.config.js
+*.config.ts
+.eslintrc.cjs
+vite.config.ts
+tailwind.config.js
+postcss.config.js
