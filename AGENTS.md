@@ -42,6 +42,43 @@ O WhatsApp pune conexões simultâneas de uma mesma sessão com banimento do nú
 
 ---
 
+## 📦 Gestão de Versões do WhatsApp
+
+O sistema lida com **dois espaços de versão independentes**. Confundi-los causa falhas silenciosas difíceis de diagnosticar.
+
+### Versão WA Web (`2.3000.x`)
+
+Usada nas conexões por QR code / browser emulation. O Zapo possui **auto-recovery nativo**:
+
+- `recoverFromClientTooOld: true` está habilitado em `clientOptions` de `manager.ts`
+- Ao receber `failure_client_too_old`, o `WaClient` chama `fetchLatestWaWebVersion()` que lê o `client_revision` de `web.whatsapp.com/sw.js` e reconecta automaticamente
+- **Nenhuma ação manual necessária** para este espaço
+
+### Versão WA Business Android (`2.24.x.x`)
+
+Usada nas conexões mobile TCP (`mobileTransport`). Campo `deviceInfo.appVersion`. O Zapo **não tem auto-recovery** para este espaço — `recoverFromClientTooOld` só injeta versão Web, o que não funciona para mobile.
+
+**Estratégia implementada:**
+
+| Momento | Ação |
+|---|---|
+| Startup | `fetchLatestAndroidWaVersion()` busca a versão atual no Google Play Store |
+| Sucesso | `setAppVersion(version)` atualiza o runtime antes de reconectar instâncias |
+| Falha de rede / HTML mudou | Usa `DEFAULT_MOBILE_DEVICE.appVersion` como fallback hardcoded |
+| `confirmCode` | `getMobileDevice()` usa sempre a versão runtime resolvida |
+| Reconexão de instância existente | `instance.deviceInfo` (salvo no DB no momento do registro) tem precedência |
+
+**Arquivos relevantes:**
+- `backend/src/config/device.ts` — fonte única da config de device + `getMobileDevice()`
+- `backend/src/config/fetchAndroidWaVersion.ts` — fetcher Play Store + documentação dos patterns
+
+**Quando o fetcher quebrar** (Google muda o HTML do Play Store):
+1. Inspecionar HTML de `https://play.google.com/store/apps/details?id=com.whatsapp.w4b&hl=en&gl=US`
+2. Atualizar `VERSION_PATTERNS` em `fetchAndroidWaVersion.ts`
+3. Atualizar o fallback `appVersion` em `device.ts`
+
+---
+
 ## ⚠️ Regras Técnicas de Desenvolvimento (TypeScript & Zapo)
 
 Ao realizar modificações no backend, siga estritamente estas diretrizes de tipagem e API da biblioteca Zapo:

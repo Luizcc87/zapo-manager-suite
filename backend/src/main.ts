@@ -8,6 +8,15 @@ import instanceRouter from './routes/instance.routes';
 import messageRouter from './routes/message.routes';
 import { ZapoManager } from './manager';
 import { PrismaClient } from '@prisma/client';
+import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
+import { setAppVersion, getCurrentAppVersion } from './config/device';
+
+function getZapoWebVersion(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('zapo-js/spec/version').WA_VERSION ?? 'unknown';
+  } catch { return 'unknown'; }
+}
 
 dotenv.config();
 
@@ -169,6 +178,17 @@ async function bootstrap() {
   try {
     // Aplica migrations com retry para aguardar o banco estar pronto
     await runMigrationsWithRetry();
+
+    // Versões em uso — logar antes de reconectar instâncias
+    console.log(`[Zapo-Manager] WA Web version (zapo-js built-in): ${getZapoWebVersion()}`);
+
+    const latestAndroidVersion = await fetchLatestAndroidWaVersion();
+    if (latestAndroidVersion) {
+      setAppVersion(latestAndroidVersion);
+      console.log(`[Zapo-Manager] WA Business Android version (Play Store): ${latestAndroidVersion}`);
+    } else {
+      console.warn(`[Zapo-Manager] WA Business Android version: fetch falhou — usando fallback hardcoded: ${getCurrentAppVersion()}`);
+    }
 
     // Carregar e reconectar instâncias ativas do banco de dados na inicialização
     await ZapoManager.loadAll();

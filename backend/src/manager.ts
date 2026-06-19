@@ -1,4 +1,5 @@
 import { createStore, WaClient, ConsoleLogger } from 'zapo-js';
+import { getMobileDevice } from './config/device';
 import { createPostgresStore } from '@zapo-js/store-postgres';
 import { createRedisStore } from '@zapo-js/store-redis';
 import { createSqliteStore } from '@zapo-js/store-sqlite';
@@ -184,18 +185,15 @@ export class ZapoManager {
     const clientOptions: any = {
       store,
       sessionId: instanceName,
+      // Auto-reconnect with latest WA Web version on failure_client_too_old (Web transport)
+      recoverFromClientTooOld: true,
     };
 
     // Aplicar transporte Mobile (TCP Android) se configurado
     if (instance.mobileTransport) {
       clientOptions.mobileTransport = {
-        deviceInfo: instance.deviceInfo || {
-          manufacturer: 'Google',
-          device: 'Pixel 7',
-          osVersion: '13',
-          osBuildNumber: 'TQ3A.230805.001',
-          appVersion: '2.24.4.76'
-        }
+        // instance.deviceInfo persisted from registration; falls back to runtime-resolved version
+        deviceInfo: instance.deviceInfo || getMobileDevice()
       };
     }
 

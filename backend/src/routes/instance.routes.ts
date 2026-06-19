@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ZapoManager } from '../manager';
+import { getMobileDevice } from '../config/device';
 import { PrismaClient } from '@prisma/client';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
@@ -286,13 +287,7 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
       routingInfo: creds.routingInfo ? new Uint8Array(creds.routingInfo) : undefined,
       serverHasPreKeys: true,
       platform: 'android',
-      deviceInfo: {
-        manufacturer: 'Google',
-        device: 'Pixel 7',
-        osVersion: '13',
-        osBuildNumber: 'TQ3A.230805.001',
-        appVersion: '2.24.4.76'
-      }
+      deviceInfo: getMobileDevice()
     };
 
     console.log('[ZapoRouter] [ConfirmCode] Credenciais mapeadas para Zapo:', JSON.stringify(mappedCreds, null, 2));

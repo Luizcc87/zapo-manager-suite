@@ -101,6 +101,34 @@ Cada integração em `src/lib/queries/<integration>/` tem estrutura uniforme:
 - `EmbedColorsContext` — customização de cores do embed
 - `ReplyingMessageContext` — mensagem sendo respondida no chat
 
+## Versões do WhatsApp — Como o Sistema Trata
+
+Existem **dois espaços de versão independentes** que o sistema precisa manter atualizados:
+
+### 1. Versão WA Web (conexões QR / browser)
+
+Formato: `2.3000.x` — usada quando `mobileTransport` está desativado.
+
+O Zapo tem **auto-recovery nativo**: ao receber `failure_client_too_old` (HTTP 405), o `recoverFromClientTooOld: true` (ativado em `manager.ts`) busca automaticamente a versão atual de `web.whatsapp.com/sw.js` e reconecta. Nenhuma ação manual necessária.
+
+### 2. Versão WA Business Android (conexões mobile TCP)
+
+Formato: `2.24.x.x` — campo `appVersion` dentro de `deviceInfo` do `mobileTransport`.
+
+O Zapo **não tem auto-recovery** para este espaço de versão. `recoverFromClientTooOld` só corrige a versão Web — injetá-la numa conexão mobile não resolve.
+
+**Solução implementada:**
+- Fonte única de configuração: [`backend/src/config/device.ts`](backend/src/config/device.ts)
+- No startup, [`backend/src/config/fetchAndroidWaVersion.ts`](backend/src/config/fetchAndroidWaVersion.ts) busca a versão atual do WA Business no Google Play Store e chama `setAppVersion()` antes de `ZapoManager.loadAll()`
+- Se o fetch falhar (rede, mudança de HTML do Play Store), usa o valor hardcoded em `DEFAULT_MOBILE_DEVICE.appVersion` como fallback
+
+**Para atualizar o fallback manualmente** (quando o Play Store mudar o HTML e o fetch parar de funcionar):
+1. Verificar a versão atual: https://play.google.com/store/apps/details?id=com.whatsapp.w4b
+2. Atualizar `appVersion` em [`backend/src/config/device.ts`](backend/src/config/device.ts)
+3. Se os patterns do fetcher quebrarem, atualizar `VERSION_PATTERNS` em [`backend/src/config/fetchAndroidWaVersion.ts`](backend/src/config/fetchAndroidWaVersion.ts)
+
+---
+
 ## Backend Database Migrations
 
 **Regra:** toda mudança de schema Prisma **deve** ter uma migration SQL manual em `backend/prisma/migrations/`.
