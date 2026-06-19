@@ -10,9 +10,6 @@ import * as fs from 'fs';
 const prisma = new PrismaClient();
 const router = Router();
 
-// Cache em memória para os números mockados registrados via SMS/OTP
-const mockRegisteredNumbers = new Map<string, string>();
-
 // Cache para sockets de registro com TTL de 10 minutos
 interface RegistrationCacheItem {
   sock: any;
@@ -196,6 +193,9 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
       sock,
       phoneNumber: parsed.full,
     });
+
+    // Persistir telefone no DB — sobrevive a restarts do servidor
+    await prisma.$executeRaw`UPDATE "Instance" SET "registeredPhone" = ${parsed.full} WHERE "instanceName" = ${instanceName}`;
 
     return res.status(200).json({ status: 'success' });
   } catch (err: any) {
@@ -403,7 +403,11 @@ router.get('/connectionState/:instanceName', checkInstanceApiKey, async (req: Re
 // 4. Listar todas as Instâncias
 router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
-    const dbInstances = await prisma.instance.findMany();
+    const dbInstances = await prisma.$queryRaw<Array<{
+      id: string; instanceName: string; apiKey: string; status: string;
+      mobileTransport: boolean; registeredPhone: string | null;
+      deviceInfo: unknown; createdAt: Date; updatedAt: Date;
+    }>>`SELECT * FROM "Instance"`;
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
       const isMockConnected = inst.status === 'connected' && !active;
@@ -415,9 +419,8 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         try {
           ownerJid = active.client.getCredentials()?.meJid || null;
         } catch (e) {}
-      } else if (isMockConnected) {
-        const savedNum = mockRegisteredNumbers.get(inst.instanceName) || '5511999999999';
-        ownerJid = `${savedNum.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+      } else if (isMockConnected && inst.registeredPhone) {
+        ownerJid = `${inst.registeredPhone.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
       }
 
       return {
@@ -428,7 +431,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         profileName: inst.instanceName,
         profilePicUrl: '',
         integration: 'WHATSAPP-BAILEYS',
-        number: isMockConnected ? (mockRegisteredNumbers.get(inst.instanceName) || '') : '',
+        number: isMockConnected ? (inst.registeredPhone || '') : '',
         businessId: '',
         token: inst.apiKey,
         clientName: 'evolution',

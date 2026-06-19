@@ -13,6 +13,7 @@ model Instance {
   apiKey          String
   status          String   @default("disconnected")
   mobileTransport Boolean  @default(false)
+  registeredPhone String?
   deviceInfo      Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
