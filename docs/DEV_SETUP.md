@@ -21,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Acessem `http://localhost:5173` → informe `http://localhost:8080` como URL da API e use a `GLOBAL_API_KEY` configurada no `.env`.
+Acesse `http://localhost:5173` (a URL da API `http://localhost:8080` será detectada e preenchida automaticamente no campo "URL do Servidor" durante o desenvolvimento local) e use a `GLOBAL_API_KEY` configurada no `.env`.
 
 ## Método B: Serviços Separados
 

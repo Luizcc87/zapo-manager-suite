@@ -148,8 +148,9 @@ O `.docker/` contém configs nginx incluindo SPA fallback, SSL e cache headers.
 ## Environment Variables
 
 ```env
-VITE_EVOLUTION_API_URL=http://localhost:8080   # Opcional: pré-configura URL
-VITE_EVOLUTION_API_KEY=your-api-key            # Opcional: pré-configura token
+VITE_API_URL=http://localhost:8080             # Opcional: pré-configura/sobrescreve a URL do backend
+VITE_API_KEY=your-api-key                      # Opcional: pré-configura a chave API global no formulário
+# Também há suporte legível para VITE_EVOLUTION_API_URL e VITE_EVOLUTION_API_KEY
 ```
 
 Sem essas variáveis, o usuário configura via tela de login.
