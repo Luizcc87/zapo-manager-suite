@@ -1,0 +1,23 @@
+.message-bubble-from-me {
+  align-self: end;
+}
+
+.message-bubble-from-me::after {
+  right: -15px;
+  border-left-color: var(--from-me-bubble-color);
+  border-right-color: transparent;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.message-bubble-from-other {
+  align-self: start;
+}
+
+.message-bubble-from-other::after {
+  left: -15px;
+  border-right-color: var(--from-other-bubble-color);
+  border-left-color: transparent;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}

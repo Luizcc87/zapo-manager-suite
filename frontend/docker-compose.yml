@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  evolution-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    container_name: evolution-manager-v2
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - evolution-network
+
+  # Optional: Include Evolution API for complete stack
+  # Uncomment the section below if you want to run Evolution API alongside the manager
+
+  # evolution-api:
+  #   image: evolutionapi/evolution-api:latest
+  #   ports:
+  #     - "8080:8080"
+  #   container_name: evolution-api
+  #   restart: unless-stopped
+  #   environment:
+  #     - DATABASE_PROVIDER=postgresql
+  #     - DATABASE_CONNECTION_URI=postgresql://postgres:password@postgres:5432/evolution
+  #     - AUTHENTICATION_API_KEY=your-api-key-here
+  #     - SERVER_PORT=8080
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - evolution-network
+
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: evolution-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     - POSTGRES_DB=evolution
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - evolution-network
+
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: evolution-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - evolution-network
+
+networks:
+  evolution-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
