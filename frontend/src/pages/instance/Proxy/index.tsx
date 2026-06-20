@@ -119,8 +119,9 @@ function ProxyStatusPanel({ instanceName }: { instanceName: string }) {
         )}
 
         {status.error && (
-          <div className="rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-500 break-all">
-            {status.error}
+          <div className="rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-500 break-all space-y-1">
+            <div className="font-semibold">{status.error}</div>
+            {status.details && <div className="text-[10px] opacity-80">{status.details}</div>}
           </div>
         )}
       </div>
@@ -212,7 +213,11 @@ function Proxy() {
       toast.success(t("proxy.toast.success"));
     } catch (error: any) {
       console.error(t("proxy.toast.error"), error);
-      toast.error(`Error : ${error?.response?.data?.response?.message}`);
+      const errMsg = error?.response?.data?.response?.message || 
+                     error?.response?.data?.message || 
+                     error?.response?.data?.error || 
+                     error?.message;
+      toast.error(`Error : ${errMsg}`);
     } finally {
       setLoading(false);
     }
@@ -278,4 +283,4 @@ function Proxy() {
   );
 }
 
-export { Proxy };
+export { Proxy, ProxyStatusPanel };

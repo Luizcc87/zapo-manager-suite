@@ -6,6 +6,51 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Pareamento QR Code / Código de Pareamento para Zapo Mobile Companion
+
+**Backend**
+- `backend/src/manager.ts`:
+  - Modificada a inicialização do cliente no `connectClient` para condicionalmente ignorar a configuração `mobileTransport` quando a instância ainda não possuir credenciais registradas (campo `ownerJid` vazio no banco de dados). Isso permite que a instância mobile pendente de pareamento seja inicializada temporariamente via WebSocket normal para gerar o QR code / código de pareamento, e mude para a emulação TCP do dispositivo móvel na reconexão após o primeiro pareamento.
+- `backend/src/routes/instance.routes.ts`:
+  - Adicionado fallback para `getMobileDevice()` e `getMobileDevice().appVersion` no endpoint `GET /fetchInstances` se a instância móvel estiver sem `deviceInfo` salvo no banco de dados (padrão em novas instâncias pareadas via QR Code), exibindo corretamente a "Versão do app mobile" na dashboard.
+
+**Frontend**
+- `frontend/src/pages/instance/DashboardInstance/index.tsx`:
+  - Removido o bloqueio `instanceType !== "mobile"` que ocultava as opções de gerar QR Code e código de pareamento para instâncias do tipo Mobile. Agora o usuário pode escolher conectar como Companion (Tablet Mode) escaneando o QR Code ou digitando o código de pareamento, além de poder registrar como dispositivo primário via SMS/Voz.
+  - Importado e renderizado o card de status de proxy `ProxyStatusPanel` dinamicamente na Dashboard da instância quando a mesma possui proxy configurado e ativado (`instance.proxyEnabled === true`), exibindo o estado da conexão, IP externo, latência e servidor.
+- `frontend/src/pages/instance/Proxy/index.tsx`:
+  - Exportado o componente `ProxyStatusPanel` para permitir seu reuso em outros locais (como no Dashboard da Instância).
+
+### Logs de debug para conexões de proxy
+
+**Backend**
+- `backend/src/routes/config.routes.ts`:
+  - Adicionados logs detalhados com `console.error` no backend (exibindo `err.cause`) ao falhar o teste de conectividade de proxy.
+  - Retornado o campo `details` com a causa real do erro no JSON de resposta, permitindo que a interface ou o cliente saibam o motivo exato de `fetch failed`.
+  - Mapeado erro específico de código HTTP `402` (Payment Required) retornado por túneis HTTP para fornecer uma mensagem amigável instruindo o usuário a verificar o saldo/conta do plano de proxy.
+  - Adicionada validação de conectividade em tempo real ao salvar configurações de proxy ativas no endpoint `POST /proxy/set/:instanceName`. Se a conexão falhar, retorna status 400 formatado no padrão esperado pela UI (`response.message`), impedindo que o proxy seja salvo como sucesso quando a conexão falhar.
+- `backend/src/manager.ts`:
+  - Introduzido `ZapoManager.proxyStatusCache` em memória para persistir o estado de conectividade da última verificação ou tentativa de conexão do proxy por instância.
+  - O cache é atualizado com `connected: true/false` ao conectar o cliente e capturar erros de inicialização de proxy.
+  - No bloco `catch` de inicialização do cliente, realiza um teste de conectividade em tempo real via `testProxyConnectivity` antes de marcar a falha no cache. Isso previne que erros da aplicação/registro (ex: `mobileTransport requires registered credentials`) sejam marcados incorretamente como falhas de proxy na dashboard.
+  - Omitida a propriedade `ws` (agente WebSocket do proxy) das configurações enviadas ao `WaClient` quando a instância utiliza `mobileTransport`, uma vez que a conexão móvel nativa TCP (porta 5222) não suporta agentes WebSocket. Isso evita a exceção `mobileTransport does not support socketOptions.proxy.ws` enquanto mantém o proxy ativo para envio/download de mídias e link previews.
+  - Adicionado suporte e mapeamento para erro HTTP `407` (Proxy Authentication Required) em `testProxyConnectivity`.
+  - Aplicada sanitização com expressão regular (`toLowerCase` + `replace(/[^a-z0-9]/g, '')`) nos sufixos de `session` e `country` adicionados ao usuário do proxy. Isso evita rejeições de autenticação de proxy (HTTP 407) causadas por formatos inválidos contendo letras maiúsculas ou caracteres especiais (como o nome da instância `Teste-mobile` auto-injetado como ID de sessão).
+  - Adicionados logs informativos detalhados no terminal ao iniciar o teste de conectividade de proxy, mostrando o usuário final composto com sufixos, o host do proxy e o resultado (sucesso, IP retornado e latência).
+- `backend/src/routes/instance.routes.ts`:
+  - Retornadas as propriedades `proxyConnected` e `proxyError` em `GET /fetchInstances` a partir do cache de status do proxy.
+
+**Frontend**
+- `frontend/src/pages/instance/Proxy/index.tsx`:
+  - Ajustado o tratamento de erros no salvamento de proxy para capturar chaves de resposta alternativas (`error?.response?.data?.message`, `error?.response?.data?.error`, etc.) de forma resiliente, evitando que mensagens de erro importantes fiquem ocultas ou indefinidas no toast.
+- `frontend/src/components/instance-card.tsx`:
+  - O badge de Proxy ativado muda dinamicamente para vermelho com o rótulo "Proxy falhou" e o ícone `ShieldAlert` se a propriedade `proxyConnected` for `false`, alertando o usuário diretamente na listagem de instâncias.
+- `frontend/src/pages/instance/DashboardInstance/index.tsx`:
+  - Adicionado um banner de `Alert` vermelho com `ShieldAlert` no topo da Dashboard da instância avisando sobre a falha de proxy e exibindo a mensagem descritiva do erro.
+  - Ocultados os botões/diálogos de "QR Code" e "Código de Pareamento" (que ficavam em loop de carregamento infinito) para instâncias móveis (`mobileTransport`), exibindo apenas a opção correta de "Registrar via SMS/Voz" (Registro Primário).
+- `frontend/src/types/evolution.types.ts`:
+  - Atualizado o tipo `Instance` para suportar `proxyConnected` e `proxyError`.
+
 ### Correção de conexão em instâncias móveis pendentes
 
 **Backend**

@@ -415,9 +415,9 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         mobileTransport: inst.mobileTransport,
         webhookEnabled: !!(inst.webhookConfig as any)?.enabled,
         softwareVersion: inst.mobileTransport
-          ? ((inst.deviceInfo as any)?.appVersion || '')
+          ? ((inst.deviceInfo as any)?.appVersion || getMobileDevice().appVersion)
           : getWebVersion(),
-        deviceInfo: inst.deviceInfo || null,
+        deviceInfo: inst.deviceInfo || (inst.mobileTransport ? getMobileDevice() : null),
         ownerJid: ownerJid || inst.ownerJid || null,
         profileName: inst.profileName || inst.instanceName,
         profilePicUrl: inst.profilePicUrl || '',
@@ -437,6 +437,10 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
           syncFullHistory: false
         },
         proxyEnabled: !!(inst.proxyConfig as any)?.enabled,
+        proxyConnected: ZapoManager.proxyStatusCache.get(inst.instanceName)?.connected ?? true,
+        proxyError: ZapoManager.proxyStatusCache.get(inst.instanceName)?.connected === false 
+          ? (ZapoManager.proxyStatusCache.get(inst.instanceName)?.details || ZapoManager.proxyStatusCache.get(inst.instanceName)?.error || null)
+          : null,
         _count: {
           Message: 0,
           Contact: 0,

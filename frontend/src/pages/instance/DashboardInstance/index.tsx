@@ -4,7 +4,7 @@ import { Avatar, AvatarImage } from "@evoapi/design-system/avatar";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@evoapi/design-system/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CircleUser, Globe, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, Smartphone, UsersRound } from "lucide-react";
+import { CircleUser, Globe, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, Smartphone, ShieldAlert, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import QRCode from "react-qr-code";
@@ -23,6 +23,7 @@ import { getProvider, getToken, TOKEN_ID } from "@/lib/queries/token";
 import { GoQrCodeModal } from "./GoQrCodeModal";
 import { GoSendMessageModal } from "./GoSendMessageModal";
 import { PrimaryRegistrationDialog } from "../../Dashboard/PrimaryRegistration";
+import { ProxyStatusPanel } from "../Proxy";
 
 function DashboardInstance() {
   const { t, i18n } = useTranslation();
@@ -209,6 +210,22 @@ function DashboardInstance() {
               </div>
             </div>
 
+            {instance.proxyEnabled && instance.proxyConnected === false && (
+              <Alert variant="destructive" className="w-full flex items-start gap-3">
+                <div className="mt-0.5">
+                  <ShieldAlert className="h-5 w-5 text-red-500" />
+                </div>
+                <div>
+                  <AlertTitle className="text-sm font-bold text-red-500">
+                    {t("proxy.alert.failed.title", { defaultValue: "Falha na conexão do Proxy" })}
+                  </AlertTitle>
+                  <p className="mt-1 text-xs text-red-500/90 break-all leading-normal">
+                    {instance.proxyError || t("proxy.alert.failed.description", { defaultValue: "Não foi possível estabelecer conexão através do proxy configurado. Por favor, verifique as configurações." })}
+                  </p>
+                </div>
+              </Alert>
+            )}
+
             {!connected && (
               <Alert variant="warning" className="flex flex-wrap items-center justify-between gap-3">
                 <AlertTitle className="text-lg font-bold tracking-wide">
@@ -316,6 +333,12 @@ function DashboardInstance() {
         </Card>
 
         {isGo && <GoSendMessageModal open={goSendOpen} onOpenChange={setGoSendOpen} />}
+
+        {instance.proxyEnabled && (
+          <div className="w-full">
+            <ProxyStatusPanel instanceName={instance.name} />
+          </div>
+        )}
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="border-sidebar-border bg-sidebar">

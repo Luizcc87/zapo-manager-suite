@@ -11,6 +11,7 @@ export type ProxyStatusResponse = {
   proxyUrl?: string;
   protocol?: string;
   error?: string;
+  details?: string;
 };
 
 const queryKey = (instanceName?: string | null) => ["proxy", "status", instanceName];

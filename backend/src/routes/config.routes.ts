@@ -2,63 +2,9 @@ import { Router, Request, Response } from 'express';
 import { ProxyAgent } from 'undici';
 import { prisma } from '../lib/prisma';
 import { checkInstanceApiKey } from '../middleware/auth';
+import { ZapoManager, testProxyConnectivity } from '../manager';
 
 const router = Router();
-
-async function testProxyConnectivity(cfg: any): Promise<{
-  connected: boolean;
-  externalIp?: string;
-  latencyMs: number;
-  error?: string;
-}> {
-  const CHECK_URL = 'https://api.ipify.org?format=json';
-  const protocol = (cfg.protocol as string) || 'http';
-
-  // Apply same username suffix logic as buildProxy in manager.ts
-  let effectiveUser: string = cfg.username || '';
-  if (effectiveUser) {
-    if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase()}`;
-    if (cfg.session) effectiveUser += `-${cfg.session}`;
-  }
-  const auth = effectiveUser && cfg.password
-    ? `${encodeURIComponent(effectiveUser)}:${encodeURIComponent(cfg.password)}@`
-    : effectiveUser && !cfg.password
-    ? `${encodeURIComponent(effectiveUser)}@`
-    : '';
-  const proxyUrl = `${protocol}://${auth}${cfg.host}:${cfg.port}`;
-  const start = Date.now();
-
-  try {
-    if (protocol === 'socks4' || protocol === 'socks5') {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { SocksProxyAgent } = require('socks-proxy-agent');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const https = require('https');
-      const agent = new SocksProxyAgent(proxyUrl);
-      const data = await new Promise<string>((resolve, reject) => {
-        const req = https.get(CHECK_URL, { agent }, (res: any) => {
-          let body = '';
-          res.on('data', (chunk: any) => { body += chunk; });
-          res.on('end', () => resolve(body));
-        });
-        req.on('error', reject);
-        req.setTimeout(10_000, () => { req.destroy(); reject(new Error('timeout')); });
-      });
-      const json = JSON.parse(data) as { ip: string };
-      return { connected: true, externalIp: json.ip, latencyMs: Date.now() - start };
-    }
-
-    // HTTP / HTTPS — undici ProxyAgent supports both
-    const dispatcher = new ProxyAgent(proxyUrl);
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { fetch: undiciFetch } = require('undici');
-    const res = await (undiciFetch as typeof fetch)(CHECK_URL, { dispatcher } as any);
-    const json = await res.json() as { ip: string };
-    return { connected: true, externalIp: json.ip, latencyMs: Date.now() - start };
-  } catch (err: any) {
-    return { connected: false, latencyMs: Date.now() - start, error: err.message };
-  }
-}
 
 const DEFAULT_SETTINGS = {
   rejectCall: false,
@@ -154,13 +100,36 @@ router.get('/proxy/find/:instanceName', checkInstanceApiKey, async (req: Request
 router.post('/proxy/set/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const data = { ...DEFAULT_PROXY, ...req.body };
+
+    if (data.enabled && data.host && data.port) {
+      const test = await testProxyConnectivity(data);
+      ZapoManager.proxyStatusCache.set(req.params.instanceName, {
+        connected: test.connected,
+        error: test.error,
+        details: test.details
+      });
+      if (!test.connected) {
+        return res.status(400).json({
+          response: {
+            message: `Falha na conexão com o proxy: ${test.error}${test.details ? ` (${test.details})` : ''}`
+          }
+        });
+      }
+    } else {
+      ZapoManager.proxyStatusCache.delete(req.params.instanceName);
+    }
+
     await prisma.instance.update({
       where: { instanceName: req.params.instanceName },
       data: { proxyConfig: data },
     });
     return res.json(data);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      response: {
+        message: err.message
+      }
+    });
   }
 });
 
@@ -179,6 +148,11 @@ router.get('/proxy/status/:instanceName', checkInstanceApiKey, async (req: Reque
     const proxyUrl = `${protocol}://${cfg.host}:${cfg.port}`; // no credentials
 
     const result = await testProxyConnectivity(cfg);
+    ZapoManager.proxyStatusCache.set(req.params.instanceName, {
+      connected: result.connected,
+      error: result.error,
+      details: result.details
+    });
     return res.json({ enabled: true, protocol, proxyUrl, ...result });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

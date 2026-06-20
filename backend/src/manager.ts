@@ -124,6 +124,95 @@ async function buildStore(instanceName: string): Promise<{ store: any; pgStore: 
   return { store, pgStore, redisClient, poller };
 }
 
+export async function testProxyConnectivity(cfg: any): Promise<{
+  connected: boolean;
+  externalIp?: string;
+  latencyMs: number;
+  error?: string;
+  details?: string;
+}> {
+  const CHECK_URL = 'https://api.ipify.org?format=json';
+  const protocol = (cfg.protocol as string) || 'http';
+
+  // Apply same username suffix logic as buildProxy in manager.ts
+  let effectiveUser: string = cfg.username || '';
+  if (effectiveUser) {
+    if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase().replace(/[^a-z]/g, '')}`;
+    if (cfg.session && cfg.session !== 'none' && cfg.session !== 'disabled') {
+      effectiveUser += `-${(cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    }
+  }
+  const auth = effectiveUser && cfg.password
+    ? `${encodeURIComponent(effectiveUser)}:${encodeURIComponent(cfg.password)}@`
+    : effectiveUser && !cfg.password
+    ? `${encodeURIComponent(effectiveUser)}@`
+    : '';
+  const proxyUrl = `${protocol}://${auth}${cfg.host}:${cfg.port}`;
+  const start = Date.now();
+
+  console.log(`[ProxyCheck] Iniciando teste de conectividade via ${protocol} proxy (${cfg.host}:${cfg.port}). Suffixes: country=${cfg.country || 'none'}, session=${cfg.session || 'none'}, effectiveUser=${effectiveUser}`);
+
+  try {
+    if (protocol === 'socks4' || protocol === 'socks5') {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { SocksProxyAgent } = require('socks-proxy-agent');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const https = require('https');
+      const agent = new SocksProxyAgent(proxyUrl);
+      const data = await new Promise<string>((resolve, reject) => {
+        const req = https.get(CHECK_URL, { agent }, (res: any) => {
+          let body = '';
+          res.on('data', (chunk: any) => { body += chunk; });
+          res.on('end', () => resolve(body));
+        });
+        req.on('error', reject);
+        req.setTimeout(10_000, () => { req.destroy(); reject(new Error('timeout')); });
+      });
+      const json = JSON.parse(data) as { ip: string };
+      const latency = Date.now() - start;
+      console.log(`[ProxyCheck] Conectado via SOCKS com sucesso. IP externo: ${json.ip}. Latência: ${latency}ms`);
+      return { connected: true, externalIp: json.ip, latencyMs: latency };
+    }
+
+    // HTTP / HTTPS — undici ProxyAgent supports both
+    const dispatcher = new ProxyAgent(proxyUrl);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { fetch: undiciFetch } = require('undici');
+    const res = await (undiciFetch as typeof fetch)(CHECK_URL, { dispatcher } as any);
+    const json = await res.json() as { ip: string };
+    const latency = Date.now() - start;
+    console.log(`[ProxyCheck] Conectado via HTTP/HTTPS com sucesso. IP externo: ${json.ip}. Latência: ${latency}ms`);
+    return { connected: true, externalIp: json.ip, latencyMs: latency };
+  } catch (err: any) {
+    console.error(`[ProxyCheck] Error testing connectivity via ${protocol} proxy (${cfg.host}:${cfg.port}):`, err);
+    if (err.cause) {
+      console.error(`[ProxyCheck] Cause:`, err.cause);
+    }
+
+    const fullErrorStr = [
+      err.message,
+      err.cause?.message,
+      err.cause?.cause?.message,
+      String(err.cause),
+      String(err.cause?.cause)
+    ].filter(Boolean).join(' | ');
+
+    let errDetails = err.cause ? (err.cause.message || String(err.cause)) : undefined;
+    if (fullErrorStr.includes('402')) {
+      errDetails = 'Status 402 (Payment Required) - Por favor, verifique sua conta de proxy (saldo, assinatura ou limite de dados excedido).';
+    } else if (fullErrorStr.includes('407')) {
+      errDetails = 'Status 407 (Proxy Authentication Required) - Usuário ou senha do proxy incorretos, ou formato de sessão inválido.';
+    }
+
+    return {
+      connected: false,
+      latencyMs: Date.now() - start,
+      error: err.message,
+      details: errDetails
+    };
+  }
+}
+
 function buildProxy(cfg: any): Record<string, any> | undefined {
   if (!cfg?.enabled || !cfg.host || !cfg.port) return undefined;
 
@@ -135,8 +224,10 @@ function buildProxy(cfg: any): Record<string, any> | undefined {
   //           (critical for WhatsApp: IP rotation mid-session triggers security checks)
   let effectiveUser: string = cfg.username || '';
   if (effectiveUser) {
-    if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase()}`;
-    if (cfg.session) effectiveUser += `-${cfg.session}`;
+    if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase().replace(/[^a-z]/g, '')}`;
+    if (cfg.session && cfg.session !== 'none' && cfg.session !== 'disabled') {
+      effectiveUser += `-${(cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    }
   }
 
   const auth = effectiveUser && cfg.password
@@ -163,6 +254,8 @@ function buildProxy(cfg: any): Record<string, any> | undefined {
 }
 
 export class ZapoManager {
+  static proxyStatusCache = new Map<string, { connected: boolean; error?: string; details?: string }>();
+
   // ── Socket.io bridge ────────────────────────────────────────────────────────
 
   static setSocketEmitter(fn: (event: string, payload: any) => void) {
@@ -369,6 +462,12 @@ export class ZapoManager {
     const logger = new ConsoleLogger('info');
     const { store, pgStore, redisClient, poller } = await buildStore(instanceName);
     const proxy = buildProxy(proxyConfig);
+    if (proxy && instance.mobileTransport) {
+      // mobileTransport uses TCP (port 5222) directly and doesn't use WebSockets.
+      // We omit the 'ws' option to avoid the 'mobileTransport does not support socketOptions.proxy.ws' error,
+      // but keep mediaUpload/mediaDownload/linkPreview proxy dispatchers active.
+      delete proxy.ws;
+    }
 
     if (proxy) {
       console.log(`[ZapoManager] [${instanceName}] Proxy ativo: ${proxyConfig.protocol}://${proxyConfig.host}:${proxyConfig.port}`);
@@ -389,11 +488,14 @@ export class ZapoManager {
       ...(proxy && { proxy }),
     };
 
-    if (instance.mobileTransport) {
+    const hasCredentials = !!instance.ownerJid;
+    if (instance.mobileTransport && hasCredentials) {
       clientOptions.mobileTransport = {
         deviceInfo: instance.deviceInfo || getMobileDevice()
       };
       console.log(`[ZapoManager] [${instanceName}] Inicializando cliente com Mobile Transport:`, JSON.stringify(clientOptions.mobileTransport, null, 2));
+    } else if (instance.mobileTransport) {
+      console.warn(`[ZapoManager] [${instanceName}] Instância Mobile sem credenciais registradas (ownerJid vazio). Ignorando mobileTransport para permitir pareamento QR Code via WebSocket.`);
     }
 
     const client = new WaClient(clientOptions, logger);
@@ -579,7 +681,24 @@ export class ZapoManager {
 
     try {
       await client.connect();
-    } catch (err) {
+      if (proxy) {
+        ZapoManager.proxyStatusCache.set(instanceName, { connected: true });
+      }
+    } catch (err: any) {
+      if (proxy) {
+        // Run a real-time connectivity check to verify if the failure is actually due to the proxy
+        const test = await testProxyConnectivity(proxyConfig).catch(() => ({ connected: false, error: 'Proxy check failed', details: undefined }));
+        if (!test.connected) {
+          ZapoManager.proxyStatusCache.set(instanceName, {
+            connected: false,
+            error: test.error || err.message,
+            details: test.details
+          });
+        } else {
+          // The proxy is working fine, so this error is related to credentials/registration (e.g. mobileTransport requires meJid)
+          ZapoManager.proxyStatusCache.set(instanceName, { connected: true });
+        }
+      }
       await ZapoManager.disconnectClient(instanceName);
       throw err;
     }

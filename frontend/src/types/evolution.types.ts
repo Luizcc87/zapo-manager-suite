@@ -44,6 +44,8 @@ export type Instance = {
   createdAt: string;
   updatedAt: string;
   proxyEnabled?: boolean;
+  proxyConnected?: boolean;
+  proxyError?: string | null;
   Setting: Settings;
   _count?: {
     Message?: number;

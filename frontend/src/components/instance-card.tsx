@@ -1,7 +1,7 @@
 import { Badge } from "@evoapi/design-system/badge";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent } from "@evoapi/design-system/card";
-import { FlaskConical, Globe, ShieldCheck, Settings, SquareMousePointer, Smartphone, Trash2 } from "lucide-react";
+import { FlaskConical, Globe, ShieldCheck, ShieldAlert, Settings, SquareMousePointer, Smartphone, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -106,11 +106,11 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
           <div className="flex flex-wrap gap-2 pb-2">
             <FlagBadge
               active={!!instance.proxyEnabled}
-              activeLabel={t("proxy.badge.active")}
+              activeLabel={instance.proxyConnected === false ? t("proxy.badge.failed", { defaultValue: "Proxy falhou" }) : t("proxy.badge.active")}
               inactiveLabel={t("proxy.badge.inactive", { defaultValue: "Proxy desativado" })}
-              activeClassName="bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"
+              activeClassName={instance.proxyConnected === false ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" : "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"}
               inactiveClassName="bg-muted text-muted-foreground hover:bg-muted/80"
-              activeIcon={<ShieldCheck className="h-3 w-3" />}
+              activeIcon={instance.proxyConnected === false ? <ShieldAlert className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3 w-3" />}
               inactiveIcon={<ShieldCheck className="h-3 w-3" />}
             />
             <FlagBadge
