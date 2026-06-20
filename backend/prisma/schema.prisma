@@ -18,6 +18,9 @@ model Instance {
   settingsConfig  Json?
   webhookConfig   Json?
   proxyConfig     Json?
+  profilePicUrl   String   @default("")
+  profileName     String   @default("")
+  ownerJid        String   @default("")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

@@ -12,6 +12,9 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `backend/src/manager.ts`: Adicionado suporte a `SAVE_DATA_NEW_MESSAGE`, `SAVE_DATA_CONTACTS` e `SAVE_DATA_HISTORIC` em `buildStore()` e `connectClient()` para controlar a persistência no PostgreSQL/SQLite. Adicionado método `recordSentMessage()` para gravação de mensagens enviadas.
 - `backend/src/routes/message.routes.ts`: Chamada a `ZapoManager.recordSentMessage()` após o envio bem-sucedido de mensagens em todas as 7 rotas de envio.
 - `backend/.env.example`: Documentação das variáveis de ambiente de persistência de dados.
+- `backend/prisma/schema.prisma`: Adicionados campos `profilePicUrl`, `profileName` e `ownerJid` (com default `""`) ao model `Instance`.
+- `backend/prisma/migrations/20260622000002_add_instance_profile/migration.sql`: Migration idempotente (`ADD COLUMN IF NOT EXISTS`) para os novos campos de perfil.
+- `backend/package.json`: Removido hook `predev: prisma generate` — causava EPERM no Windows (DLL travado pelo Vite em paralelo). Usar `npm run prisma:generate` manualmente (com servidor parado) após mudanças de schema.
 
 **Infra**
 - `docker-stack-swarm.yaml`: Declaração das variáveis `SAVE_DATA_NEW_MESSAGE`, `SAVE_DATA_CONTACTS` e `SAVE_DATA_HISTORIC` no serviço `app`.

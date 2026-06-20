@@ -412,6 +412,39 @@ export class ZapoManager {
           activeData.qrCode = undefined;
           await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
           ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connected' });
+
+          // Buscar foto e nome do perfil próprio de forma assíncrona (fire-and-forget)
+          // Não bloquear o evento de conexão
+          setImmediate(async () => {
+            try {
+              const meJid = client.getCredentials()?.meJid;
+              if (!meJid) return;
+
+              // Buscar foto de perfil
+              let profilePicUrl = '';
+              try {
+                const pic = await client.profile.getProfilePicture(meJid);
+                profilePicUrl = pic?.url ?? '';
+              } catch (_) { /* privacidade: foto não acessível */ }
+
+              // Buscar pushName — verificar onde está disponível:
+              const creds = client.getCredentials() as any;
+              const profileName = creds?.pushName ?? creds?.me?.name ?? '';
+
+              await prisma.instance.update({
+                where: { instanceName },
+                data: { profilePicUrl, profileName, ownerJid: meJid }
+              });
+
+              // Emitir atualização ao frontend via socket
+              _socketEmitter?.('connection.update', {
+                instance: instanceName,
+                data: { status: 'connected', profilePicUrl, profileName, ownerJid: meJid }
+              });
+            } catch (err: any) {
+              console.warn(`[ZapoManager] [${instanceName}] Falha ao buscar perfil:`, err.message);
+            }
+          });
         } else {
           console.log(`[ZapoManager] [${instanceName}] Conexão de rede aberta, aguardando autenticação (registered=false).`);
         }
