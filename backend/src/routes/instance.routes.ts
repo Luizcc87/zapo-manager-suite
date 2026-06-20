@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { ZapoManager } from '../manager';
 import { getMobileDevice } from '../config/device';
-import { PrismaClient } from '@prisma/client';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
 import { DEFAULT_CONNECTION_CONFIG } from '@whiskeysockets/baileys/lib/Defaults/index.js';
 import * as path from 'path';
 import * as fs from 'fs';
+import { prisma } from '../lib/prisma';
+import { checkGlobalApiKey, checkInstanceApiKey } from '../middleware/auth';
 
-const prisma = new PrismaClient();
 const router = Router();
 
 // Cache para sockets de registro com TTL de 10 minutos
@@ -63,44 +63,6 @@ function parsePhoneNumber(fullPhone: string) {
   return { cc, national, full: digits };
 }
 
-// Middleware de Autenticação Global da Evolution
-// O Manager envia o Token global no header "apikey"
-function checkGlobalApiKey(req: Request, res: Response, next: any) {
-  const globalApiKey = process.env.GLOBAL_API_KEY;
-  const requestKey = req.get('apikey');
-  
-  if (requestKey !== globalApiKey) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid Global API Key' });
-  }
-  next();
-}
-
-// Middleware de Autenticação de Instância
-// O Manager envia a chave específica da instância no header "apikey"
-async function checkInstanceApiKey(req: Request, res: Response, next: any) {
-  try {
-    const { instanceName } = req.params;
-    const requestKey = req.get('apikey');
-    
-    if (!instanceName) {
-      return res.status(400).json({ error: 'instanceName parameter is required' });
-    }
-
-    const instance = await prisma.instance.findUnique({ where: { instanceName } });
-    if (!instance) {
-      return res.status(404).json({ error: 'Instance not found' });
-    }
-
-    const globalApiKey = process.env.GLOBAL_API_KEY;
-    if (instance.apiKey !== requestKey && globalApiKey !== requestKey) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid API Key' });
-    }
-
-    next();
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-}
 
 // 1. Criar Instância
 router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) => {
@@ -222,7 +184,7 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
       return res.status(400).json({ error: 'Sessão de registro expirada ou não encontrada. Solicite o código novamente.' });
     }
 
-    const { sock, phoneNumber } = cached;
+    const { sock } = cached;
 
     // 2. Validar OTP com servidores do WhatsApp
     await sock.register(code);
@@ -403,35 +365,17 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
   try {
     const { instanceId, instanceName } = req.query;
     console.log(`[ZapoRouter] GET /fetchInstances - query params:`, { instanceId, instanceName });
-    let dbInstances;
-    if (instanceId) {
-      dbInstances = await prisma.$queryRaw<Array<{
-        id: string; instanceName: string; apiKey: string; status: string;
-        mobileTransport: boolean; registeredPhone: string | null;
-        deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
-      }>>`SELECT * FROM "Instance" WHERE "id" = ${instanceId as string}`;
-    } else if (instanceName) {
-      dbInstances = await prisma.$queryRaw<Array<{
-        id: string; instanceName: string; apiKey: string; status: string;
-        mobileTransport: boolean; registeredPhone: string | null;
-        deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
-      }>>`SELECT * FROM "Instance" WHERE "instanceName" = ${instanceName as string}`;
-    } else {
-      dbInstances = await prisma.$queryRaw<Array<{
-        id: string; instanceName: string; apiKey: string; status: string;
-        mobileTransport: boolean; registeredPhone: string | null;
-        deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
-      }>>`SELECT * FROM "Instance"`;
-    }
+    const where = instanceId
+      ? { id: instanceId as string }
+      : instanceName
+      ? { instanceName: instanceName as string }
+      : undefined;
+    const dbInstances = await prisma.instance.findMany({ where });
     console.log(`[ZapoRouter] GET /fetchInstances - found ${dbInstances.length} instances:`, dbInstances.map(i => i.instanceName));
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
-      const isMockConnected = inst.status === 'connected' && !active;
-      let connected = isMockConnected;
-      if (active) {
-        const clientState = active.client.getState();
-        connected = clientState.connected && clientState.registered;
-      }
+      const isMockConnected = inst.status === 'connected';
+      const connected = !!active && active.client.getState().connected && active.client.getState().registered;
       const state = connected ? 'open' : (active?.qrCode ? 'connecting' : 'close');
       
       let ownerJid: string | null = null;

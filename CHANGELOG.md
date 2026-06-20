@@ -6,6 +6,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Isolamento de chave de mensagens e status de conexão real
+
+**Backend**
+- `backend/src/middleware/auth.ts`: Adicionada `checkStrictInstanceApiKey` para rotas de mensagem, aceitando apenas a `apiKey` da instância e rejeitando `GLOBAL_API_KEY` com `401 Unauthorized`.
+- `backend/src/routes/message.routes.ts`: Rotas `/message/*` passaram a usar a validação estrita de chave por instância.
+- `backend/src/routes/instance.routes.ts`: `GET /fetchInstances` agora só marca `open` quando existe cliente ativo real em memória; instâncias sem `activeClients` retornam `close`/`disconnected` mesmo que o banco ainda esteja com status `connected`.
+
 ### Automação de Testes e Correções de Autenticação
 
 **Testes**

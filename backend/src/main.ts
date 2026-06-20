@@ -2,15 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { execFileSync } from 'child_process';
-import { Server } from 'http';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { Server as HttpServer } from 'http';
+import { Server as SocketServer } from 'socket.io';
 import instanceRouter from './routes/instance.routes';
 import messageRouter from './routes/message.routes';
+import chatRouter from './routes/chat.routes';
 import configRouter from './routes/config.routes';
 import { ZapoManager } from './manager';
-import { PrismaClient } from '@prisma/client';
 import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
 import { setAppVersion, getCurrentAppVersion } from './config/device';
+
+const execFileAsync = promisify(execFile);
 
 function getZapoWebVersion(): string {
   try {
@@ -34,9 +38,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rotas de API da Evolution
+// Rotas de API
 app.use('/instance', instanceRouter);
 app.use('/message', messageRouter);
+app.use('/chat', chatRouter);
 app.use('/', configRouter);
 
 // Mock de licença da Evolution API v2 para evitar bloqueios na UI
@@ -97,64 +102,111 @@ app.get('*', (req, res, next) => {
 });
 
 async function runMigrationsWithRetry(maxRetries = 5, delayMs = 3000) {
-  const prisma = new PrismaClient();
+  const { prisma } = await import('./lib/prisma');
+  const cwd = path.join(__dirname, '..');
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`[Zapo-Manager] Aplicando migrations (Tentativa ${attempt}/${maxRetries})...`);
-      execFileSync('npx', ['prisma', 'migrate', 'deploy'], { stdio: 'inherit', cwd: path.join(__dirname, '..'), shell: true });
+      await execFileAsync('npx', ['prisma', 'migrate', 'deploy'], { cwd, shell: true });
       console.log('[Zapo-Manager] Migrations aplicadas com sucesso.');
-      await prisma.$disconnect();
       return;
     } catch (err: any) {
-      // Se der erro, verificamos se a tabela "Instance" já existe no banco de dados (Baselining automático se P3005 ocorrer)
       let instanceTableExists = false;
       try {
         await prisma.$queryRawUnsafe('SELECT 1 FROM "Instance" LIMIT 1');
         instanceTableExists = true;
-      } catch (dbErr) {
-        // Tabela não existe ou banco inacessível
-      }
+      } catch { /* banco inacessível ou tabela ausente */ }
 
       if (instanceTableExists) {
-        console.warn('[Zapo-Manager] A tabela "Instance" já existe, mas o histórico de migração do Prisma está ausente. Executando baselining automático da migração inicial...');
+        console.warn('[Zapo-Manager] Tabela "Instance" existe sem histórico Prisma. Executando baselining automático...');
         try {
-          execFileSync('npx', ['prisma', 'migrate', 'resolve', '--applied', '20260619000001_init'], { stdio: 'inherit', cwd: path.join(__dirname, '..'), shell: true });
-          console.log('[Zapo-Manager] Migração inicial baselinada com sucesso. Re-executando deploy...');
-          execFileSync('npx', ['prisma', 'migrate', 'deploy'], { stdio: 'inherit', cwd: path.join(__dirname, '..'), shell: true });
+          await execFileAsync('npx', ['prisma', 'migrate', 'resolve', '--applied', '20260619000001_init'], { cwd, shell: true });
+          await execFileAsync('npx', ['prisma', 'migrate', 'deploy'], { cwd, shell: true });
           console.log('[Zapo-Manager] Migrations aplicadas com sucesso pós-baselining.');
-          await prisma.$disconnect();
           return;
         } catch (resolveErr: any) {
-          console.error('[Zapo-Manager] Erro ao tentar baselinar migração inicial:', resolveErr.message);
+          console.error('[Zapo-Manager] Erro ao baselinar migração inicial:', resolveErr.message);
         }
       }
 
       if (attempt === maxRetries) {
-        await prisma.$disconnect();
         throw new Error(`Falha persistente ao aplicar migrations após ${maxRetries} tentativas: ${err.message}`);
       }
-      console.warn(`[Zapo-Manager] Banco de dados não está pronto ou erro na migração. Aguardando ${delayMs / 1000}s antes de tentar de novo...`);
+      console.warn(`[Zapo-Manager] Banco não pronto. Aguardando ${delayMs / 1000}s...`);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
-  await prisma.$disconnect();
 }
 
-function startServer(app: express.Express, initialPort: number, maxAttempts = 10): Promise<{ server: Server; port: number }> {
+function startServer(app: express.Express, initialPort: number, maxAttempts = 10): Promise<{ server: HttpServer; io: SocketServer; port: number }> {
   return new Promise((resolve, reject) => {
     let currentPort = initialPort;
-    let server: Server;
+    let server: HttpServer;
 
     const tryListen = () => {
-      server = app.listen(currentPort);
+      server = new HttpServer(app);
+
+      const allowedOrigin = process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173';
+
+      const io = new SocketServer(server, {
+        cors: {
+          origin: allowedOrigin,
+          methods: ['GET', 'POST'],
+          credentials: true,
+        },
+        transports: ['websocket', 'polling'],
+      });
+
+      // Auth middleware: validate apikey from handshake, join per-instance room
+      io.use(async (socket, next) => {
+        try {
+          const apikey = socket.handshake.auth?.apikey as string | undefined;
+          const instanceName = socket.handshake.auth?.instanceName as string | undefined;
+          const globalKey = process.env.GLOBAL_API_KEY;
+
+          if (!apikey) return next(new Error('Missing apikey'));
+
+          // Global key grants access to all instances
+          if (apikey === globalKey) {
+            if (instanceName) socket.data.instanceName = instanceName;
+            return next();
+          }
+
+          // Instance-specific key: validate against DB
+          if (!instanceName) return next(new Error('Missing instanceName'));
+          const { prisma: db } = await import('./lib/prisma');
+          const inst = await db.instance.findUnique({ where: { instanceName } });
+          if (!inst || inst.apiKey !== apikey) return next(new Error('Unauthorized'));
+
+          socket.data.instanceName = instanceName;
+          next();
+        } catch (err: any) {
+          next(new Error(err.message));
+        }
+      });
+
+      io.on('connection', (socket) => {
+        const instanceName: string | undefined = socket.data.instanceName;
+        if (instanceName) {
+          socket.join(instanceName);
+          console.log(`[Socket.io] ${socket.id} joined room: ${instanceName}`);
+        }
+        socket.on('disconnect', () => {
+          console.log(`[Socket.io] Cliente desconectado: ${socket.id}`);
+        });
+      });
+
+      server.listen(currentPort);
 
       server.on('listening', () => {
-        resolve({ server, port: currentPort });
+        resolve({ server, io, port: currentPort });
       });
 
       server.on('error', (err: any) => {
         if (err.code === 'EADDRINUSE') {
           console.warn(`[Zapo-Manager] Porta ${currentPort} em uso. Tentando a próxima porta...`);
+          io.close();
+          server.close();
           currentPort++;
           if (currentPort >= initialPort + maxAttempts) {
             reject(new Error(`Nenhuma porta disponível no intervalo [${initialPort} - ${initialPort + maxAttempts - 1}]`));
@@ -177,7 +229,9 @@ async function autoRegisterServerIp() {
   if (!apiKey || !authUrl) return;
 
   try {
-    const ipRes = await fetch('https://api.ipify.org?format=json');
+    const ipRes = await fetch('https://api.ipify.org?format=json', {
+      signal: AbortSignal.timeout(5_000),
+    });
     const { ip } = await ipRes.json() as { ip: string };
     const authRes = await fetch(authUrl, {
       method: 'POST',
@@ -196,6 +250,14 @@ async function autoRegisterServerIp() {
   }
 }
 
+let _httpServer: HttpServer | null = null;
+
+process.on('SIGTERM', () => {
+  console.log('[Zapo-Manager] SIGTERM recebido. Encerrando sessões ativas...');
+  if (_httpServer) _httpServer.close(() => process.exit(0));
+  else process.exit(0);
+});
+
 async function bootstrap() {
   if (!process.env.GLOBAL_API_KEY) {
     console.error('[Zapo-Manager] FATAL: GLOBAL_API_KEY não definida. Configure a variável de ambiente antes de iniciar.');
@@ -203,10 +265,8 @@ async function bootstrap() {
   }
 
   try {
-    // Aplica migrations com retry para aguardar o banco estar pronto
     await runMigrationsWithRetry();
 
-    // Versões em uso — logar antes de reconectar instâncias
     console.log(`[Zapo-Manager] WA Web version (zapo-js built-in): ${getZapoWebVersion()}`);
 
     const latestAndroidVersion = await fetchLatestAndroidWaVersion();
@@ -217,14 +277,24 @@ async function bootstrap() {
       console.warn(`[Zapo-Manager] WA Business Android version: fetch falhou — usando fallback hardcoded: ${getCurrentAppVersion()}`);
     }
 
-    // Auto-registra o IP público do servidor no provedor de proxies (se configurado)
     await autoRegisterServerIp();
 
-    // Carregar e reconectar instâncias ativas do banco de dados na inicialização
     await ZapoManager.loadAll();
-    
+
     const startPort = typeof PORT === 'number' ? PORT : parseInt(PORT as string, 10) || 8080;
-    const { port } = await startServer(app, startPort);
+    const { server, io, port } = await startServer(app, startPort);
+    _httpServer = server;
+
+    // Wire Socket.io emitter — emit only to the room of the specific instance
+    ZapoManager.setSocketEmitter((event, payload) => {
+      const instanceName: string | undefined = payload?.instance;
+      if (instanceName) {
+        io.to(instanceName).emit(event, payload);
+      } else {
+        io.emit(event, payload); // fallback para eventos sem instanceName
+      }
+    });
+
     console.log(`[Zapo-Manager] Servidor rodando na porta ${port}`);
     console.log(`[Zapo-Manager] Acesse a API em: http://localhost:${port}`);
   } catch (err: any) {
@@ -232,12 +302,5 @@ async function bootstrap() {
     process.exit(1);
   }
 }
-
-// Tratamento de sinais de terminação para encerramento limpo das conexões
-process.on('SIGTERM', async () => {
-  console.log('[Zapo-Manager] SIGTERM recebido. Encerrando sessões ativas...');
-  // A classe ZapoManager cuida de liberar locks e fechar conexões
-  process.exit(0);
-});
 
 bootstrap();

@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { ProxyAgent } from 'undici';
+import { prisma } from '../lib/prisma';
+import { checkInstanceApiKey } from '../middleware/auth';
 
-const prisma = new PrismaClient();
 const router = Router();
 
 async function testProxyConnectivity(cfg: any): Promise<{
@@ -89,21 +89,6 @@ const DEFAULT_PROXY = {
   session: '',  // optional sticky session ID (auto-set to instanceName when blank)
 };
 
-async function checkInstanceApiKey(req: Request, res: Response, next: any) {
-  try {
-    const { instanceName } = req.params;
-    const requestKey = req.get('apikey');
-    const instance = await prisma.instance.findUnique({ where: { instanceName } });
-    if (!instance) return res.status(404).json({ error: 'Instance not found' });
-    const globalApiKey = process.env.GLOBAL_API_KEY;
-    if (instance.apiKey !== requestKey && globalApiKey !== requestKey) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    next();
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-}
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 

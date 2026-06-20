@@ -95,8 +95,15 @@ export function useSendMessage() {
   };
 }
 
+const MESSAGES_INVALIDATE_KEYS = [
+  ["chats", "findMessages"],
+  ["chats", "findChats"],
+] as const;
+
 export function useSendMedia() {
-  const sendMediaMutation = useManageMutation(sendMedia);
+  const sendMediaMutation = useManageMutation(sendMedia, {
+    invalidateKeys: MESSAGES_INVALIDATE_KEYS,
+  });
 
   return {
     sendMedia: sendMediaMutation,
@@ -104,7 +111,9 @@ export function useSendMedia() {
 }
 
 export function useSendAudio() {
-  const sendAudioMutation = useManageMutation(sendAudio);
+  const sendAudioMutation = useManageMutation(sendAudio, {
+    invalidateKeys: MESSAGES_INVALIDATE_KEYS,
+  });
 
   return {
     sendAudio: sendAudioMutation,

@@ -3,15 +3,13 @@ import { getMobileDevice } from './config/device';
 import { createPostgresStore } from '@zapo-js/store-postgres';
 import { createRedisStore } from '@zapo-js/store-redis';
 import { createSqliteStore } from '@zapo-js/store-sqlite';
-import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import Redis from 'ioredis';
 import * as path from 'path';
 import * as fs from 'fs';
 import { randomBytes } from 'crypto';
 import { ProxyAgent } from 'undici';
-
-const prisma = new PrismaClient();
+import { prisma } from './lib/prisma';
 const activeClients = new Map<string, {
   client: WaClient;
   pgStore?: any;
@@ -21,6 +19,13 @@ const activeClients = new Map<string, {
   lockInterval?: NodeJS.Timeout;
   messageStatus?: Map<string, any>;
 }>();
+
+// In-memory chat/message store (populated by message events)
+const chatMessages = new Map<string, Map<string, any[]>>(); // instanceName -> remoteJid -> messages[]
+const chatList     = new Map<string, Map<string, any>>();    // instanceName -> remoteJid -> chat
+
+// Socket.io emitter — set by main.ts after server startup
+let _socketEmitter: ((event: string, payload: any) => void) | null = null;
 
 // Redis para Locks de Concorrência (Docker Swarm safety)
 const redisLockClient = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL) : null;
@@ -155,19 +160,85 @@ function buildProxy(cfg: any): Record<string, any> | undefined {
 }
 
 export class ZapoManager {
+  // ── Socket.io bridge ────────────────────────────────────────────────────────
+
+  static setSocketEmitter(fn: (event: string, payload: any) => void) {
+    _socketEmitter = fn;
+  }
+
+  // ── In-memory chat/message accessors ────────────────────────────────────────
+
+  static getChatList(instanceName: string): any[] {
+    const byJid = chatList.get(instanceName);
+    if (!byJid) return [];
+    return Array.from(byJid.values()).sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }
+
+  static getMessageList(instanceName: string, remoteJid: string): any[] {
+    const byJid = chatMessages.get(instanceName);
+    return byJid?.get(remoteJid) ?? [];
+  }
+
+  private static storeMessage(instanceName: string, msgData: any) {
+    const remoteJid: string = msgData.key?.remoteJid;
+    if (!remoteJid) return;
+
+    // Detect message type from proto structure
+    const msgObj = msgData.message ?? {};
+    const messageType = Object.keys(msgObj)[0] ?? 'unknown';
+
+    const normalized = {
+      id: msgData.key?.id ?? `${Date.now()}`,
+      key: msgData.key,
+      pushName: msgData.pushName ?? '',
+      messageType,
+      message: msgObj,
+      messageTimestamp: String(msgData.messageTimestamp ?? Math.floor(Date.now() / 1000)),
+      instanceId: instanceName,
+      source: 'baileys',
+    };
+
+    if (!chatMessages.has(instanceName)) chatMessages.set(instanceName, new Map());
+    const byJid = chatMessages.get(instanceName)!;
+    const msgs = byJid.get(remoteJid) ?? [];
+    // Deduplicate by message id
+    if (!msgs.find((m: any) => m.id === normalized.id)) {
+      msgs.push(normalized);
+      byJid.set(remoteJid, msgs);
+    }
+
+    // Update chat entry
+    if (!chatList.has(instanceName)) chatList.set(instanceName, new Map());
+    const byChat = chatList.get(instanceName)!;
+    const existing = byChat.get(remoteJid) ?? {};
+    byChat.set(remoteJid, {
+      id: remoteJid,
+      pushName: msgData.pushName ?? existing.pushName ?? '',
+      remoteJid,
+      labels: existing.labels ?? null,
+      profilePicUrl: existing.profilePicUrl ?? '',
+      createdAt: existing.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      instanceId: instanceName,
+    });
+  }
+
   static async loadAll() {
     console.log(`[ZapoManager] Inicializando com CONTAINER_ID: ${CONTAINER_ID}`);
     const instances = await prisma.instance.findMany({
       where: { status: { in: ['connected', 'connecting'] } }
     });
     console.log(`[ZapoManager] Encontradas ${instances.length} instâncias para iniciar automaticamente.`);
-    for (const inst of instances) {
-      try {
-        await this.connectClient(inst.instanceName);
-      } catch (err: any) {
-        console.error(`[ZapoManager] Falha ao iniciar auto-conexão da instância ${inst.instanceName}:`, err.message);
+    const results = await Promise.allSettled(
+      instances.map(inst => this.connectClient(inst.instanceName))
+    );
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        console.error(`[ZapoManager] Falha ao iniciar auto-conexão da instância ${instances[i].instanceName}:`, r.reason?.message);
       }
-    }
+    });
   }
 
   static getActive(instanceName: string) {
@@ -310,15 +381,16 @@ export class ZapoManager {
       if (settings.readMessages && !event.key.fromMe) {
         await client.message.sendReceipt(event, { type: 'read' }).catch(() => {});
       }
-      ZapoManager.sendWebhook(instanceName, 'messages.upsert', {
-        instance: instanceName,
-        data: {
-          key: event.key,
-          message: event.message,
-          messageTimestamp: event.timestampSeconds,
-          pushName: event.pushName
-        }
-      });
+      const msgData = {
+        key: event.key,
+        message: event.message,
+        messageTimestamp: event.timestampSeconds,
+        pushName: event.pushName
+      };
+      ZapoManager.storeMessage(instanceName, msgData);
+      const webhookPayload = { instance: instanceName, data: msgData };
+      ZapoManager.sendWebhook(instanceName, 'messages.upsert', webhookPayload);
+      _socketEmitter?.('messages.upsert', webhookPayload);
     });
 
     client.on('message_addon', (event) => {
@@ -341,10 +413,9 @@ export class ZapoManager {
           updatedAt: new Date().toISOString()
         });
       }
-      ZapoManager.sendWebhook(instanceName, 'messages.update', {
-        instance: instanceName,
-        data: { chatJid: event.chatJid, status: event.status, messageIds: event.messageIds }
-      });
+      const updatePayload = { instance: instanceName, data: { chatJid: event.chatJid, status: event.status, messageIds: event.messageIds } };
+      ZapoManager.sendWebhook(instanceName, 'messages.update', updatePayload);
+      _socketEmitter?.('messages.update', updatePayload);
     });
 
     // ── Presence & Chat-state ─────────────────────────────────────────────────

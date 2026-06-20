@@ -19,7 +19,7 @@ import { DEFAULT_PROVIDER, logout, saveToken } from "@/lib/queries/token";
 import { useTheme } from "@/components/theme-provider";
 
 const loginSchema = z.object({
-  provider: z.enum(["api", "go"]).default(DEFAULT_PROVIDER),
+  provider: z.enum(["api", "go", "zapo"]).default(DEFAULT_PROVIDER),
   serverUrl: z.string({ required_error: "serverUrl is required" }).url("URL inválida"),
   apiKey: z.string({ required_error: "ApiKey is required" }).min(1, "API Key é obrigatória"),
 });

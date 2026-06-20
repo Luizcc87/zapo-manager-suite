@@ -1,7 +1,11 @@
 import { io, Socket } from "socket.io-client";
 
-// Store active sockets
-const activeSockets = new Map<string, Socket>();
+import { getToken, TOKEN_ID } from "@/lib/queries/token";
+
+export interface SocketAuth {
+  apikey: string;
+  instanceName: string;
+}
 
 export interface WebSocketConnection {
   on: (event: string, callback: (data: any) => void) => void;
@@ -10,15 +14,25 @@ export interface WebSocketConnection {
   disconnect: () => void;
 }
 
-export const connectSocket = (serverUrl: string): WebSocketConnection => {
-  // Check if socket already exists for this URL
-  if (activeSockets.has(serverUrl)) {
-    const existingSocket = activeSockets.get(serverUrl)!;
-    return createSocketWrapper(existingSocket);
+// Key: `${serverUrl}::${instanceName}`
+const activeSockets = new Map<string, Socket>();
+
+function makeKey(serverUrl: string, instanceName: string) {
+  return `${serverUrl}::${instanceName}`;
+}
+
+export const connectSocket = (serverUrl: string, auth?: Partial<SocketAuth>): WebSocketConnection => {
+  const instanceName = auth?.instanceName ?? "";
+  const apikey = auth?.apikey ?? getToken(TOKEN_ID.INSTANCE_TOKEN) ?? getToken(TOKEN_ID.TOKEN) ?? "";
+
+  const key = makeKey(serverUrl, instanceName);
+
+  if (activeSockets.has(key)) {
+    return createSocketWrapper(key, activeSockets.get(key)!);
   }
 
-  // Create new socket connection
   const socket = io(serverUrl, {
+    auth: { apikey, instanceName },
     transports: ["websocket", "polling"],
     autoConnect: false,
     reconnection: true,
@@ -27,74 +41,51 @@ export const connectSocket = (serverUrl: string): WebSocketConnection => {
     timeout: 20000,
   });
 
-  // Store socket
-  activeSockets.set(serverUrl, socket);
+  activeSockets.set(key, socket);
 
-  // Set up connection event handlers
   socket.on("connect", () => {
-    console.log(`✅ WebSocket connected to ${serverUrl}`);
+    console.log(`[WS] Connected to ${serverUrl} (instance: ${instanceName})`);
   });
 
   socket.on("disconnect", (reason) => {
-    console.log(`❌ WebSocket disconnected from ${serverUrl}:`, reason);
+    console.log(`[WS] Disconnected from ${serverUrl}:`, reason);
   });
 
   socket.on("connect_error", (error) => {
-    console.error(`🚫 WebSocket connection error to ${serverUrl}:`, error);
+    console.error(`[WS] Connection error to ${serverUrl}:`, error.message);
   });
 
-  socket.on("reconnect", (attemptNumber) => {
-    console.log(`🔄 WebSocket reconnected to ${serverUrl} after ${attemptNumber} attempts`);
-  });
-
-  socket.on("reconnect_error", (error) => {
-    console.error(`🔄❌ WebSocket reconnection error to ${serverUrl}:`, error);
-  });
-
-  return createSocketWrapper(socket);
+  return createSocketWrapper(key, socket);
 };
 
-export const disconnectSocket = (connection: WebSocketConnection | Socket): void => {
-  // Find and remove from active sockets
-  for (const [url, socket] of activeSockets.entries()) {
-    if (socket === connection || (connection as any)._socket === socket) {
-      console.log(`🔌 Disconnecting socket for ${url}`);
-      socket.disconnect();
-      activeSockets.delete(url);
-      break;
-    }
+export const disconnectSocket = (connection: WebSocketConnection): void => {
+  const wrapper = connection as SocketWrapper;
+  const socket = activeSockets.get(wrapper._key);
+  if (socket) {
+    socket.disconnect();
+    activeSockets.delete(wrapper._key);
   }
 };
 
-// Create a wrapper that provides a consistent interface
-const createSocketWrapper = (socket: Socket): WebSocketConnection => {
-  return {
-    on: (event: string, callback: (data: any) => void) => {
-      socket.on(event, callback);
-    },
-    off: (event: string) => {
-      socket.off(event);
-    },
-    connect: () => {
-      if (!socket.connected) {
-        socket.connect();
-      }
-    },
-    disconnect: () => {
-      socket.disconnect();
-    },
-  };
-};
-
-// Cleanup function to disconnect all sockets
 export const disconnectAllSockets = (): void => {
-  console.log("🧹 Disconnecting all websockets...");
-  for (const [url, socket] of activeSockets.entries()) {
-    console.log(`🔌 Disconnecting socket for ${url}`);
+  for (const socket of activeSockets.values()) {
     socket.disconnect();
   }
   activeSockets.clear();
 };
 
-// Export for debugging
+interface SocketWrapper extends WebSocketConnection {
+  _key: string;
+}
+
+function createSocketWrapper(key: string, socket: Socket): SocketWrapper {
+  return {
+    _key: key,
+    on: (event, callback) => { socket.on(event, callback); },
+    off: (event) => { socket.off(event); },
+    connect: () => { if (!socket.connected) socket.connect(); },
+    disconnect: () => { socket.disconnect(); },
+  };
+}
+
 export const getActiveSockets = () => activeSockets;

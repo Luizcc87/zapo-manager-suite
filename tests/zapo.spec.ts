@@ -197,16 +197,15 @@ test.describe('Suite 2 — Autenticação e Autorização', () => {
 
   // --- /message/* (instância DESCONECTADA) ---
 
-  test('2.4 /message/* — global_key é aceita pelo middleware checkInstanceApiKey', async ({ request }) => {
+  test('2.4 /message/* — global_key deve retornar 401 (design intencional)', async ({ request }) => {
     const r = await request.post(`/message/sendText/${instanceName}`, {
       headers: { apikey: GLOBAL_API_KEY, 'Content-Type': 'application/json' },
       data: { number: '5511999999999', text: 'teste' },
     });
-    // O middleware checkInstanceApiKey aceita a global key nas rotas de mensagens.
-    // Portanto, o status retornado não deve ser 401 (Unauthorized), mas sim 503 ou 500
-    // devido à instância de teste estar desconectada.
-    expect(r.status()).not.toBe(401);
-    expect([500, 503]).toContain(r.status());
+    // O middleware checkStrictInstanceApiKey deve rejeitar a global key nas rotas de mensagens.
+    expect(r.status()).toBe(401);
+    const body = await r.json();
+    expect(body.error).toContain('Unauthorized');
   });
 
   test('2.5 /message/* — instanceKey passa auth, mas 503 pois não está conectada', async ({ request }) => {
@@ -218,13 +217,12 @@ test.describe('Suite 2 — Autenticação e Autorização', () => {
     expect([500, 503]).toContain(r.status());
   });
 
-  test('2.6 /message/sendMedia — global_key é aceita pelo middleware e retorna 503 (desconectada)', async ({ request }) => {
+  test('2.6 /message/sendMedia — global_key deve retornar 401', async ({ request }) => {
     const r = await request.post(`/message/sendMedia/${instanceName}`, {
       headers: { apikey: GLOBAL_API_KEY, 'Content-Type': 'application/json' },
       data: { number: '5511999999999', mediaUrl: MEDIA_URLS.image, mimetype: 'image/jpeg' },
     });
-    expect(r.status()).not.toBe(401);
-    expect([500, 503]).toContain(r.status());
+    expect(r.status()).toBe(401);
   });
 
   test('2.7 /message/sendMedia — instanceKey passa auth, mas 503 pois não está conectada', async ({ request }) => {

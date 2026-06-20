@@ -33,6 +33,7 @@ This directory contains the split local copy of the official [zapo.to](https://z
 - **[Polls, reactions & edits](./guides/interactive-messages.md)** - Send polls and votes, react to messages, pin and edit content, revoke sent messages, and handle the events for each — through the typed content union.
 - **[Media](./guides/media.md)** - Send images, video, audio voice notes, documents, and stickers — and stream or download incoming WhatsApp media attachments with zapo's media helpers.
 - **[Migrating from Baileys](./guides/migrating-from-baileys.md)** - Coming from Baileys? Here's how the connection lifecycle, store layout, message API, and event names map onto zapo's coordinator-based client.
+- **[Zapo Migration Report](./guides/zapo-migration-report.md)** - Relatório final de migração e conformidade para a API Zapo, detalhando os testes automatizados, performance, e as correções realizadas de autenticação e status.
 - **[Multi-session deployments](./guides/multi-session.md)** - Run many WhatsApp accounts in one process with a shared store — what's per-session vs shared, the single-writer rule, memory budget, sharding, and graceful shutdown.
 - **[Newsletters (channels)](./guides/newsletters.md)** - Create, discover, follow, post to, react on, and administer WhatsApp channels (newsletters) using the client.newsletter coordinator in zapo.
 - **[Presence & status](./guides/presence-status.md)** - Broadcast online presence, send typing and recording indicators, subscribe to contact presence, and post WhatsApp status updates with text and media.

@@ -116,9 +116,11 @@ const FormInput = <TFieldValues extends FieldValues = FieldValues, TName extends
   required,
   readOnly,
   className,
+  helper,
   ...props
 }: Omit<ControllerProps<TFieldValues, TName>, "render"> & {
   label?: string;
+  helper?: string;
   children: React.ReactNode;
   className?: string;
   required?: boolean;
@@ -148,6 +150,7 @@ const FormInput = <TFieldValues extends FieldValues = FieldValues, TName extends
                 readOnly,
               })}
           </FormControl>
+          {helper && <FormDescription className="text-xs">{helper}</FormDescription>}
           <FormMessage />
         </FormItem>
       )}

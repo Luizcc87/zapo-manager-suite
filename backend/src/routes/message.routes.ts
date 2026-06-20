@@ -1,17 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { ZapoManager } from '../manager';
 import { proto } from 'zapo-js';
-import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { prisma } from '../lib/prisma';
+import { checkStrictInstanceApiKey } from '../middleware/auth';
 
-const prisma = new PrismaClient();
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-router.get('/status/:instanceName/:messageId', async (req: Request, res: Response) => {
+router.get('/status/:instanceName/:messageId', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName, messageId } = req.params;
     const instance = await prisma.instance.findUnique({ where: { instanceName } });
@@ -117,33 +117,54 @@ function saveTempFile(buffer: Buffer, originalname: string): string {
   return tempPath;
 }
 
-// Middleware de Autenticação de Instância
-async function checkInstanceApiKey(req: Request, res: Response, next: any) {
+
+// 0. Enviar Áudio (PTT / Voice Note) — base64
+router.post('/sendWhatsAppAudio/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  let tempPath: string | null = null;
   try {
     const { instanceName } = req.params;
-    const requestKey = req.get('apikey');
-    
-    if (!instanceName) {
-      return res.status(400).json({ error: 'instanceName parameter is required' });
+    const number: string = req.body.number;
+    const audioBase64: string = req.body.audioMessage?.audio ?? req.body.audio;
+
+    if (!number || !audioBase64) {
+      return res.status(400).json({ error: 'number and audioMessage.audio (base64) are required' });
     }
 
-    const instance = await prisma.instance.findUnique({ where: { instanceName } });
-    if (!instance) {
-      return res.status(404).json({ error: 'Instance not found' });
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
-    if (instance.apiKey !== requestKey) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid Instance API Key' });
-    }
+    const jid = await resolveJid(active.client, number);
+    const buffer = Buffer.from(audioBase64, 'base64');
+    tempPath = saveTempFile(buffer, 'audio.ogg');
 
-    next();
+    const sentMsg = await active.client.message.send(jid, {
+      type: 'audio',
+      media: tempPath,
+      mimetype: 'audio/ogg; codecs=opus',
+      ptt: true,
+    });
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { audioMessage: { ptt: true } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING'
+    });
   } catch (err: any) {
+    console.error(`[MessageRoutes] sendWhatsAppAudio error:`, err.message);
     return res.status(500).json({ error: err.message });
+  } finally {
+    if (tempPath && fs.existsSync(tempPath)) {
+      try { fs.unlinkSync(tempPath); } catch (e) {}
+    }
   }
-}
+});
 
 // 1. Enviar Texto
-router.post('/sendText/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
     const { number, text, options } = req.body;
@@ -179,7 +200,7 @@ router.post('/sendText/:instanceName', checkInstanceApiKey, async (req: Request,
 });
 
 // 2. Enviar Mídia (Suporta JSON e Multipart/Form-data)
-router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file'), async (req: Request, res: Response) => {
+router.post('/sendMedia/:instanceName', checkStrictInstanceApiKey, upload.single('file'), async (req: Request, res: Response) => {
   let tempPath: string | null = null;
   try {
     const { instanceName } = req.params;
@@ -265,7 +286,7 @@ router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file
 });
 
 // 3. Enviar Sticker (Apenas wrapper de mídia com tipo sticker)
-router.post('/sendSticker/:instanceName', checkInstanceApiKey, upload.single('file'), async (req: Request, res: Response) => {
+router.post('/sendSticker/:instanceName', checkStrictInstanceApiKey, upload.single('file'), async (req: Request, res: Response) => {
   let tempPath: string | null = null;
   try {
     const { instanceName } = req.params;
@@ -326,7 +347,7 @@ router.post('/sendSticker/:instanceName', checkInstanceApiKey, upload.single('fi
 });
 
 // 4. Enviar Botões (Interactive / Buttons)
-router.post('/sendButtons/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+router.post('/sendButtons/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
     const { number, title, description, footer, buttons } = req.body;
@@ -421,7 +442,7 @@ router.post('/sendButtons/:instanceName', checkInstanceApiKey, async (req: Reque
 });
 
 // 5. Enviar List (List Message)
-router.post('/sendList/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+router.post('/sendList/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
     const { number, title, description, footerText, buttonText, sections } = req.body;
@@ -491,7 +512,7 @@ router.post('/sendList/:instanceName', checkInstanceApiKey, async (req: Request,
 });
 
 // 6. Enviar Carousel (Carousel Message)
-router.post('/sendCarousel/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+router.post('/sendCarousel/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
     const { number, body, cards } = req.body;

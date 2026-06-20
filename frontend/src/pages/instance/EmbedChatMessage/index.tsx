@@ -126,7 +126,11 @@ function EmbedChatMessage() {
       localStorage.setItem("accessToken", tokenFromUrl);
     }
 
-    const socket = connectSocket(serverUrl);
+    const effectiveToken = tokenFromUrl ?? currentToken ?? "";
+    const socket = connectSocket(serverUrl, {
+      apikey: effectiveToken,
+      instanceName: activeInstance.name,
+    });
 
     function updateChats(_: string, data: any) {
       if (!activeInstance) return;

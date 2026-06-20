@@ -450,7 +450,10 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
       return;
     }
 
-    const socket = connectSocket(serverUrl);
+    const socket = connectSocket(serverUrl, {
+      apikey: instance.token,
+      instanceName: instance.name,
+    });
 
     // Function to update messages from websocket events
     const updateMessagesFromWebsocket = (_eventType: string, data: any) => {
