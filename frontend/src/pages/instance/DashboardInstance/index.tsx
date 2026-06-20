@@ -30,6 +30,7 @@ function DashboardInstance() {
   const [pairingCode, setPairingCode] = useState("");
   const [goQrOpen, setGoQrOpen] = useState(false);
   const [goSendOpen, setGoSendOpen] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const token = getToken(TOKEN_ID.TOKEN);
   const isGo = getProvider() === "go";
   const { theme } = useTheme();
@@ -44,6 +45,24 @@ function DashboardInstance() {
       localStorage.setItem(TOKEN_ID.INSTANCE_TOKEN, instance.token);
     }
   }, [instance]);
+
+  // Auto-refresh QR code every 20 seconds while the dialog is open.
+  // WhatsApp QR codes expire in ~20 seconds; this keeps them valid silently.
+  useEffect(() => {
+    if (!qrDialogOpen || !instance || !token) return;
+
+    const refreshQR = async () => {
+      try {
+        const data = await connect({ instanceName: instance.name, token });
+        if (data?.code) setQRCode(data.code);
+      } catch (error) {
+        console.error("Error auto-refreshing QR code:", error);
+      }
+    };
+
+    const interval = setInterval(refreshQR, 20000);
+    return () => clearInterval(interval);
+  }, [qrDialogOpen]);
 
   const handleReload = async () => {
     await reloadInstance();
@@ -185,18 +204,35 @@ function DashboardInstance() {
                   </>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    <Dialog>
-                      <DialogTrigger onClick={() => handleConnect(instance.name, false)} asChild>
+                    <Dialog
+                      open={qrDialogOpen}
+                      onOpenChange={(open) => {
+                        setQrDialogOpen(open);
+                        if (!open) closeQRCodePopup();
+                      }}
+                    >
+                      <DialogTrigger
+                        onClick={() => {
+                          setQrDialogOpen(true);
+                          handleConnect(instance.name, false);
+                        }}
+                        asChild
+                      >
                         <Button>
                           <QrCode className="mr-2 h-4 w-4" />
                           {t("instance.dashboard.button.qrcode.label")}
                         </Button>
                       </DialogTrigger>
-                      <DialogContent onCloseAutoFocus={closeQRCodePopup}>
+                      <DialogContent>
                         <DialogHeader>{t("instance.dashboard.button.qrcode.title")}</DialogHeader>
-                        <div className="flex items-center justify-center py-4">
+                        <div className="flex flex-col items-center gap-3 py-4">
                           {qrCode ? (
-                            <QRCode value={qrCode} size={256} bgColor="transparent" fgColor={qrCodeColor} className="rounded-sm" />
+                            <>
+                              <QRCode value={qrCode} size={256} bgColor="transparent" fgColor={qrCodeColor} className="rounded-sm" />
+                              <p className="text-xs text-muted-foreground animate-pulse">
+                                {t("instance.dashboard.qrcode.autoRefresh", { defaultValue: "QR Code atualiza automaticamente a cada 20 segundos" })}
+                              </p>
+                            </>
                           ) : (
                             <LoadingSpinner />
                           )}
