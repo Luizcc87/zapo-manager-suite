@@ -63,8 +63,11 @@ export const connectSocket = (
 
   socket.on("disconnect", (reason) => {
     console.log(`[WS] Disconnected from ${serverUrl}:`, reason);
-    // FIX 3: notifica chamador para exibir banner "Reconectando..."
-    callbacks?.onDisconnect?.(reason);
+    // "io client disconnect" = chamado intencionalmente (navegação, unmount)
+    // Não exibir banner de "Conexão perdida" nesses casos
+    if (reason !== "io client disconnect") {
+      callbacks?.onDisconnect?.(reason);
+    }
   });
 
   socket.on("connect_error", (error) => {
