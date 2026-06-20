@@ -357,6 +357,7 @@ export class ZapoManager {
       throw new Error(`Instância ${instanceName} não cadastrada.`);
     }
 
+
     const settings = (instance.settingsConfig as any) ?? {};
     const rawProxy = (instance.proxyConfig as any) ?? {};
     // Auto-inject sticky session per instance when not explicitly set.
@@ -392,6 +393,7 @@ export class ZapoManager {
       clientOptions.mobileTransport = {
         deviceInfo: instance.deviceInfo || getMobileDevice()
       };
+      console.log(`[ZapoManager] [${instanceName}] Inicializando cliente com Mobile Transport:`, JSON.stringify(clientOptions.mobileTransport, null, 2));
     }
 
     const client = new WaClient(clientOptions, logger);
@@ -498,7 +500,11 @@ export class ZapoManager {
             console.error(`[ZapoManager] [${instanceName}] Erro ao desconectar no evento de close:`, err.message);
           });
         } else {
-          await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
+          try {
+            await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
+          } catch (err: any) {
+            console.log(`[ZapoManager] [${instanceName}] Falha ao definir status como desconectado (provavelmente excluída):`, err.message);
+          }
           ZapoManager.sendWebhook(instanceName, 'connection.update', {
             status: 'disconnected',
             reason: (event as any).reason

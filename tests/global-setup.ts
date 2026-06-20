@@ -18,7 +18,7 @@
 import * as path from 'path';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/0';
-const BASE_URL  = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080';
+const BASE_URL  = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8080';
 
 export default async function globalSetup(): Promise<void> {
   console.log('\n╔══════════════════════════════════════════════════╗');

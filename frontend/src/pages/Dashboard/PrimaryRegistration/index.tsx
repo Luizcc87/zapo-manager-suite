@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, Loader2, Phone, ShieldAlert } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -57,12 +57,14 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   resetTable: () => void;
+  defaultInstanceName?: string;
 }
 
 export function PrimaryRegistrationDialog({
   open,
   onOpenChange,
   resetTable,
+  defaultInstanceName,
 }: Props) {
   const { t } = useTranslation();
   const { createInstance } = useManageInstance();
@@ -73,7 +75,7 @@ export function PrimaryRegistrationDialog({
 
   const formMethods = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { instanceName: "", phoneNumber: "", method: "sms" },
+    defaultValues: { instanceName: defaultInstanceName || "", phoneNumber: "", method: "sms" },
   });
 
   const otpMethods = useForm<OtpData>({
@@ -81,8 +83,18 @@ export function PrimaryRegistrationDialog({
     defaultValues: { code: "" },
   });
 
+  useEffect(() => {
+    if (open && defaultInstanceName) {
+      formMethods.setValue("instanceName", defaultInstanceName);
+    }
+  }, [open, defaultInstanceName]);
+
   const resetAll = () => {
-    formMethods.reset();
+    formMethods.reset({
+      instanceName: defaultInstanceName || "",
+      phoneNumber: "",
+      method: "sms",
+    });
     otpMethods.reset();
     setStep("warning");
     setInstanceName("");

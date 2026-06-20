@@ -6,6 +6,21 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Correção de conexão em instâncias móveis pendentes
+
+**Backend**
+- `backend/src/routes/instance.routes.ts`:
+  - No endpoint `/instance/create`, não inicia a conexão de forma assíncrona para instâncias `mobileTransport` pendentes de pareamento.
+  - No endpoint `/instance/connect/:instanceName`, captura erros de inicialização da conexão TCP (ex: porta 5222 bloqueada) e retorna status `200` com `status: 'disconnected'` e a mensagem do erro, evitando falhas de rede HTTP 500 no console do frontend.
+- `backend/src/manager.ts`:
+  - Tratado o evento de desconexão (`close`) no Prisma de forma segura com `try-catch`, evitando falhas de banco de dados (`P2025`) se a instância for excluída do painel durante a desconexão.
+
+**Frontend**
+- `frontend/src/pages/instance/DashboardInstance/index.tsx`:
+  - Modificado o alerta de desconexão. Se a instância for do tipo `mobileTransport` e estiver desconectada, o painel oculta as opções de QR Code / Código de Pareamento e exibe um botão dedicado "Registrar Dispositivo Móvel" para abrir o modal de Registro Primário diretamente, com o nome da instância já preenchido.
+- `frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx`:
+  - Adicionado suporte a `defaultInstanceName` para preencher automaticamente o campo de texto do nome da instância.
+
 ### Flags visuais e versão por instância no dashboard
 
 **Backend**

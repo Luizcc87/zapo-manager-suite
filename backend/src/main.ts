@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as net from 'net';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { Server as HttpServer } from 'http';
@@ -27,6 +28,30 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+function checkPort(host: string, port: number, timeout = 2500): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(timeout);
+    
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.connect(port, host);
+  });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -268,6 +293,22 @@ async function bootstrap() {
     await runMigrationsWithRetry();
 
     console.log(`[Zapo-Manager] WA Web version (zapo-js built-in): ${getZapoWebVersion()}`);
+
+    // Inicia verificação assíncrona de portas do WhatsApp para diagnóstico prévio
+    setImmediate(async () => {
+      const is5222Open = await checkPort('web.whatsapp.com', 5222);
+      const is443Open = await checkPort('web.whatsapp.com', 443);
+      if (!is5222Open) {
+        console.warn('[Zapo-Manager] ⚠️ PORTA 5222 BLOQUEADA: Conexões nativas com o WhatsApp (Mobile Transport) podem falhar ou demorar para conectar.');
+      } else {
+        console.log('[Zapo-Manager] Port 5222 connectivity to web.whatsapp.com is OK.');
+      }
+      if (!is443Open) {
+        console.warn('[Zapo-Manager] ⚠️ PORTA 443 BLOQUEADA: O servidor não consegue se conectar com o WhatsApp Web.');
+      } else {
+        console.log('[Zapo-Manager] Port 443 connectivity to web.whatsapp.com is OK.');
+      }
+    });
 
     const latestAndroidVersion = await fetchLatestAndroidWaVersion();
     if (latestAndroidVersion) {

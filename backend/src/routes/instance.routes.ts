@@ -83,9 +83,11 @@ router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) =>
     const instance = await ZapoManager.createClient(instanceName, mobileTransport || false, deviceInfo, token);
     
     // Inicia a conexão de forma assíncrona (gerar QR ou reconectar)
-    ZapoManager.connectClient(instanceName).catch(err => {
-      console.error(`[ZapoRouter] Falha na inicialização assíncrona de ${instanceName}:`, err.message);
-    });
+    if (!instance.mobileTransport) {
+      ZapoManager.connectClient(instanceName).catch(err => {
+        console.error(`[ZapoRouter] Falha na inicialização assíncrona de ${instanceName}:`, err.message);
+      });
+    }
 
     return res.status(201).json({
       instance: {
@@ -308,7 +310,17 @@ router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, r
     // Inicia a conexão se não estiver iniciada
     let active = ZapoManager.getActive(instanceName);
     if (!active) {
-      active = await ZapoManager.connectClient(instanceName);
+      try {
+        active = await ZapoManager.connectClient(instanceName);
+      } catch (err: any) {
+        console.warn(`[ZapoRouter] Falha ao iniciar cliente ${instanceName}:`, err.message);
+        return res.status(200).json({
+          code: '',
+          count: 0,
+          status: 'disconnected',
+          error: err.message
+        });
+      }
     }
     if (!active) {
       return res.status(500).json({ error: 'Failed to initialize active instance client' });

@@ -22,6 +22,7 @@ import { getProvider, getToken, TOKEN_ID } from "@/lib/queries/token";
 
 import { GoQrCodeModal } from "./GoQrCodeModal";
 import { GoSendMessageModal } from "./GoSendMessageModal";
+import { PrimaryRegistrationDialog } from "../../Dashboard/PrimaryRegistration";
 
 function DashboardInstance() {
   const { t, i18n } = useTranslation();
@@ -31,6 +32,7 @@ function DashboardInstance() {
   const [goQrOpen, setGoQrOpen] = useState(false);
   const [goSendOpen, setGoSendOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [primaryRegOpen, setPrimaryRegOpen] = useState(false);
   const token = getToken(TOKEN_ID.TOKEN);
   const isGo = getProvider() === "go";
   const { theme } = useTheme();
@@ -210,7 +212,10 @@ function DashboardInstance() {
             {!connected && (
               <Alert variant="warning" className="flex flex-wrap items-center justify-between gap-3">
                 <AlertTitle className="text-lg font-bold tracking-wide">
-                  {t("instance.dashboard.alert")}
+                  {instanceType === "mobile" 
+                    ? t("instance.dashboard.alert.mobile", { defaultValue: "Esta é uma instância móvel pendente de registro." })
+                    : t("instance.dashboard.alert")
+                  }
                 </AlertTitle>
 
                 {isGo ? (
@@ -223,6 +228,21 @@ function DashboardInstance() {
                   </>
                 ) : (
                   <div className="flex flex-wrap gap-2">
+                    {instanceType === "mobile" && (
+                      <>
+                        <Button onClick={() => setPrimaryRegOpen(true)} variant="outline">
+                          <Smartphone className="mr-2 h-4 w-4" />
+                          {t("primaryRegistration.button", { defaultValue: "Registrar via SMS/Voz" })}
+                        </Button>
+                        <PrimaryRegistrationDialog
+                          open={primaryRegOpen}
+                          onOpenChange={setPrimaryRegOpen}
+                          resetTable={handleReload}
+                          defaultInstanceName={instance.name}
+                        />
+                      </>
+                    )}
+
                     <Dialog
                       open={qrDialogOpen}
                       onOpenChange={(open) => {
