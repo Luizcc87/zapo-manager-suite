@@ -395,9 +395,11 @@ export class ZapoManager {
     }
 
     const client = new WaClient(clientOptions, logger);
+    const QR_LIMIT = parseInt(process.env.QRCODE_LIMIT ?? '5', 10);
     const activeData = {
       client, pgStore, redisClient, poller,
       qrCode: undefined as string | undefined,
+      qrCount: 0,
       lockInterval: undefined as any,
       messageStatus: new Map<string, any>()
     };
@@ -415,15 +417,30 @@ export class ZapoManager {
     // ── Auth & Connection ─────────────────────────────────────────────────────
 
     client.on('auth_qr', async ({ qr }) => {
-      console.log(`[ZapoManager] [${instanceName}] QR Code recebido.`);
+      activeData.qrCount += 1;
+      console.log(`[ZapoManager] [${instanceName}] QR Code recebido (${activeData.qrCount}/${QR_LIMIT}).`);
+
+      if (activeData.qrCount > QR_LIMIT) {
+        console.warn(`[ZapoManager] [${instanceName}] Limite de QR Codes atingido (${QR_LIMIT}). Encerrando tentativas.`);
+        ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'disconnected', reason: 'qrcode_limit_reached' });
+        _socketEmitter?.('connection.update', { instance: instanceName, data: { status: 'disconnected', reason: 'qrcode_limit_reached' } });
+        // Desconecta sem marcar como logout — pode ser reconectado manualmente depois
+        ZapoManager.disconnectClient(instanceName).catch((err: any) => {
+          console.error(`[ZapoManager] [${instanceName}] Erro ao encerrar após limite de QR:`, err.message);
+        });
+        return;
+      }
+
       activeData.qrCode = qr;
       await prisma.instance.update({ where: { instanceName }, data: { status: 'connecting' } });
       ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connecting', qr });
+      _socketEmitter?.('connection.update', { instance: instanceName, data: { status: 'connecting', qr } });
     });
 
     client.on('auth_paired', async ({ credentials }) => {
       console.log(`[ZapoManager] [${instanceName}] Dispositivo pareado como ${credentials.meJid}`);
       activeData.qrCode = undefined;
+      activeData.qrCount = 0;
       await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
       ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connected', meJid: credentials.meJid });
     });
