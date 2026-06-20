@@ -19,6 +19,9 @@ version: '3.8'
 #                      Gerar: openssl rand -base64 24
 #                      Exemplo: export POSTGRES_PASSWORD=K7mP2xQnR9vLdJhF4sTuYwZcB1eN8oAg
 #
+#   SERVER_URL       — URL pública do servidor (usada para links absolutos).
+#                      Exemplo: export SERVER_URL=https://zapo.seu-dominio.com
+#
 #   WEBHOOK_URL      — URL de destino para eventos WhatsApp (opcional).
 #                      Exemplo: export WEBHOOK_URL=https://seu-dominio.com/webhook/zapo
 #                      Deixar vazio se não usar: export WEBHOOK_URL=
@@ -49,6 +52,7 @@ services:
       - DATABASE_URL=postgresql://zapo:${POSTGRES_PASSWORD:-zapo}@zapo-db:5432/zapo?schema=public
       - REDIS_URL=redis://zapo-redis:6379/0
       - GLOBAL_API_KEY=${GLOBAL_API_KEY:?GLOBAL_API_KEY obrigatorio. Gere com: openssl rand -hex 32}
+      - SERVER_URL=${SERVER_URL:-http://localhost:8080}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - PORT=8080
       - NODE_ENV=production
