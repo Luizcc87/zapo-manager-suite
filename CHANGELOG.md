@@ -1,0 +1,128 @@
+# Changelog — zapo-manager
+
+Registro cronológico reverso de implementações e alterações relevantes.
+
+---
+
+## [Unreleased] — 2026-06-20
+
+### Proxy — sticky session, auto-registro de IP, substituição
+
+**Backend**
+- `backend/src/routes/config.routes.ts`
+  - `testProxyConnectivity`: aplica mesmo sufixo `username-country-session` que `buildProxy` (consistência entre teste e conexão real)
+  - `POST /proxy/replace/:instanceName`: solicita substituição do IP do proxy via `PROXY_REPLACE_API_URL` + `PROXY_REPLACE_API_KEY`
+  - `DEFAULT_PROXY`: adicionados campos `country` e `session`
+  - `GET /proxy/status/:instanceName`: retorna `{enabled, connected, externalIp, latencyMs, proxyUrl, error}`
+
+- `backend/src/manager.ts`
+  - `buildProxy()`: compõe usuário com sufixos `-country-session` para roteamento geográfico e sessão fixa em pools backconnect
+  - `connectClient`: auto-injeta `session = instanceName` quando `session` está vazio (evita rotação de IP mid-session)
+
+- `backend/src/main.ts`
+  - `autoRegisterServerIp()`: detecta IP público via `api.ipify.org` e registra no provedor de proxies via `PROXY_API_KEY` + `PROXY_IP_AUTH_URL` a cada startup
+
+**Frontend**
+- `frontend/src/pages/instance/Proxy/index.tsx`
+  - Campos `country` (código ISO 2 letras) e `session` (ID de sessão fixa) no formulário
+  - `ProxyStatusPanel`: botão "Substituir IP" chama `POST /proxy/replace/:instanceName`
+
+- `frontend/src/types/evolution.types.ts`: `Proxy` type + `country?` e `session?`
+- i18n: chaves `proxy.form.country`, `proxy.form.session`, `proxy.status.replace` em pt-BR, en-US, es-ES, fr-FR
+
+**Env vars novas (opcionais)**
+| Var | Uso |
+|---|---|
+| `PROXY_API_KEY` | Chave para auto-registro de IP |
+| `PROXY_IP_AUTH_URL` | Endpoint de autorização de IP (POST `{ip_address}`) |
+| `PROXY_REPLACE_API_URL` | Endpoint de substituição de proxy |
+| `PROXY_REPLACE_API_KEY` | Chave para substituição |
+
+**Commits:** `f6e50f8`, `c2dc0b7`, `d72c451`
+
+---
+
+### Proxy — status visual, badge no card, painel de status
+
+- `GET /proxy/status/:instanceName` — testa conectividade real via `api.ipify.org`
+- `frontend/src/lib/queries/proxy/fetchProxyStatus.ts` — hook `useFetchProxyStatus`
+- `frontend/src/pages/instance/Proxy/index.tsx` — `ProxyStatusPanel`: IP externo, latência, URL, badge conectado/falhou, botão refresh
+- `frontend/src/components/instance-card.tsx` — badge roxo "Proxy" quando `instance.proxyEnabled === true`
+- `backend/src/routes/instance.routes.ts` — campo `proxyEnabled` no fetchInstances response
+- i18n: chaves `proxy.status.*` e `proxy.badge.*` nos 4 idiomas
+
+**Commit:** `b696bec`
+
+---
+
+### Proxy — suporte nativo via zapo-js
+
+- `backend/src/manager.ts`: `buildProxy()` com `undici.ProxyAgent` (HTTP/HTTPS) + `require('socks-proxy-agent')` / `require('https-proxy-agent')` dinâmico (contorna `moduleResolution: node` incompatível com ESM exports)
+- 4 legs: `ws`, `mediaUpload`, `mediaDownload`, `linkPreview`
+- `backend/src/routes/config.routes.ts`: rotas `GET/POST /proxy/find|set/:instanceName`
+- Schema Prisma: campo `proxyConfig Json?` na tabela `Instance`
+- Migration idempotente: `ADD COLUMN IF NOT EXISTS "proxyConfig"`
+
+**Commit:** `fad9994`
+
+---
+
+### zapo-js — correção de eventos e integração
+
+- `backend/src/manager.ts`:
+  - `buildStore()` extraído para eliminar duplicação
+  - `sendWebhook`: lê `webhookConfig` do DB por instância com filtro de eventos (era env var global)
+  - Handlers Baileys mortos removidos; substituídos por handlers zapo-js nativos
+  - `client.on('receipt', ...)`: popula `messageStatus` com status de entrega/leitura
+  - `settingsConfig` aplicado: `markOnlineOnConnect`, `history.enabled`, `readMessages` (auto-receipt), `groupsIgnore`
+  - Eventos wired: `message_addon`, `receipt`, `presence`, `chatstate`, `call`, `group`
+
+**Commit:** `948490d`
+
+---
+
+### Config routes, device envs, provider zapo
+
+- Rotas REST: `GET/POST /settings/find|set`, `GET/POST /webhook/find|set`
+- `backend/src/config/device.ts`: `DEFAULT_MOBILE_DEVICE` centralizado com `appVersion`
+- `backend/src/config/fetchAndroidWaVersion.ts`: busca versão WA Business no Google Play no startup; fallback hardcoded se falhar
+- Variáveis de ambiente: `SESSION_DEVICE_BROWSER`, `SESSION_DEVICE_OS` → `zapo-js` `deviceBrowser`/`deviceOsDisplayName`
+- Provider `"zapo"` adicionado ao frontend; integrações incompatíveis marcadas como disabled
+
+**Commit:** `60493f5`
+
+---
+
+### Branding e identidade
+
+- Footer, integration-disabled: "Evolution API" → "zapo-manager-suite" / "Zapo"
+- Logo Zapo Manager aplicado nos 6 componentes de UI relevantes
+
+---
+
+### Registro primário SMS/OTP (Fases 1 + 2)
+
+- Frontend: `registrationApi.ts`, `PrimaryRegistrationDialog`, fluxo requestCode/confirmCode
+- Backend: endpoints `/registration/request-code` e `/registration/confirm-code`
+- Prisma: campo `registeredPhone` na tabela `Instance` (migration idempotente aplicada)
+- ⚠️ **Pendente**: `npx prisma generate` no `backend/` (com dev server parado) para regenerar client e habilitar acesso direto ao campo `registeredPhone` sem `$queryRaw`
+
+---
+
+### Docker e infraestrutura
+
+- Build multi-arch `amd64 + arm64` publicado em `lc1868/zapo-manager`
+- `docker-stack-swarm.yaml`: rede isolada `zapo-internal` para DB/Redis, `GLOBAL_API_KEY` obrigatória com `:?`, postgres `18-alpine`
+- `scripts/build-push.sh`: build + push com tag opcional
+- `.env.example`: template com todos os env vars documentados
+- Peer deps: `--legacy-peer-deps` necessário (`sharp@0.33.5` vs `baileys` que pede `^0.32.2`)
+- Prisma em produção: DLL lock Windows resolvido parando server antes de `generate`
+
+---
+
+## Pendências ativas
+
+| Item | Detalhe |
+|---|---|
+| `prisma generate` | Regenerar client após adição de `registeredPhone` — parar dev server antes |
+| Push origin | 12 commits à frente de `origin/master` |
