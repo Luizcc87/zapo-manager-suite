@@ -300,9 +300,32 @@ export class ZapoManager {
     );
   }
 
-  static getMessageList(instanceName: string, remoteJid: string): any[] {
-    const byJid = chatMessages.get(instanceName);
-    return byJid?.get(remoteJid) ?? [];
+  static async getMessageList(instanceName: string, remoteJid: string): Promise<any[]> {
+    const inMemory = chatMessages.get(instanceName)?.get(remoteJid) ?? [];
+
+    if (process.env.SAVE_DATA_NEW_MESSAGE !== 'true') return inMemory;
+
+    const dbRows = await prisma.message.findMany({
+      where: { instanceName, remoteJid },
+      orderBy: { messageTimestamp: 'asc' },
+    });
+
+    const map = new Map<string, any>();
+    for (const r of dbRows) {
+      map.set(r.messageId, {
+        id: r.messageId,
+        key: { remoteJid: r.remoteJid, fromMe: r.fromMe, id: r.messageId },
+        pushName: r.pushName,
+        messageType: r.messageType,
+        message: r.message,
+        messageTimestamp: r.messageTimestamp,
+        instanceId: r.instanceName,
+        source: r.source,
+      });
+    }
+    for (const m of inMemory) map.set(m.id, m);
+
+    return Array.from(map.values());
   }
 
   private static unwrapMessage(message: any): any {
@@ -371,7 +394,7 @@ export class ZapoManager {
     };
     byChat.set(remoteJid, chatEntry);
 
-    // FIX 2: Persiste chat no banco (wa_chats) — fire-and-forget para não bloquear evento
+    // Persiste chat no banco (wa_chats) — fire-and-forget
     prisma.chatEntry.upsert({
       where: { instanceName_remoteJid: { instanceName, remoteJid } },
       create: {
@@ -389,6 +412,27 @@ export class ZapoManager {
     }).catch((err: any) => {
       console.error(`[ZapoManager] [${instanceName}] Erro ao persistir chat ${remoteJid}:`, err.message);
     });
+
+    // Persiste mensagem no banco quando SAVE_DATA_NEW_MESSAGE=true — fire-and-forget
+    if (process.env.SAVE_DATA_NEW_MESSAGE === 'true') {
+      prisma.message.upsert({
+        where: { instanceName_messageId: { instanceName, messageId: normalized.id } },
+        create: {
+          instanceName,
+          remoteJid,
+          messageId: normalized.id,
+          fromMe: msgData.key?.fromMe ?? false,
+          pushName: normalized.pushName,
+          messageType: normalized.messageType,
+          message: normalized.message as any,
+          messageTimestamp: normalized.messageTimestamp,
+          source: normalized.source,
+        },
+        update: {},
+      }).catch((err: any) => {
+        console.error(`[ZapoManager] [${instanceName}] Erro ao persistir mensagem ${normalized.id}:`, err.message);
+      });
+    }
   }
 
   static async loadAll() {

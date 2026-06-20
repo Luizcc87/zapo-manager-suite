@@ -16,7 +16,7 @@ import { getToken, TOKEN_ID } from "@/lib/queries/token";
 
 import { Message } from "@/types/evolution.types";
 
-import { connectSocket, disconnectSocket } from "@/services/websocket/socket";
+import { connectSocket } from "@/services/websocket/socket";
 
 // Import components from EmbedChatMessage for attachment functionality
 import { MediaOptions } from "../EmbedChatMessage/InputMessage/media-options";
@@ -420,6 +420,7 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
   const { data: messages, isSuccess } = useFindMessages({
     remoteJid,
     instanceName: instance?.name,
+    refetchInterval: 3000,
   });
 
   // Combine React Query messages with real-time updates
@@ -494,27 +495,20 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
       // TODO: Implement proper message status updates when Message type supports it
     };
 
-    // Set up event listeners
-    socket.on("messages.upsert", (data: any) => {
-      updateMessagesFromWebsocket("messages.upsert", data);
-    });
+    const onUpsert = (data: any) => updateMessagesFromWebsocket("messages.upsert", data);
+    const onSend = (data: any) => updateMessagesFromWebsocket("send.message", data);
+    const onUpdate = (data: any) => updateMessageStatus(data);
 
-    socket.on("send.message", (data: any) => {
-      updateMessagesFromWebsocket("send.message", data);
-    });
-
-    socket.on("messages.update", (data: any) => {
-      updateMessageStatus(data);
-    });
+    socket.on("messages.upsert", onUpsert);
+    socket.on("send.message", onSend);
+    socket.on("messages.update", onUpdate);
 
     socket.connect();
 
-    // Cleanup function
     return () => {
-      socket.off("messages.upsert");
-      socket.off("send.message");
-      socket.off("messages.update");
-      disconnectSocket(socket);
+      socket.offHandler("messages.upsert", onUpsert);
+      socket.offHandler("send.message", onSend);
+      socket.offHandler("messages.update", onUpdate);
     };
   }, [instance?.name, remoteJid]);
 

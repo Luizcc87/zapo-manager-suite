@@ -34,7 +34,7 @@ router.post('/findMessages/:instanceName', checkInstanceApiKey, async (req: Requ
       return res.status(400).json({ error: 'where.key.remoteJid is required' });
     }
 
-    const records = ZapoManager.getMessageList(instanceName, remoteJid);
+    const records = await ZapoManager.getMessageList(instanceName, remoteJid);
 
     // Match the response shape the frontend expects:
     // response.data?.messages?.records OR response.data (array)

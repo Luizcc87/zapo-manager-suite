@@ -17,6 +17,7 @@ export interface SocketCallbacks {
 export interface WebSocketConnection {
   on: (event: string, callback: (data: any) => void) => void;
   off: (event: string) => void;
+  offHandler: (event: string, callback: (data: any) => void) => void;
   connect: () => void;
   disconnect: () => void;
 }
@@ -106,6 +107,7 @@ function createSocketWrapper(key: string, socket: Socket): SocketWrapper {
     _key: key,
     on: (event, callback) => { socket.on(event, callback); },
     off: (event) => { socket.off(event); },
+    offHandler: (event, callback) => { socket.off(event, callback); },
     connect: () => { if (!socket.connected) socket.connect(); },
     disconnect: () => { socket.disconnect(); },
   };

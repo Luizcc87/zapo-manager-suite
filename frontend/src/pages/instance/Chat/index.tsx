@@ -15,7 +15,7 @@ import { useFindChats } from "@/lib/queries/chat/findChats";
 import { getToken, TOKEN_ID } from "@/lib/queries/token";
 import { cn } from "@/lib/utils";
 
-import { connectSocket, disconnectSocket } from "@/services/websocket/socket";
+import { connectSocket } from "@/services/websocket/socket";
 
 import { Chat as ChatType } from "@/types/evolution.types";
 
@@ -113,9 +113,8 @@ function Chat() {
     socket.connect();
 
     return () => {
-      socket.off("messages.upsert");
-      socket.off("send.message");
-      disconnectSocket(socket);
+      socket.offHandler("messages.upsert", handle);
+      socket.offHandler("send.message", handle);
     };
   }, [instance, instance?.name, queryClient]);
 

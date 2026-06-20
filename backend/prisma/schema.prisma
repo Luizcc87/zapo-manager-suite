@@ -25,6 +25,25 @@ model Instance {
   updatedAt       DateTime @updatedAt
 }
 
+/// Persiste mensagens por instância quando SAVE_DATA_NEW_MESSAGE=true.
+model Message {
+  id               String   @id @default(cuid())
+  instanceName     String
+  remoteJid        String
+  messageId        String
+  fromMe           Boolean  @default(false)
+  pushName         String   @default("")
+  messageType      String   @default("unknown")
+  message          Json?
+  messageTimestamp String
+  source           String   @default("baileys")
+  createdAt        DateTime @default(now())
+
+  @@unique([instanceName, messageId])
+  @@index([instanceName, remoteJid])
+  @@map("wa_messages")
+}
+
 /// Persiste a lista de chats por instância para sobreviver a restarts.
 model ChatEntry {
   id           String   @id @default(cuid())
