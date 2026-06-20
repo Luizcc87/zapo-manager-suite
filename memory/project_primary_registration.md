@@ -22,10 +22,13 @@ Fluxo completo para registrar número WhatsApp como Primário (sem QR Code) via 
 - `backend/prisma/schema.prisma` tem campo `registeredPhone String?` (aplicado via raw SQL, Prisma client ainda não regenerado)
 - Bug fixes: domínios `preKey`/`session`/`identity` no store, sanitização de keyPrefix Redis para nomes com hífen
 
-**Pendente:**
-- Rodar `npx prisma generate` no `backend/` após parar o dev server (para Prisma client conhecer `registeredPhone`)
-- Substituir `$queryRaw` no `fetchInstances` por `findMany()` tipado após regenerar
+**Fase 3 — Companion QR Code & Proxy Visuals (Concluída em 2026-06-20):**
+- **Bypass de mobileTransport:** Quando `ownerJid` está vazio (primeira conexão), o backend ignora `mobileTransport` para permitir o pareamento inicial por QR Code/WebSocket. Após o pareamento, o status passa a conectado e as reconexões usam o modo TCP.
+- **Restauração de Controles no Frontend:** A Dashboard da instância agora exibe as opções de gerar QR Code e código de pareamento mesmo para instâncias móveis, permitindo registrar como Companion ou Primário.
+- **Fallback de Versão Móvel:** Corrigida a leitura de versão móvel para novas instâncias que ainda não possuem `deviceInfo` salvo no DB, caindo no dispositivo padrão do runtime.
+- **Status de Proxy no Dashboard:** Integrado o painel `ProxyStatusPanel` no dashboard da instância se o proxy estiver ativo.
 
-**Why:** Permite usar número como Primário sem QR Code — chip não precisa estar acessível depois do registro, menor risco de ban.
+**Status de Pendências:**
+- *Prisma client:* O comando `npx prisma generate` foi executado e a listagem `fetchInstances` foi atualizada de `$queryRaw` para `findMany()` tipado usando as propriedades nativas.
 
-**How to apply:** Ao trabalhar neste fluxo, verificar se `registeredPhone` já está no Prisma client gerado. Se não, usar `$executeRaw` / `$queryRaw`.
+**Why:** Permite usar número tanto como Primário (via SMS OTP) quanto Companion/Vinculado (via Tablet QR Code TCP) mantendo alta estabilidade e feedback em tempo real do proxy na dashboard.
