@@ -368,6 +368,8 @@ export type Proxy = {
   protocol: string;
   username?: string;
   password?: string;
+  country?: string;
+  session?: string;
 };
 
 export type Chatwoot = {

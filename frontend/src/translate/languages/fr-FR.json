@@ -368,6 +368,15 @@
       },
       "password": {
         "label": "Mot de passe"
+      },
+      "country": {
+        "label": "Pays (2 lettres)",
+        "description": "Code ISO optionnel pour le routage géographique (ex: br, us)"
+      },
+      "session": {
+        "label": "Session fixe",
+        "description": "ID de session pour IP fixe. Vide = nom de l'instance",
+        "placeholder": "auto"
       }
     },
     "button": {
@@ -381,7 +390,10 @@
       "failed": "Échoué",
       "ip": "IP Externe",
       "latency": "Latence",
-      "server": "Serveur"
+      "server": "Serveur",
+      "replace": "Remplacer l'IP",
+      "replaceSuccess": "Remplacement demandé avec succès",
+      "replaceFailed": "Échec de la demande de remplacement"
     },
     "badge": {
       "label": "Proxy",

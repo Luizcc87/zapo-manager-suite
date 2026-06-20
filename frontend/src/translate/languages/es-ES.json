@@ -369,6 +369,15 @@
       },
       "password": {
         "label": "Contraseña"
+      },
+      "country": {
+        "label": "País (2 letras)",
+        "description": "Código ISO opcional para enrutamiento geográfico (ej: br, us)"
+      },
+      "session": {
+        "label": "Sesión fija",
+        "description": "ID de sesión para IP fija. Vacío = nombre de instancia",
+        "placeholder": "auto"
       }
     },
     "button": {
@@ -382,7 +391,10 @@
       "failed": "Falló",
       "ip": "IP Externa",
       "latency": "Latencia",
-      "server": "Servidor"
+      "server": "Servidor",
+      "replace": "Reemplazar IP",
+      "replaceSuccess": "Reemplazo solicitado con éxito",
+      "replaceFailed": "Error al solicitar el reemplazo"
     },
     "badge": {
       "label": "Proxy",

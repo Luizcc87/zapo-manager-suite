@@ -171,6 +171,31 @@ function startServer(app: express.Express, initialPort: number, maxAttempts = 10
   });
 }
 
+async function autoRegisterServerIp() {
+  const apiKey = process.env.PROXY_API_KEY;
+  const authUrl = process.env.PROXY_IP_AUTH_URL;
+  if (!apiKey || !authUrl) return;
+
+  try {
+    const ipRes = await fetch('https://api.ipify.org?format=json');
+    const { ip } = await ipRes.json() as { ip: string };
+    const authRes = await fetch(authUrl, {
+      method: 'POST',
+      headers: { 'Authorization': `Token ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip_address: ip }),
+    });
+    if (authRes.status === 201 || authRes.status === 200) {
+      console.log(`[Zapo-Manager] IP ${ip} autorizado no provedor de proxies.`);
+    } else if (authRes.status === 409) {
+      console.log(`[Zapo-Manager] IP ${ip} já autorizado no provedor de proxies.`);
+    } else {
+      console.warn(`[Zapo-Manager] Aviso ao autorizar IP ${ip}: HTTP ${authRes.status}`);
+    }
+  } catch (err: any) {
+    console.warn(`[Zapo-Manager] Falha ao auto-registrar IP no provedor de proxies: ${err.message}`);
+  }
+}
+
 async function bootstrap() {
   if (!process.env.GLOBAL_API_KEY) {
     console.error('[Zapo-Manager] FATAL: GLOBAL_API_KEY não definida. Configure a variável de ambiente antes de iniciar.');
@@ -191,6 +216,9 @@ async function bootstrap() {
     } else {
       console.warn(`[Zapo-Manager] WA Business Android version: fetch falhou — usando fallback hardcoded: ${getCurrentAppVersion()}`);
     }
+
+    // Auto-registra o IP público do servidor no provedor de proxies (se configurado)
+    await autoRegisterServerIp();
 
     // Carregar e reconectar instâncias ativas do banco de dados na inicialização
     await ZapoManager.loadAll();

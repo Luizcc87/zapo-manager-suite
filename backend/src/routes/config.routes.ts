@@ -12,10 +12,19 @@ async function testProxyConnectivity(cfg: any): Promise<{
   error?: string;
 }> {
   const CHECK_URL = 'https://api.ipify.org?format=json';
-  const auth = cfg.username && cfg.password
-    ? `${encodeURIComponent(cfg.username)}:${encodeURIComponent(cfg.password)}@`
-    : '';
   const protocol = (cfg.protocol as string) || 'http';
+
+  // Apply same username suffix logic as buildProxy in manager.ts
+  let effectiveUser: string = cfg.username || '';
+  if (effectiveUser) {
+    if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase()}`;
+    if (cfg.session) effectiveUser += `-${cfg.session}`;
+  }
+  const auth = effectiveUser && cfg.password
+    ? `${encodeURIComponent(effectiveUser)}:${encodeURIComponent(cfg.password)}@`
+    : effectiveUser && !cfg.password
+    ? `${encodeURIComponent(effectiveUser)}@`
+    : '';
   const proxyUrl = `${protocol}://${auth}${cfg.host}:${cfg.port}`;
   const start = Date.now();
 
@@ -76,6 +85,8 @@ const DEFAULT_PROXY = {
   protocol: 'http',
   username: '',
   password: '',
+  country: '',  // optional 2-letter ISO code for geographic targeting
+  session: '',  // optional sticky session ID (auto-set to instanceName when blank)
 };
 
 async function checkInstanceApiKey(req: Request, res: Response, next: any) {
@@ -184,6 +195,41 @@ router.get('/proxy/status/:instanceName', checkInstanceApiKey, async (req: Reque
 
     const result = await testProxyConnectivity(cfg);
     return res.json({ enabled: true, protocol, proxyUrl, ...result });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Proxy Replace ─────────────────────────────────────────────────────────────
+
+router.post('/proxy/replace/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  const replaceApiUrl = process.env.PROXY_REPLACE_API_URL;
+  const replaceApiKey = process.env.PROXY_REPLACE_API_KEY;
+
+  if (!replaceApiUrl || !replaceApiKey) {
+    return res.status(501).json({ error: 'PROXY_REPLACE_API_URL and PROXY_REPLACE_API_KEY are not configured' });
+  }
+
+  try {
+    const instance = await prisma.instance.findUnique({ where: { instanceName: req.params.instanceName } });
+    if (!instance) return res.status(404).json({ error: 'Instance not found' });
+
+    const cfg = (instance.proxyConfig as any) ?? {};
+    if (!cfg.host) return res.status(400).json({ error: 'No proxy host configured for this instance' });
+
+    const body = {
+      to_replace: { type: 'ip_address', ip_addresses: [cfg.host] },
+      replace_with: [{ type: 'any', count: 1 }],
+    };
+
+    const response = await fetch(replaceApiUrl, {
+      method: 'POST',
+      headers: { 'Authorization': `Token ${replaceApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    return res.status(response.ok ? 200 : response.status).json(data);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

@@ -412,6 +412,15 @@
       },
       "password": {
         "label": "Password"
+      },
+      "country": {
+        "label": "Country (2 letters)",
+        "description": "Optional ISO code for geographic routing (e.g. br, us)"
+      },
+      "session": {
+        "label": "Sticky session",
+        "description": "Session ID for fixed IP. Empty = instance name",
+        "placeholder": "auto"
       }
     },
     "button": {
@@ -425,7 +434,10 @@
       "failed": "Failed",
       "ip": "External IP",
       "latency": "Latency",
-      "server": "Server"
+      "server": "Server",
+      "replace": "Replace IP",
+      "replaceSuccess": "Replacement requested successfully",
+      "replaceFailed": "Failed to request replacement"
     },
     "badge": {
       "label": "Proxy",

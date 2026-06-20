@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { useInstance } from "@/contexts/InstanceContext";
 
 import { getProvider } from "@/lib/queries/token";
+import { apiGlobal } from "@/lib/queries/api";
 import { useFetchProxy } from "@/lib/queries/proxy/fetchProxy";
 import { useManageProxy } from "@/lib/queries/proxy/manageProxy";
 import { useFetchProxyStatus, ProxyStatusResponse } from "@/lib/queries/proxy/fetchProxyStatus";
@@ -29,6 +30,8 @@ const formSchema = z.object({
   protocol: z.string(),
   username: z.string(),
   password: z.string(),
+  country: z.string(),
+  session: z.string(),
 });
 
 type FormSchemaType = z.infer<typeof formSchema>;
@@ -36,8 +39,22 @@ type FormSchemaType = z.infer<typeof formSchema>;
 function ProxyStatusPanel({ instanceName }: { instanceName: string }) {
   const { t } = useTranslation();
   const { data: status, isFetching, refetch } = useFetchProxyStatus({ instanceName });
+  const [replacing, setReplacing] = useState(false);
 
   if (!status?.enabled) return null;
+
+  const handleReplace = async () => {
+    setReplacing(true);
+    try {
+      await apiGlobal.post(`/proxy/replace/${instanceName}`);
+      toast.success(t("proxy.status.replaceSuccess"));
+      refetch();
+    } catch (err: any) {
+      toast.error(t("proxy.status.replaceFailed"));
+    } finally {
+      setReplacing(false);
+    }
+  };
 
   return (
     <div className="rounded-lg border border-sidebar-border bg-sidebar p-4 space-y-3">
@@ -46,15 +63,28 @@ function ProxyStatusPanel({ instanceName }: { instanceName: string }) {
           <Shield className="h-4 w-4 text-purple-500" />
           {t("proxy.status.title")}
         </h4>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="h-7 px-2"
-        >
-          <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReplace}
+            disabled={replacing || isFetching}
+            className="h-7 px-2 text-xs"
+            title={t("proxy.status.replace")}
+          >
+            <RefreshCw className={`h-3 w-3 ${replacing ? "animate-spin" : ""}`} />
+            <span className="ml-1 hidden sm:inline">{t("proxy.status.replace")}</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="h-7 px-2"
+          >
+            <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2 text-sm">
@@ -138,6 +168,8 @@ function Proxy() {
       protocol: "http",
       username: "",
       password: "",
+      country: "",
+      session: "",
     },
   });
 
@@ -148,8 +180,10 @@ function Proxy() {
         host: proxy.host,
         port: proxy.port,
         protocol: proxy.protocol,
-        username: proxy.username,
-        password: proxy.password,
+        username: proxy.username ?? "",
+        password: proxy.password ?? "",
+        country: proxy.country ?? "",
+        session: proxy.session ?? "",
       });
     }
   }, [proxy]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -166,6 +200,8 @@ function Proxy() {
         protocol: data.protocol,
         username: data.username,
         password: data.password,
+        country: data.country,
+        session: data.session,
       };
 
       await createProxy({
@@ -218,6 +254,14 @@ function Proxy() {
                   </FormInput>
                   <FormInput name="password" label={t("proxy.form.password.label")}>
                     <Input type="password" />
+                  </FormInput>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 md:gap-8">
+                  <FormInput name="country" label={t("proxy.form.country.label")} helper={t("proxy.form.country.description")}>
+                    <Input placeholder="br" maxLength={2} />
+                  </FormInput>
+                  <FormInput name="session" label={t("proxy.form.session.label")} helper={t("proxy.form.session.description")}>
+                    <Input placeholder={t("proxy.form.session.placeholder")} />
                   </FormInput>
                 </div>
                 <div className="flex justify-end px-4 pt-6">
