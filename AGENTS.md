@@ -145,6 +145,28 @@ Para garantir que a imagem oficial funcione tanto em ambientes Intel/AMD (`amd64
 
 ---
 
+## 🧠 Memória Persistente (Claude Code)
+
+A pasta `memory/` contém arquivos de memória do Claude Code que persistem contexto entre sessões.
+
+**Ao iniciar qualquer sessão de desenvolvimento, ler:**
+
+| Arquivo | O que contém |
+|---|---|
+| `memory/MEMORY.md` | Índice — carregado automaticamente pelo Claude |
+| `memory/user_profile.md` | Perfil do dev: nível técnico, preferências de resposta |
+| `memory/project_zapo_manager.md` | Contexto do projeto: stack, remotes, arquitetura |
+| `memory/project_primary_registration.md` | Status do fluxo SMS/OTP e pendências |
+| `memory/feedback_workflow.md` | Como o dev gosta de trabalhar (aprovar plano, revisar diff, master direto) |
+| `memory/reference_key_files.md` | Mapa dos arquivos-chave do projeto |
+
+**Regras:**
+- Não modificar esses arquivos manualmente — são atualizados pelo Claude durante as conversas
+- Não versionar no git público (adicionar `memory/` ao `.gitignore` se necessário)
+- Complementam o `CHANGELOG.md` — memória guarda **quem/como**, changelog guarda **o quê/quando**
+
+---
+
 ## 📋 CHANGELOG — Regra Obrigatória
 
 **Todo commit relevante deve ter entrada correspondente em [CHANGELOG.md](CHANGELOG.md).**

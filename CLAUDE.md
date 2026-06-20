@@ -224,6 +224,17 @@ Sem essas variáveis, o usuário configura via tela de login.
 
 **Proxy — sticky session:** campos `country` e `session` no formulário de proxy por-instância. Se `session` estiver vazio, o backend usa automaticamente o nome da instância como ID de sessão (evita rotação de IP mid-session pelo WhatsApp).
 
+## Memória Persistente
+
+A pasta `memory/` contém contexto persistente entre sessões do Claude Code:
+
+- `memory/MEMORY.md` — índice (carregado automaticamente)
+- `memory/feedback_workflow.md` — preferências de trabalho do dev
+- `memory/project_*.md` — status de features e decisões do projeto
+- `memory/reference_key_files.md` — mapa dos arquivos importantes
+
+Ler antes de implementar. Não editar manualmente. Ver detalhes em `AGENTS.md` → seção Memória Persistente.
+
 ## CHANGELOG — Regra Obrigatória
 
 **Toda implementação relevante deve ser registrada em [CHANGELOG.md](CHANGELOG.md) antes ou junto ao commit.**
