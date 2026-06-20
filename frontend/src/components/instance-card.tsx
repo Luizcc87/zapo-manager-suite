@@ -1,7 +1,7 @@
 import { Badge } from "@evoapi/design-system/badge";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent } from "@evoapi/design-system/card";
-import { FlaskConical, Settings, Trash2 } from "lucide-react";
+import { FlaskConical, Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -84,6 +84,17 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
             <span>{t("instance.dashboard.messages")}</span>
             <span className="font-mono">{numberFormatter.format(instance._count?.Message || 0)}</span>
           </div>
+          {instance.proxyEnabled && (
+            <div className="flex items-center justify-between pt-1">
+              <span className="flex items-center gap-1 text-purple-500">
+                <ShieldCheck className="h-3 w-3" />
+                {t("proxy.badge.label")}
+              </span>
+              <Badge className="bg-purple-500/10 text-purple-500 hover:bg-purple-500/20">
+                {t("proxy.badge.active")}
+              </Badge>
+            </div>
+          )}
         </div>
 
         <div className="flex border-t border-sidebar-border opacity-0 transition-opacity duration-200 group-hover:opacity-100">

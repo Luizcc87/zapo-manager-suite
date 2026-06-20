@@ -98,13 +98,13 @@
         "closed": "Closed"
       },
       "timeOptions": {
-        "all": "Any time",
         "5": "Last 5 minutes",
         "10": "Last 10 minutes",
         "15": "Last 15 minutes",
         "20": "Last 20 minutes",
         "30": "Last 30 minutes",
         "60": "Last 60 minutes",
+        "all": "Any time",
         ">60": "More than 60 minutes",
         ">120": "More than 2 hours",
         ">300": "More than 5 hours",
@@ -417,6 +417,19 @@
     "button": {
       "save": "Save",
       "saving": "Saving..."
+    },
+    "status": {
+      "title": "Proxy Status",
+      "connection": "Connection",
+      "connected": "Connected",
+      "failed": "Failed",
+      "ip": "External IP",
+      "latency": "Latency",
+      "server": "Server"
+    },
+    "badge": {
+      "label": "Proxy",
+      "active": "Active"
     }
   },
   "webhook": {

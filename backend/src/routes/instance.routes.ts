@@ -404,7 +404,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
     const dbInstances = await prisma.$queryRaw<Array<{
       id: string; instanceName: string; apiKey: string; status: string;
       mobileTransport: boolean; registeredPhone: string | null;
-      deviceInfo: unknown; createdAt: Date; updatedAt: Date;
+      deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
     }>>`SELECT * FROM "Instance"`;
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
@@ -447,6 +447,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
           readStatus: false,
           syncFullHistory: false
         },
+        proxyEnabled: !!(inst.proxyConfig as any)?.enabled,
         _count: {
           Message: 0,
           Contact: 0,

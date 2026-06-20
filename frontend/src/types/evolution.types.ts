@@ -35,6 +35,7 @@ export type Instance = {
   clientName: string;
   createdAt: string;
   updatedAt: string;
+  proxyEnabled?: boolean;
   Setting: Settings;
   _count?: {
     Message?: number;
