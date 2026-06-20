@@ -5,3 +5,4 @@
 - [Registro Primário SMS/OTP](project_primary_registration.md) — Fases 1+2 concluídas; Prisma client pendente de regeneração após `registeredPhone`
 - [Workflow e preferências](feedback_workflow.md) — master direto, aprova plano antes de executar, revisa diff de outro agente antes de comentar
 - [Arquivos-chave](reference_key_files.md) — onde encontrar queries, rotas, schema, i18n, componentes principais
+- [Infraestrutura e Portas](infrastructure.md) — Requisitos de porta TCP 5222 para conexões móveis, funcionamento sob Cloudflare Tunnel e VPS.
