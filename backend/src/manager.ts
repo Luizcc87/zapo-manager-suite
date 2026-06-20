@@ -9,6 +9,7 @@ import Redis from 'ioredis';
 import * as path from 'path';
 import * as fs from 'fs';
 import { randomBytes } from 'crypto';
+import { ProxyAgent } from 'undici';
 
 const prisma = new PrismaClient();
 const activeClients = new Map<string, {
@@ -115,6 +116,30 @@ async function buildStore(instanceName: string): Promise<{ store: any; pgStore: 
   return { store, pgStore, redisClient, poller };
 }
 
+function buildProxy(cfg: any): Record<string, any> | undefined {
+  if (!cfg?.enabled || !cfg.host || !cfg.port) return undefined;
+
+  const auth = cfg.username && cfg.password
+    ? `${encodeURIComponent(cfg.username)}:${encodeURIComponent(cfg.password)}@`
+    : '';
+  const protocol = (cfg.protocol as string) || 'http';
+  const url = `${protocol}://${auth}${cfg.host}:${cfg.port}`;
+
+  if (protocol === 'socks4' || protocol === 'socks5') {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { SocksProxyAgent } = require('socks-proxy-agent');
+    const agent = new SocksProxyAgent(url);
+    return { ws: agent, mediaUpload: agent, mediaDownload: agent, linkPreview: agent };
+  }
+
+  // http / https — ws leg needs an http.Agent; media/linkPreview need an undici dispatcher
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { HttpsProxyAgent } = require('https-proxy-agent');
+  const dispatcher = new ProxyAgent(url);
+  const wsAgent = new HttpsProxyAgent(url);
+  return { ws: wsAgent, mediaUpload: dispatcher, mediaDownload: dispatcher, linkPreview: dispatcher };
+}
+
 export class ZapoManager {
   static async loadAll() {
     console.log(`[ZapoManager] Inicializando com CONTAINER_ID: ${CONTAINER_ID}`);
@@ -169,8 +194,14 @@ export class ZapoManager {
     }
 
     const settings = (instance.settingsConfig as any) ?? {};
+    const proxyConfig = (instance.proxyConfig as any) ?? {};
     const logger = new ConsoleLogger('info');
     const { store, pgStore, redisClient, poller } = await buildStore(instanceName);
+    const proxy = buildProxy(proxyConfig);
+
+    if (proxy) {
+      console.log(`[ZapoManager] [${instanceName}] Proxy ativo: ${proxyConfig.protocol}://${proxyConfig.host}:${proxyConfig.port}`);
+    }
 
     const clientOptions: any = {
       store,
@@ -180,6 +211,7 @@ export class ZapoManager {
       history: { enabled: settings.syncFullHistory ?? false },
       deviceBrowser: process.env.SESSION_DEVICE_BROWSER || 'chrome',
       ...(process.env.SESSION_DEVICE_OS && { deviceOsDisplayName: process.env.SESSION_DEVICE_OS }),
+      ...(proxy && { proxy }),
     };
 
     if (instance.mobileTransport) {
