@@ -108,6 +108,7 @@ Ao realizar modificações no backend, siga estritamente estas diretrizes de tip
 *   **Empacotamento com `viewOnceMessage`**: Todas as mensagens interativas (`buttons`, `list`, `carousel`) enviadas via `interactiveMessage` devem ser envelopadas em uma estrutura `viewOnceMessage` (ex: `viewOnceMessage: { message: { interactiveMessage: ... } }`). Sem isso, o cliente de destino descartará silenciosamente a mensagem recebida.
 *   **Listas com `single_select`**: Menus de listas interativas devem ser implementados usando botões de fluxo nativo `single_select` em vez do template antigo `listMessage` (depreciado pelo WhatsApp em contas pessoais/companion).
 *   **JID sem o '9' extra**: No Brasil, contas antigas utilizam o formato JID sem o dígito `9` (ex: `555599703107@s.whatsapp.net`). Se as mensagens de texto ou interativas retornarem sucesso mas não forem entregues, valide se o JID correto na rede do WhatsApp não omite o `9` extra de celular.
+*   **Cache de JID (`resolvedJidCache`)**: O helper `resolveJid` utiliza um cache em memória (`Map`) para evitar consultas repetidas à rede do WhatsApp. A primeira mensagem para um número inédito faz o lookup no WhatsApp e armazena o resultado; envios subsequentes lêem o JID resolvido instantaneamente do cache em `O(1)`.
 
 ---
 
