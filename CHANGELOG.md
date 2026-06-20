@@ -6,6 +6,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Limite de tentativas de QR Code (QRCODE_LIMIT)
+
+**Backend**
+- `backend/src/manager.ts`: Implementado `QRCODE_LIMIT` (padrão: 5). Ao atingir o limite de QR Codes sem scan, a instância para de reconectar, emite evento `connection.update` com `status: disconnected, reason: qrcode_limit_reached` via webhook e socket, e chama `disconnectClient()`. Contador reseta em `auth_paired` para permitir re-pareamento após o limite. Equivalente à variável `QRCODE_LIMIT` da Evolution API.
+- `docker-stack-swarm.yaml`: Variável `QRCODE_LIMIT` documentada e declarada no serviço `app`.
+
 ### Persistência de dados e gravação de mensagens outbound
 
 **Backend**

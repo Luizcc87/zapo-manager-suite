@@ -54,6 +54,13 @@ version: '3.8'
 #                      Pode ser igual a PROXY_API_KEY ou diferente.
 #                      Exemplo: export PROXY_REPLACE_API_KEY=Token abcdef1234567890
 #
+# ─── VARIÁVEIS OPCIONAIS — COMPORTAMENTO ──────────────────────────────────────
+#
+#   QRCODE_LIMIT     — Número máximo de QR Codes gerados antes de parar tentativas
+#                      e marcar instância como desconectada. Padrão: 5.
+#                      Equivalente ao QRCODE_LIMIT da Evolution API.
+#                      Exemplo: export QRCODE_LIMIT=10
+#
 # ─── CLOUDFLARE TUNNEL ────────────────────────────────────────────────────────
 #   Para expor o painel via Cloudflare Tunnel, crie uma rota pública apontando
 #   para o serviço interno do Swarm:
@@ -92,6 +99,7 @@ services:
       - SAVE_DATA_NEW_MESSAGE=${SAVE_DATA_NEW_MESSAGE:-false}
       - SAVE_DATA_CONTACTS=${SAVE_DATA_CONTACTS:-false}
       - SAVE_DATA_HISTORIC=${SAVE_DATA_HISTORIC:-false}
+      - QRCODE_LIMIT=${QRCODE_LIMIT:-5}
       - PORT=8080
       - NODE_ENV=production
     networks:
