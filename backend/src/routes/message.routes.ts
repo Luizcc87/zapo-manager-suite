@@ -42,6 +42,37 @@ function formatJid(num: string): string {
   return `${num.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
 }
 
+// Helper para resolver dinamicamente o JID correto no WhatsApp (tratando o 9 extra brasileiro)
+async function resolveJid(client: any, num: string): Promise<string> {
+  const cleanNum = num.replace(/[^0-9]/g, '');
+  if (num.includes('@')) return num;
+
+  if (cleanNum.startsWith('55')) {
+    let alternateNum = '';
+    if (cleanNum.length === 13) {
+      // 13 dígitos (com o 9) -> deriva o formato de 12 dígitos (sem o 9)
+      alternateNum = cleanNum.slice(0, 4) + cleanNum.slice(5);
+    } else if (cleanNum.length === 12) {
+      // 12 dígitos (sem o 9) -> deriva o formato de 13 dígitos (com o 9)
+      alternateNum = cleanNum.slice(0, 4) + '9' + cleanNum.slice(4);
+    }
+
+    if (alternateNum) {
+      try {
+        const results = await client.profile.getLidsByPhoneNumbers([cleanNum, alternateNum]);
+        const found = results.find((r: any) => r.exists);
+        if (found) {
+          return found.phoneJid || found.lidJid || `${cleanNum}@s.whatsapp.net`;
+        }
+      } catch (e) {
+        // Ignora erro de rede e usa o padrão
+      }
+    }
+  }
+
+  return `${cleanNum}@s.whatsapp.net`;
+}
+
 // Baixa uma URL HTTP/HTTPS e salva em arquivo temporário
 // zapo-js trata 'string' como caminho local — URLs devem ser pré-baixadas
 async function downloadMediaUrl(url: string, mimetype: string): Promise<string> {
@@ -115,7 +146,7 @@ router.post('/sendText/:instanceName', checkInstanceApiKey, async (req: Request,
       return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
-    const jid = formatJid(number);
+    const jid = await resolveJid(active.client, number);
     const sentMsg = await active.client.message.send(jid, text, options);
 
     return res.status(201).json({
@@ -157,7 +188,7 @@ router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file
       return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
-    const jid = formatJid(number);
+    const jid = await resolveJid(active.client, number);
     let mediaInput: any;
 
     if (req.file) {
@@ -238,7 +269,7 @@ router.post('/sendSticker/:instanceName', checkInstanceApiKey, upload.single('fi
       return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
-    const jid = formatJid(number);
+    const jid = await resolveJid(active.client, number);
     let mediaInput: any;
 
     if (req.file) {
@@ -298,7 +329,7 @@ router.post('/sendButtons/:instanceName', checkInstanceApiKey, async (req: Reque
       return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
-    const jid = formatJid(number);
+    const jid = await resolveJid(active.client, number);
 
     const nativeFlowButtons: any[] = [];
     if (Array.isArray(buttons)) {
@@ -393,7 +424,7 @@ router.post('/sendList/:instanceName', checkInstanceApiKey, async (req: Request,
       return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
-    const jid = formatJid(number);
+    const jid = await resolveJid(active.client, number);
 
     const listParams = {
       title: buttonText || 'Ver opções',
@@ -463,7 +494,7 @@ router.post('/sendCarousel/:instanceName', checkInstanceApiKey, async (req: Requ
       return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
-    const jid = formatJid(number);
+    const jid = await resolveJid(active.client, number);
 
     const interactiveCards: any[] = [];
     if (Array.isArray(cards)) {

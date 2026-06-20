@@ -9,7 +9,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 ### Suporte a Mensagens Interativas
 
 **Backend**
-- `backend/src/routes/message.routes.ts`: Implementados os endpoints `POST /message/sendButtons/:instanceName`, `POST /message/sendList/:instanceName` e `POST /message/sendCarousel/:instanceName` para suportar testes de botões interativos, menus de lista e carrosséis mapeando os payloads recebidos para o formato `zapo-js`. Para evitar que o WhatsApp descarte silenciosamente os templates, as mensagens interativas foram empacotadas em contêineres `viewOnceMessage` e as listas foram convertidas para usar o botão de fluxo nativo `single_select`.
+- `backend/src/routes/message.routes.ts`: Implementados os endpoints `POST /message/sendButtons/:instanceName`, `POST /message/sendList/:instanceName` e `POST /message/sendCarousel/:instanceName` para suportar testes de botões interativos, menus de lista e carrosséis mapeando os payloads recebidos para o formato `zapo-js`. Para evitar que o WhatsApp descarte silenciosamente os templates, as mensagens interativas foram empacotadas em contêineres `viewOnceMessage` e as listas foram convertidas para usar o botão de fluxo nativo `single_select`. Adicionado também o helper `resolveJid` para resolver automaticamente a incompatibilidade de 9 dígitos vs 8 dígitos para todos os envios de mensagens direcionados a números do Brasil.
 
 ### Correção de carregamento inicial e navegação do provider Zapo
 
