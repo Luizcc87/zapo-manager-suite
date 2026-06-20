@@ -18,6 +18,7 @@ const activeClients = new Map<string, {
   poller?: any;
   qrCode?: string;
   lockInterval?: NodeJS.Timeout;
+  messageStatus?: Map<string, any>;
 }>();
 
 // Redis para Locks de Concorrência
@@ -84,6 +85,11 @@ export class ZapoManager {
 
   static getActive(instanceName: string) {
     return activeClients.get(instanceName);
+  }
+
+  static getMessageStatus(instanceName: string, messageId: string) {
+    const active = activeClients.get(instanceName);
+    return active?.messageStatus?.get(messageId) || null;
   }
 
   static async createClient(instanceName: string, mobileTransport = false, deviceInfo?: any, customApiKey?: string) {
@@ -198,7 +204,15 @@ export class ZapoManager {
     }
 
     const client = new WaClient(clientOptions, logger);
-    const activeData = { client, pgStore, redisClient, poller, qrCode: undefined as string | undefined, lockInterval: undefined as any };
+    const activeData = {
+      client,
+      pgStore,
+      redisClient,
+      poller,
+      qrCode: undefined as string | undefined,
+      lockInterval: undefined as any,
+      messageStatus: new Map<string, any>()
+    };
 
     // Iniciar loop de renovação do Lock de concorrência
     activeData.lockInterval = setInterval(async () => {
@@ -262,6 +276,42 @@ export class ZapoManager {
           pushName: event.pushName
         }
       });
+    });
+
+    const eventEmitter = client as any;
+
+    eventEmitter.ev.on('messages.update', (updates: any[]) => {
+      for (const update of updates || []) {
+        const messageId = update.key?.id;
+        if (!messageId) continue;
+        const previous = activeData.messageStatus?.get(messageId) || {};
+        activeData.messageStatus?.set(messageId, {
+          ...previous,
+          messageId,
+          remoteJid: update.key?.remoteJid,
+          fromMe: update.key?.fromMe ?? previous.fromMe,
+          status: update.update?.status ?? previous.status,
+          update: update.update,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    });
+
+    eventEmitter.ev.on('message-receipt.update', (updates: any[]) => {
+      for (const update of updates || []) {
+        const messageId = update.key?.id;
+        if (!messageId) continue;
+        const previous = activeData.messageStatus?.get(messageId) || {};
+        activeData.messageStatus?.set(messageId, {
+          ...previous,
+          messageId,
+          remoteJid: update.key?.remoteJid,
+          fromMe: update.key?.fromMe ?? previous.fromMe,
+          status: update.receipt?.type ?? previous.status,
+          receipt: update.receipt,
+          updatedAt: new Date().toISOString()
+        });
+      }
     });
 
     // Tentar conectar de fato

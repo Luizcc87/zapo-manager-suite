@@ -10,6 +10,30 @@ const prisma = new PrismaClient();
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+router.get('/status/:instanceName/:messageId', async (req: Request, res: Response) => {
+  try {
+    const { instanceName, messageId } = req.params;
+    const instance = await prisma.instance.findUnique({ where: { instanceName } });
+    if (!instance) {
+      return res.status(404).json({ error: 'Instance not found' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const status = ZapoManager.getMessageStatus(instanceName, messageId);
+    if (!status) {
+      return res.status(404).json({ error: 'Message status not found' });
+    }
+
+    return res.status(200).json(status);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Helper para formatar o número do WhatsApp no formato JID
 function formatJid(num: string): string {
   if (num.includes('@')) return num;
@@ -94,6 +118,7 @@ router.post('/sendText/:instanceName', checkInstanceApiKey, async (req: Request,
     const sentMsg = await active.client.message.send(jid, text, options);
 
     return res.status(201).json({
+      accepted: true,
       key: {
         remoteJid: jid,
         fromMe: true,
@@ -173,6 +198,7 @@ router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file
     else returnedMsg.documentMessage = { caption, fileName: sendPayload.fileName };
 
     return res.status(201).json({
+      accepted: true,
       key: {
         remoteJid: jid,
         fromMe: true,
@@ -232,6 +258,7 @@ router.post('/sendSticker/:instanceName', checkInstanceApiKey, upload.single('fi
     });
 
     return res.status(201).json({
+      accepted: true,
       key: {
         remoteJid: jid,
         fromMe: true,

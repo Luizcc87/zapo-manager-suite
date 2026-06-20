@@ -277,8 +277,8 @@ test.describe('Suite 3 — Envio de Mensagens (requer instância conectada)', ()
     const list = await r.json();
 
     // Priorizar a instância configurada; se não, usar qualquer uma com "open"
-    const preferred = list.find((i: any) => i.name === CONNECTED_INSTANCE && i.connectionStatus === 'open');
-    const fallback = list.find((i: any) => i.connectionStatus === 'open');
+  const preferred = list.find((i: any) => i.name === CONNECTED_INSTANCE && i.connectionStatus === 'open');
+  const fallback = list.find((i: any) => i.connectionStatus === 'open');
     const found = preferred ?? fallback;
 
     if (found) {
