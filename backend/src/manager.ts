@@ -286,6 +286,30 @@ export class ZapoManager {
       where: { status: { in: ['connected', 'connecting'] } }
     });
     console.log(`[ZapoManager] Encontradas ${instances.length} instâncias para iniciar automaticamente.`);
+
+    // Em ambiente sem Redis (dev local), locks ficam presos após kill abrupto do processo.
+    // Força liberação de todos os locks antes de tentar conectar.
+    if (!redisLockClient) {
+      // sem Redis: acquireLock sempre retorna true — nenhuma ação necessária
+    } else {
+      await Promise.allSettled(
+        instances.map(inst => releaseLock(inst.instanceName, CONTAINER_ID).catch(() => {}))
+      );
+      // Libera locks de qualquer container anterior (sobreposição do CONTAINER_ID não importa:
+      // releaseLock só deleta se o valor bater — se não bater, o TTL de 30s vai expirar)
+      // Para restart de dev, aguarda o TTL expirar ou usa DEL direto
+      const staleKeys = await Promise.allSettled(
+        instances.map(async inst => {
+          const lockKey = `lock:zapo:${inst.instanceName}`;
+          const holder = await redisLockClient.get(lockKey);
+          if (holder && holder !== CONTAINER_ID) {
+            console.log(`[ZapoManager] Limpando lock stale de ${inst.instanceName} (holder: ${holder})`);
+            await redisLockClient.del(lockKey);
+          }
+        })
+      );
+      void staleKeys; // resultado ignorado intencionalmente
+    }
     const results = await Promise.allSettled(
       instances.map(inst => this.connectClient(inst.instanceName))
     );
