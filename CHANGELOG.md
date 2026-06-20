@@ -10,6 +10,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 **Frontend**
 - `frontend/src/components/test-interactive-modal.tsx`: Adicionado suporte a aba "Texto" (que dispara `POST /message/sendText/:instanceName`), expandido a contagem de colunas do grid de abas para 6 e adicionada a classe `max-h-[90vh] overflow-y-auto` ao `<DialogContent>` para permitir rolagem de tela nos payloads longos.
+- `frontend/src/components/instance-card.tsx`: Adicionado contorno verde esmeralda semi-transparente, fundo suave e cor de texto correspondente no avatar/iniciais da instância quando não há foto de perfil cadastrada.
 - `frontend/src/translate/languages/*.json`: Adicionadas as traduções para a nova aba de texto ("Texto"/"Text"/"Texte") em português, inglês, espanhol e francês.
 
 **Backend**

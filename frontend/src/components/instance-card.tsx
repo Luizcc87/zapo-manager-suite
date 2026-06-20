@@ -54,7 +54,7 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
               </div>
             </div>
           ) : (
-            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-lg font-semibold text-muted-foreground">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/5 text-lg font-semibold text-emerald-500 dark:text-emerald-400">
               {displayName.slice(0, 2).toUpperCase()}
             </div>
           )}
