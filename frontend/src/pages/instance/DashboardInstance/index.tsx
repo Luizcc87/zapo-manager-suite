@@ -4,7 +4,7 @@ import { Avatar, AvatarImage } from "@evoapi/design-system/avatar";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@evoapi/design-system/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CircleUser, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, UsersRound } from "lucide-react";
+import { CircleUser, Globe, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, Smartphone, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import QRCode from "react-qr-code";
@@ -123,6 +123,9 @@ function DashboardInstance() {
   if (!instance) return <LoadingSpinner />;
 
   const connected = instance.connectionStatus === "open";
+  const instanceType = instance.instanceType ?? (instance.mobileTransport ? "mobile" : "web");
+  const versionLabel = instanceType === "mobile" ? t("instance.dashboard.version.mobile", { defaultValue: "Versão do app mobile" }) : t("instance.dashboard.version.web", { defaultValue: "Versão do WhatsApp Web" });
+  const versionValue = instance.softwareVersion || t("instance.dashboard.version.unavailable", { defaultValue: "Não disponível" });
 
   return (
     <div className="flex flex-col">
@@ -186,6 +189,21 @@ function DashboardInstance() {
           <CardContent className="flex flex-col items-start space-y-4">
             <div className="w-full">
               <InstanceToken token={instance.token} />
+            </div>
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-3">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  {instanceType === "mobile" ? <Smartphone className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
+                  {t("instance.type.label", { defaultValue: "Tipo da instância" })}
+                </div>
+                <p className="mt-1 text-sm font-semibold capitalize">
+                  {instanceType === "mobile" ? t("instance.type.mobile", { defaultValue: "Mobile" }) : t("instance.type.web", { defaultValue: "Web" })}
+                </p>
+              </div>
+              <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/20 p-3 sm:col-span-2">
+                <div className="text-xs font-medium text-muted-foreground">{versionLabel}</div>
+                <p className="mt-1 break-all text-sm font-semibold">{versionValue}</p>
+              </div>
             </div>
 
             {!connected && (

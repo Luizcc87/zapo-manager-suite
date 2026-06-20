@@ -11,6 +11,14 @@ import { checkGlobalApiKey, checkInstanceApiKey } from '../middleware/auth';
 
 const router = Router();
 
+const getWebVersion = () => {
+  try {
+    return require('zapo-js/spec/version').WA_VERSION ?? '';
+  } catch (error) {
+    return '';
+  }
+};
+
 // Cache para sockets de registro com TTL de 10 minutos
 interface RegistrationCacheItem {
   sock: any;
@@ -391,6 +399,13 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         id: inst.id,
         name: inst.instanceName,
         connectionStatus: state,
+        instanceType: inst.mobileTransport ? 'mobile' : 'web',
+        mobileTransport: inst.mobileTransport,
+        webhookEnabled: !!(inst.webhookConfig as any)?.enabled,
+        softwareVersion: inst.mobileTransport
+          ? ((inst.deviceInfo as any)?.appVersion || '')
+          : getWebVersion(),
+        deviceInfo: inst.deviceInfo || null,
         ownerJid: ownerJid || inst.ownerJid || null,
         profileName: inst.profileName || inst.instanceName,
         profilePicUrl: inst.profilePicUrl || '',

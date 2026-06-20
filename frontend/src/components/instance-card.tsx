@@ -1,7 +1,8 @@
 import { Badge } from "@evoapi/design-system/badge";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent } from "@evoapi/design-system/card";
-import { FlaskConical, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { FlaskConical, Globe, ShieldCheck, Settings, SquareMousePointer, Smartphone, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,36 @@ const StatusBadge = ({ status }: { status?: string }) => {
   if (status === "open") return <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">{t("status.open")}</Badge>;
   if (status === "connecting") return <Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">{t("status.connecting")}</Badge>;
   return <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">{t("status.closed")}</Badge>;
+};
+
+const FlagBadge = ({
+  active,
+  activeLabel,
+  inactiveLabel,
+  activeClassName,
+  inactiveClassName,
+  activeIcon,
+  inactiveIcon,
+}: {
+  active: boolean;
+  activeLabel: string;
+  inactiveLabel: string;
+  activeClassName: string;
+  inactiveClassName: string;
+  activeIcon: ReactNode;
+  inactiveIcon: ReactNode;
+}) => {
+  return active ? (
+    <Badge className={activeClassName}>
+      <span className="mr-1 inline-flex items-center">{activeIcon}</span>
+      {activeLabel}
+    </Badge>
+  ) : (
+    <Badge className={inactiveClassName}>
+      <span className="mr-1 inline-flex items-center">{inactiveIcon}</span>
+      {inactiveLabel}
+    </Badge>
+  );
 };
 
 interface InstanceCardProps {
@@ -70,6 +101,35 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
         </button>
 
         <div className="space-y-1 px-4 py-3 text-xs text-sidebar-foreground/70">
+          <div className="flex flex-wrap gap-2 pb-2">
+            <FlagBadge
+              active={!!instance.proxyEnabled}
+              activeLabel={t("proxy.badge.active")}
+              inactiveLabel={t("proxy.badge.inactive", { defaultValue: "Proxy desativado" })}
+              activeClassName="bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"
+              inactiveClassName="bg-muted text-muted-foreground hover:bg-muted/80"
+              activeIcon={<ShieldCheck className="h-3 w-3" />}
+              inactiveIcon={<ShieldCheck className="h-3 w-3" />}
+            />
+            <FlagBadge
+              active={!!instance.webhookEnabled}
+              activeLabel={t("webhook.status.active", { defaultValue: "Webhook ativo" })}
+              inactiveLabel={t("webhook.status.inactive", { defaultValue: "Webhook desativado" })}
+              activeClassName="bg-sky-500/10 text-sky-500 hover:bg-sky-500/20"
+              inactiveClassName="bg-muted text-muted-foreground hover:bg-muted/80"
+              activeIcon={<SquareMousePointer className="h-3 w-3" />}
+              inactiveIcon={<SquareMousePointer className="h-3 w-3" />}
+            />
+            <FlagBadge
+              active={(instance.instanceType ?? (instance.mobileTransport ? "mobile" : "web")) === "mobile"}
+              activeLabel={t("instance.type.mobile", { defaultValue: "Mobile" })}
+              inactiveLabel={t("instance.type.web", { defaultValue: "Web" })}
+              activeClassName="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+              inactiveClassName="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+              activeIcon={<Smartphone className="h-3 w-3" />}
+              inactiveIcon={<Globe className="h-3 w-3" />}
+            />
+          </div>
           {instance.ownerJid && (
             <div className="flex items-center justify-between">
               <span>{t("dashboard.card.phone", { defaultValue: "Número" })}</span>
@@ -84,17 +144,6 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
             <span>{t("instance.dashboard.messages")}</span>
             <span className="font-mono">{numberFormatter.format(instance._count?.Message || 0)}</span>
           </div>
-          {instance.proxyEnabled && (
-            <div className="flex items-center justify-between pt-1">
-              <span className="flex items-center gap-1 text-purple-500">
-                <ShieldCheck className="h-3 w-3" />
-                {t("proxy.badge.label")}
-              </span>
-              <Badge className="bg-purple-500/10 text-purple-500 hover:bg-purple-500/20">
-                {t("proxy.badge.active")}
-              </Badge>
-            </div>
-          )}
         </div>
 
         <div className="flex border-t border-sidebar-border">

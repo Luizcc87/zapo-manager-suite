@@ -25,6 +25,14 @@ export type Instance = {
   id: string;
   name: string;
   connectionStatus: string;
+  instanceType?: "web" | "mobile";
+  mobileTransport?: boolean;
+  webhookEnabled?: boolean;
+  softwareVersion?: string;
+  deviceInfo?: {
+    appVersion?: string;
+    [key: string]: unknown;
+  } | null;
   ownerJid: string;
   profileName: string;
   profilePicUrl: string;

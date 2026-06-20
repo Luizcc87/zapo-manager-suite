@@ -132,5 +132,39 @@ test.describe('Zapo Settings & Webhook Reuse Suite', () => {
     expect(webhook.events).toContain('MESSAGES_UPSERT');
     expect(webhook.events).toContain('CONNECTION_UPDATE');
     expect(webhook.events.length).toBe(3);
+
+    const rInstances = await request.get(`/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`, {
+      headers: { apikey: GLOBAL_API_KEY },
+    });
+    expect(rInstances.status()).toBe(200);
+    const instances = await rInstances.json();
+    const found = instances.find((i: any) => i.name === instanceName);
+    expect(found).toBeDefined();
+    expect(found.webhookEnabled).toBe(true);
+  });
+
+  test('2.3 Desativar webhook deve refletir imediatamente no fetchInstances', async ({ request }) => {
+    const rSet = await request.post(`/webhook/set/${instanceName}`, {
+      headers: { apikey: instanceApiKey, 'Content-Type': 'application/json' },
+      data: {
+        webhook: {
+          enabled: false,
+          url: '',
+          events: [],
+          webhookBase64: false,
+          webhookByEvents: false,
+        },
+      },
+    });
+    expect(rSet.status()).toBe(200);
+
+    const rGet = await request.get(`/instance/fetchInstances?instanceName=${encodeURIComponent(instanceName)}`, {
+      headers: { apikey: GLOBAL_API_KEY },
+    });
+    expect(rGet.status()).toBe(200);
+    const instances = await rGet.json();
+    const found = instances.find((i: any) => i.name === instanceName);
+    expect(found).toBeDefined();
+    expect(found.webhookEnabled).toBe(false);
   });
 });

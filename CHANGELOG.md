@@ -6,6 +6,20 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Flags visuais e versão por instância no dashboard
+
+**Backend**
+- `backend/src/routes/instance.routes.ts`: `GET /fetchInstances` passou a expor `instanceType`, `mobileTransport`, `webhookEnabled`, `softwareVersion` e `deviceInfo`, permitindo que a interface diferencie instâncias Web/Mobile, mostre o estado do webhook e exiba a versão correta por instância sem inferência no frontend.
+
+**Frontend**
+- `frontend/src/components/instance-card.tsx`: Adicionados flags visuais explícitos para proxy, webhook e tipo de instância, com ícones e rótulos separados para estados ativo/inativo e categorias Web/Mobile.
+- `frontend/src/pages/instance/DashboardInstance/index.tsx`: Adicionado bloco de informação com o tipo da instância e a versão do software vinculado, diferenciando WhatsApp Web de app mobile.
+- `frontend/src/types/evolution.types.ts`: Tipos atualizados para refletir os novos campos do contrato da instância.
+
+**Testes**
+- `tests/zapo.spec.ts`: Ajustada a cobertura do `fetchInstances` para validar o novo shape do retorno.
+- `tests/zapo-settings-webhook.spec.ts`: Incluída verificação de que a flag `webhookEnabled` acompanha ativação/desativação no `fetchInstances`.
+
 ### Limite de tentativas de QR Code (QRCODE_LIMIT)
 
 **Backend**
