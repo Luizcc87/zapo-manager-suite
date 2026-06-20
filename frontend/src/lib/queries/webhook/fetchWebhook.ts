@@ -32,7 +32,7 @@ const useFetchWebhookApi = (props: UseQueryParams<FetchWebhookResponse> & Partia
 
 export const useFetchWebhook = (props: UseQueryParams<FetchWebhookResponse> & Partial<IParams>) => {
   const provider = getProvider();
-  const apiQuery = useFetchWebhookApi({ ...props, enabled: (props.enabled ?? true) && provider === "api" });
+  const apiQuery = useFetchWebhookApi({ ...props, enabled: (props.enabled ?? true) && provider !== "go" });
   const goQuery = useFetchWebhookGo({ ...props, enabled: (props.enabled ?? true) && provider === "go" });
 
   return provider === "go" ? goQuery : apiQuery;

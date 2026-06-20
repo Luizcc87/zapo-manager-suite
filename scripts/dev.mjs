@@ -18,6 +18,30 @@ function resolveNpmCli() {
   throw new Error('npm_execpath not found and unable to resolve npm-cli.js');
 }
 
+// Mata processos que estejam ouvindo em determinada porta (libera lock do DLL do Prisma no Windows)
+async function killPort(port) {
+  const netstat = spawnSync('netstat', ['-ano'], { encoding: 'utf8', shell: false });
+  if (netstat.status !== 0) return;
+  const pids = new Set();
+  for (const line of netstat.stdout.split(/\r?\n/)) {
+    if (line.includes(`:${port}`) && line.includes('LISTENING')) {
+      const pid = line.trim().split(/\s+/).at(-1);
+      if (pid && /^\d+$/.test(pid) && pid !== '0') pids.add(pid);
+    }
+  }
+  if (pids.size === 0) return;
+  console.log(`[dev] Liberando porta ${port} (pids: ${[...pids].join(', ')})...`);
+  await Promise.all([...pids].map(pid =>
+    new Promise(resolve => {
+      const k = spawn('taskkill', ['/PID', pid, '/T', '/F'], { stdio: 'ignore', shell: false });
+      k.on('exit', resolve);
+      k.on('error', resolve);
+    })
+  ));
+  // Aguarda o OS liberar o handle do arquivo (DLL lock)
+  await new Promise(r => setTimeout(r, 500));
+}
+
 const npmCli = resolveNpmCli();
 
 function start(name, command, args) {
@@ -64,6 +88,9 @@ async function shutdown(code = 0) {
 
 process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
+
+// Mata processos em todo o range de portas que o backend pode ocupar (main.ts tenta 8080-8089)
+for (let p = 8080; p <= 8089; p++) await killPort(p);
 
 start('backend', process.execPath, [npmCli, 'run', 'dev:backend']);
 start('frontend', process.execPath, [npmCli, 'run', 'dev:frontend']);

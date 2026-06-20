@@ -1,0 +1,3 @@
+ALTER TABLE "Instance" ADD COLUMN IF NOT EXISTS "settingsConfig" JSONB;
+ALTER TABLE "Instance" ADD COLUMN IF NOT EXISTS "webhookConfig"  JSONB;
+ALTER TABLE "Instance" ADD COLUMN IF NOT EXISTS "proxyConfig"    JSONB;

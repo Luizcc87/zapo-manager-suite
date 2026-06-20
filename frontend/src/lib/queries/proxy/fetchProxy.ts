@@ -32,7 +32,7 @@ const useFetchProxyApi = (props: UseQueryParams<FetchProxyResponse> & Partial<IP
 
 export const useFetchProxy = (props: UseQueryParams<FetchProxyResponse> & Partial<IParams>) => {
   const provider = getProvider();
-  const apiQuery = useFetchProxyApi({ ...props, enabled: (props.enabled ?? true) && provider === "api" });
+  const apiQuery = useFetchProxyApi({ ...props, enabled: (props.enabled ?? true) && provider !== "go" });
   const goQuery = useFetchProxyGo({ ...props, enabled: (props.enabled ?? true) && provider === "go" });
 
   return provider === "go" ? goQuery : apiQuery;

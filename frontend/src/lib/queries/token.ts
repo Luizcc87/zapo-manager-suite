@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-export type Provider = "api" | "go";
+export type Provider = "api" | "go" | "zapo";
 
 export const DEFAULT_PROVIDER: Provider = "api";
 
@@ -60,5 +60,7 @@ export const getToken = (token: TOKEN_ID) => {
 
 export const getProvider = (): Provider => {
   const value = localStorage.getItem(TOKEN_ID.PROVIDER);
-  return value === "go" ? "go" : DEFAULT_PROVIDER;
+  if (value === "go") return "go";
+  if (value === "zapo") return "zapo";
+  return DEFAULT_PROVIDER;
 };

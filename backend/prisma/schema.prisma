@@ -15,6 +15,9 @@ model Instance {
   mobileTransport Boolean  @default(false)
   registeredPhone String?
   deviceInfo      Json?
+  settingsConfig  Json?
+  webhookConfig   Json?
+  proxyConfig     Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

@@ -88,12 +88,13 @@ function Login() {
         return;
       }
 
+      const detectedProvider = server.clientName === "zapo-manager" ? "zapo" : "api";
       saveToken({
         version: server.version,
         clientName: server.clientName,
         url: data.serverUrl,
         token: data.apiKey,
-        provider: "api",
+        provider: detectedProvider,
       });
       navigate("/manager/");
     } finally {

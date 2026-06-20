@@ -193,6 +193,8 @@ export class ZapoManager {
       sessionId: instanceName,
       // Auto-reconnect with latest WA Web version on failure_client_too_old (Web transport)
       recoverFromClientTooOld: true,
+      deviceBrowser: process.env.SESSION_DEVICE_BROWSER || 'chrome',
+      ...(process.env.SESSION_DEVICE_OS && { deviceOsDisplayName: process.env.SESSION_DEVICE_OS }),
     };
 
     // Aplicar transporte Mobile (TCP Android) se configurado

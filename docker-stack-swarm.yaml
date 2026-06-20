@@ -26,6 +26,14 @@ version: '3.8'
 #                      Exemplo: export WEBHOOK_URL=https://seu-dominio.com/webhook/zapo
 #                      Deixar vazio se não usar: export WEBHOOK_URL=
 #
+#   SESSION_DEVICE_BROWSER — Browser anunciado ao WhatsApp no pareamento (padrão: chrome).
+#                      Valores: chrome, chromium, firefox, safari, edge, opera, ie
+#                      Controla o label exibido na lista "Dispositivos Vinculados" do celular.
+#                      Exemplo: export SESSION_DEVICE_BROWSER=chrome
+#
+#   SESSION_DEVICE_OS — Nome do SO exibido na lista "Dispositivos Vinculados" (padrão: Linux).
+#                      Exemplo: export SESSION_DEVICE_OS=Linux
+#
 # ─── CLOUDFLARE TUNNEL ────────────────────────────────────────────────────────
 #   Para expor o painel via Cloudflare Tunnel, crie uma rota pública apontando
 #   para o serviço interno do Swarm:
@@ -54,6 +62,8 @@ services:
       - GLOBAL_API_KEY=${GLOBAL_API_KEY:?GLOBAL_API_KEY obrigatorio. Gere com: openssl rand -hex 32}
       - SERVER_URL=${SERVER_URL:-http://localhost:8080}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - SESSION_DEVICE_BROWSER=${SESSION_DEVICE_BROWSER:-chrome}
+      - SESSION_DEVICE_OS=${SESSION_DEVICE_OS:-Linux}
       - PORT=8080
       - NODE_ENV=production
     networks:

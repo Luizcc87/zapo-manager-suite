@@ -3,22 +3,22 @@ import { getProvider, Provider } from "@/lib/queries/token";
 type ProviderSupport = Record<Provider, boolean>;
 
 export const FEATURES = {
-  dashboard: { api: true, go: true },
-  chat: { api: true, go: false },
-  settings: { api: true, go: true },
-  proxy: { api: true, go: true },
-  webhook: { api: true, go: true },
-  websocket: { api: true, go: false },
-  rabbitmq: { api: true, go: false },
-  sqs: { api: true, go: false },
-  evoai: { api: true, go: false },
-  n8n: { api: true, go: false },
-  evolutionBot: { api: true, go: false },
-  chatwoot: { api: true, go: false },
-  typebot: { api: true, go: false },
-  openai: { api: true, go: false },
-  dify: { api: true, go: false },
-  flowise: { api: true, go: false },
+  dashboard:    { api: true,  go: true,  zapo: true  },
+  chat:         { api: true,  go: false, zapo: false },
+  settings:     { api: true,  go: true,  zapo: true  },
+  proxy:        { api: true,  go: true,  zapo: true  },
+  webhook:      { api: true,  go: true,  zapo: true  },
+  websocket:    { api: true,  go: false, zapo: false },
+  rabbitmq:     { api: true,  go: false, zapo: false },
+  sqs:          { api: true,  go: false, zapo: false },
+  evoai:        { api: true,  go: false, zapo: false },
+  n8n:          { api: true,  go: false, zapo: false },
+  evolutionBot: { api: true,  go: false, zapo: false },
+  chatwoot:     { api: true,  go: false, zapo: false },
+  typebot:      { api: true,  go: false, zapo: false },
+  openai:       { api: true,  go: false, zapo: false },
+  dify:         { api: true,  go: false, zapo: false },
+  flowise:      { api: true,  go: false, zapo: false },
 } as const satisfies Record<string, ProviderSupport>;
 
 export type FeatureKey = keyof typeof FEATURES;

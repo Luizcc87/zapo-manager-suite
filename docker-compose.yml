@@ -14,6 +14,8 @@ services:
       - GLOBAL_API_KEY=global_key
       - SERVER_URL=http://localhost:8082
       - WEBHOOK_URL=http://your-webhook-endpoint.com/webhook
+      - SESSION_DEVICE_BROWSER=chrome
+      - SESSION_DEVICE_OS=Linux
       - PORT=8080
     deploy:
       replicas: 1

@@ -32,7 +32,7 @@ const useFetchSettingsApi = (props: UseQueryParams<FetchSettingsResponse> & Part
 
 export const useFetchSettings = (props: UseQueryParams<FetchSettingsResponse> & Partial<IParams>) => {
   const provider = getProvider();
-  const apiQuery = useFetchSettingsApi({ ...props, enabled: (props.enabled ?? true) && provider === "api" });
+  const apiQuery = useFetchSettingsApi({ ...props, enabled: (props.enabled ?? true) && provider !== "go" });
   const goQuery = useFetchSettingsGo({ ...props, enabled: (props.enabled ?? true) && provider === "go" });
 
   return provider === "go" ? goQuery : apiQuery;

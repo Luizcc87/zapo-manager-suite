@@ -6,6 +6,7 @@ import { execFileSync } from 'child_process';
 import { Server } from 'http';
 import instanceRouter from './routes/instance.routes';
 import messageRouter from './routes/message.routes';
+import configRouter from './routes/config.routes';
 import { ZapoManager } from './manager';
 import { PrismaClient } from '@prisma/client';
 import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
@@ -36,6 +37,7 @@ app.use((req, res, next) => {
 // Rotas de API da Evolution
 app.use('/instance', instanceRouter);
 app.use('/message', messageRouter);
+app.use('/', configRouter);
 
 // Mock de licença da Evolution API v2 para evitar bloqueios na UI
 app.get('/license/status', (req, res) => {
