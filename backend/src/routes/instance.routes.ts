@@ -402,6 +402,7 @@ router.get('/connectionState/:instanceName', checkInstanceApiKey, async (req: Re
 router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceId, instanceName } = req.query;
+    console.log(`[ZapoRouter] GET /fetchInstances - query params:`, { instanceId, instanceName });
     let dbInstances;
     if (instanceId) {
       dbInstances = await prisma.$queryRaw<Array<{
@@ -422,6 +423,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
       }>>`SELECT * FROM "Instance"`;
     }
+    console.log(`[ZapoRouter] GET /fetchInstances - found ${dbInstances.length} instances:`, dbInstances.map(i => i.instanceName));
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
       const isMockConnected = inst.status === 'connected' && !active;

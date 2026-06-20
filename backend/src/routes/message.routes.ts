@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ZapoManager } from '../manager';
+import { proto } from 'zapo-js';
 import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import * as fs from 'fs';
@@ -279,6 +280,260 @@ router.post('/sendSticker/:instanceName', checkInstanceApiKey, upload.single('fi
         fs.unlinkSync(tempPath);
       } catch (e) {}
     }
+  }
+});
+
+// 4. Enviar Botões (Interactive / Buttons)
+router.post('/sendButtons/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, title, description, footer, buttons } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = formatJid(number);
+
+    const nativeFlowButtons: any[] = [];
+    if (Array.isArray(buttons)) {
+      for (const btn of buttons) {
+        if (btn.type === 'reply') {
+          nativeFlowButtons.push({
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: btn.displayText,
+              id: btn.id
+            })
+          });
+        } else if (btn.type === 'url') {
+          nativeFlowButtons.push({
+            name: 'cta_url',
+            buttonParamsJson: JSON.stringify({
+              display_text: btn.displayText,
+              url: btn.url,
+              merchant_url: btn.url
+            })
+          });
+        } else if (btn.type === 'copy') {
+          nativeFlowButtons.push({
+            name: 'cta_copy',
+            buttonParamsJson: JSON.stringify({
+              display_text: btn.displayText,
+              id: 'copy_code',
+              copy_code: btn.copyCode
+            })
+          });
+        } else if (btn.type === 'pix') {
+          nativeFlowButtons.push({
+            name: 'cta_copy',
+            buttonParamsJson: JSON.stringify({
+              display_text: btn.displayText || `PIX - ${btn.name || ''}`,
+              id: 'copy_code',
+              copy_code: btn.key
+            })
+          });
+        }
+      }
+    }
+
+    const sentMsg = await active.client.message.send(jid, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            header: title ? { title, hasMediaAttachment: false } : undefined,
+            body: { text: description || '' },
+            footer: footer ? { text: footer } : undefined,
+            nativeFlowMessage: {
+              buttons: nativeFlowButtons,
+              messageVersion: 1
+            }
+          }
+        }
+      }
+    });
+
+    return res.status(201).json({
+      accepted: true,
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id
+      },
+      message: {
+        interactiveMessage: {
+          body: { text: description || '' }
+        }
+      },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. Enviar List (List Message)
+router.post('/sendList/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, title, description, footerText, buttonText, sections } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = formatJid(number);
+
+    const listParams = {
+      title: buttonText || 'Ver opções',
+      sections: Array.isArray(sections) ? sections.map((sec: any) => ({
+        title: sec.title || '',
+        rows: Array.isArray(sec.rows) ? sec.rows.map((row: any) => ({
+          id: row.rowId || row.id || '',
+          title: row.title || '',
+          description: row.description || ''
+        })) : []
+      })) : []
+    };
+
+    const sentMsg = await active.client.message.send(jid, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            header: title ? { title, hasMediaAttachment: false } : undefined,
+            body: { text: description || '' },
+            footer: footerText ? { text: footerText } : undefined,
+            nativeFlowMessage: {
+              buttons: [
+                {
+                  name: 'single_select',
+                  buttonParamsJson: JSON.stringify(listParams)
+                }
+              ],
+              messageVersion: 1
+            }
+          }
+        }
+      }
+    });
+
+    return res.status(201).json({
+      accepted: true,
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id
+      },
+      message: {
+        listMessage: {
+          title: title || ''
+        }
+      },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Enviar Carousel (Carousel Message)
+router.post('/sendCarousel/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, body, cards } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = formatJid(number);
+
+    const interactiveCards: any[] = [];
+    if (Array.isArray(cards)) {
+      for (const card of cards) {
+        const cardButtons: any[] = [];
+        if (Array.isArray(card.buttons)) {
+          for (const btn of card.buttons) {
+            if (btn.type === 'url') {
+              cardButtons.push({
+                name: 'cta_url',
+                buttonParamsJson: JSON.stringify({
+                  display_text: btn.displayText,
+                  url: btn.url,
+                  merchant_url: btn.url
+                })
+              });
+            } else if (btn.type === 'reply') {
+              cardButtons.push({
+                name: 'quick_reply',
+                buttonParamsJson: JSON.stringify({
+                  display_text: btn.displayText,
+                  id: btn.id
+                })
+              });
+            }
+          }
+        }
+
+        interactiveCards.push({
+          body: { text: card.body || '' },
+          footer: card.footer ? { text: card.footer } : undefined,
+          nativeFlowMessage: {
+            buttons: cardButtons,
+            messageVersion: 1
+          }
+        });
+      }
+    }
+
+    const sentMsg = await active.client.message.send(jid, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: { text: body || '' },
+            carouselMessage: {
+              cards: interactiveCards,
+              messageVersion: 1
+            }
+          }
+        }
+      }
+    });
+
+    return res.status(201).json({
+      accepted: true,
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id
+      },
+      message: {
+        interactiveMessage: {
+          body: { text: body || '' }
+        }
+      },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
