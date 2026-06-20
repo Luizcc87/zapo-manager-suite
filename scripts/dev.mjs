@@ -92,6 +92,18 @@ process.on('SIGTERM', () => shutdown(0));
 // Mata processos em todo o range de portas que o backend pode ocupar (main.ts tenta 8080-8089)
 for (let p = 8080; p <= 8089; p++) await killPort(p);
 
+// Mata todos os processos node.exe restantes (exceto este processo e seu pai) para garantir
+// que o DLL lock do Prisma seja liberado antes do predev: prisma generate rodar (Windows EPERM)
+await new Promise(resolve => {
+  const killer = spawn('powershell', [
+    '-Command',
+    `Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | Stop-Process -Force`
+  ], { stdio: 'ignore', shell: false });
+  killer.on('exit', resolve);
+  killer.on('error', resolve);
+});
+await new Promise(r => setTimeout(r, 800));
+
 start('backend', process.execPath, [npmCli, 'run', 'dev:backend']);
 start('frontend', process.execPath, [npmCli, 'run', 'dev:frontend']);
 start('summary', 'node', ['scripts/dev-summary.mjs']);

@@ -4,6 +4,7 @@
   "description": "API Gateway for Zapo WhatsApp client emulating Evolution API v2",
   "main": "dist/main.js",
   "scripts": {
+    "predev": "prisma generate",
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "tsx watch src/main.ts",
