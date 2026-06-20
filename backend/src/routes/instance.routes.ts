@@ -401,11 +401,27 @@ router.get('/connectionState/:instanceName', checkInstanceApiKey, async (req: Re
 // 4. Listar todas as Instâncias
 router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
-    const dbInstances = await prisma.$queryRaw<Array<{
-      id: string; instanceName: string; apiKey: string; status: string;
-      mobileTransport: boolean; registeredPhone: string | null;
-      deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
-    }>>`SELECT * FROM "Instance"`;
+    const { instanceId, instanceName } = req.query;
+    let dbInstances;
+    if (instanceId) {
+      dbInstances = await prisma.$queryRaw<Array<{
+        id: string; instanceName: string; apiKey: string; status: string;
+        mobileTransport: boolean; registeredPhone: string | null;
+        deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
+      }>>`SELECT * FROM "Instance" WHERE "id" = ${instanceId as string}`;
+    } else if (instanceName) {
+      dbInstances = await prisma.$queryRaw<Array<{
+        id: string; instanceName: string; apiKey: string; status: string;
+        mobileTransport: boolean; registeredPhone: string | null;
+        deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
+      }>>`SELECT * FROM "Instance" WHERE "instanceName" = ${instanceName as string}`;
+    } else {
+      dbInstances = await prisma.$queryRaw<Array<{
+        id: string; instanceName: string; apiKey: string; status: string;
+        mobileTransport: boolean; registeredPhone: string | null;
+        deviceInfo: unknown; proxyConfig: unknown; createdAt: Date; updatedAt: Date;
+      }>>`SELECT * FROM "Instance"`;
+    }
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
       const isMockConnected = inst.status === 'connected' && !active;

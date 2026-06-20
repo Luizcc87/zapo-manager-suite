@@ -21,6 +21,8 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `backend/src/manager.ts`: 
   - Verifica se o cliente está registrado (`client.getState().registered`) no manipulador de eventos `connection` com status `open` antes de definir o status da instância como `connected` no banco de dados. Isso impede que a tela de QR code seja fechada erroneamente ao abrir a conexão de rede sem o escaneamento do QR code.
   - No manipulador de eventos `connection` com status `close`, se for detectado um logout permanente (`isLogout: true` ou `reason === "stream_error_device_removed"`), executa a limpeza completa dos recursos chamando `disconnectClient()`. Isso remove o cliente do mapa `activeClients` e libera os locks no Redis, garantindo que o status no card do painel mude corretamente para desablitado em vez de ficar preso em "Conectado".
+- `backend/src/routes/instance.routes.ts`:
+  - No endpoint `GET /instance/fetchInstances`, adiciona suporte para filtragem de instâncias via parâmetros de query `instanceId` ou `instanceName`. Isso resolve a falha em que a navegação para qualquer instância no painel carregava apenas os dados da primeira instância cadastrada no banco de dados.
 
 ### Proxy — sticky session, auto-registro de IP, substituição
 
