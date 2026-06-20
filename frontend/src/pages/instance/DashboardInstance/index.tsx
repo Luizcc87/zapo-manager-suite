@@ -119,6 +119,7 @@ function DashboardInstance() {
   );
 
   const qrCodeColor = useMemo(() => (theme === "dark" ? "#fff" : theme === "light" ? "#000" : "#189d68"), [theme]);
+  const formatOwnerJid = (ownerJid: string) => ownerJid.split("@")[0].split(":")[0];
 
   if (!instance) return <LoadingSpinner />;
 
@@ -179,7 +180,7 @@ function DashboardInstance() {
                 <div>
                   <CardTitle className="break-all">{instance.profileName || instance.name}</CardTitle>
                   {instance.ownerJid && (
-                    <p className="mt-1 break-all text-xs text-muted-foreground">{instance.ownerJid.split("@")[0]}</p>
+                    <p className="mt-1 break-all text-xs text-muted-foreground">{formatOwnerJid(instance.ownerJid)}</p>
                   )}
                 </div>
               </div>

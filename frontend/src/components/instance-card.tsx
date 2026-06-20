@@ -18,6 +18,8 @@ const StatusBadge = ({ status }: { status?: string }) => {
   return <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">{t("status.closed")}</Badge>;
 };
 
+const formatOwnerJid = (ownerJid: string) => ownerJid.split("@")[0].split(":")[0];
+
 const FlagBadge = ({
   active,
   activeLabel,
@@ -133,7 +135,7 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
           {instance.ownerJid && (
             <div className="flex items-center justify-between">
               <span>{t("dashboard.card.phone", { defaultValue: "Número" })}</span>
-              <span className="ml-2 truncate font-mono">{instance.ownerJid.split("@")[0]}</span>
+              <span className="ml-2 truncate font-mono">{formatOwnerJid(instance.ownerJid)}</span>
             </div>
           )}
           <div className="flex items-center justify-between">
