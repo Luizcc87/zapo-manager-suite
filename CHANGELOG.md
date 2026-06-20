@@ -6,6 +6,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Automação de Testes e Correções de Autenticação
+
+**Testes**
+- `tests/zapo.spec.ts`: Corrigidos os cenários de teste da `Suite 2` (Autenticação e Autorização). A validação dos endpoints `/message/*` foi ajustada de 401 para 503/500 quando a chave global (`GLOBAL_API_KEY`) ou a chave específica (`instanceApiKey`) é válida mas a instância de teste está desconectada, alinhando as expectativas com o comportamento real do middleware `checkInstanceApiKey`.
+- `tests/zapo-settings-webhook.spec.ts`: Criada uma nova suíte de testes de integração reutilizável para validar a busca e persistência das configurações de comportamento (`/settings`) e webhook (`/webhook`) de instâncias do Zapo Manager de forma isolada de instâncias ativas do WhatsApp.
+
 ### Suporte a Mensagens Interativas e Envio de Texto
 
 **Frontend**
