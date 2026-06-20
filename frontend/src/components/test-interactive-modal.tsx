@@ -14,9 +14,10 @@ import { api } from "@/lib/queries/api";
 
 import { Instance } from "@/types/evolution.types";
 
-type TabKey = "reply" | "cta" | "pix" | "list" | "carousel";
+type TabKey = "text" | "reply" | "cta" | "pix" | "list" | "carousel";
 
 const ENDPOINT: Record<TabKey, string> = {
+  text: "sendText",
   reply: "sendButtons",
   cta: "sendButtons",
   pix: "sendButtons",
@@ -25,6 +26,9 @@ const ENDPOINT: Record<TabKey, string> = {
 };
 
 const TEMPLATES: Record<TabKey, Record<string, unknown>> = {
+  text: {
+    text: "Olá! Este é um teste de envio de mensagem de texto.",
+  },
   reply: {
     title: "Resposta Rápida",
     description: "Escolha uma das opções abaixo:",
@@ -115,9 +119,10 @@ interface TestInteractiveModalProps {
 
 export function TestInteractiveModal({ instance, open, onOpenChange }: TestInteractiveModalProps) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<TabKey>("reply");
+  const [tab, setTab] = useState<TabKey>("text");
   const [number, setNumber] = useState("");
   const [payloads, setPayloads] = useState<Record<TabKey, string>>(() => ({
+    text: JSON.stringify(TEMPLATES.text, null, 2),
     reply: JSON.stringify(TEMPLATES.reply, null, 2),
     cta: JSON.stringify(TEMPLATES.cta, null, 2),
     pix: JSON.stringify(TEMPLATES.pix, null, 2),
@@ -174,6 +179,7 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
   };
 
   const tabs: { key: TabKey; label: string }[] = [
+    { key: "text", label: t("testInteractive.tabs.text") },
     { key: "reply", label: t("testInteractive.tabs.reply") },
     { key: "cta", label: t("testInteractive.tabs.cta") },
     { key: "pix", label: t("testInteractive.tabs.pix") },
@@ -183,7 +189,7 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
 
   return (
     <Dialog open={open} onOpenChange={(o) => !sending && onOpenChange(o)}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("testInteractive.title")}</DialogTitle>
         </DialogHeader>
@@ -195,7 +201,7 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
           </p>
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               {tabs.map((tb) => (
                 <TabsTrigger key={tb.key} value={tb.key}>
                   {tb.label}

@@ -6,7 +6,11 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
-### Suporte a Mensagens Interativas
+### Suporte a Mensagens Interativas e Envio de Texto
+
+**Frontend**
+- `frontend/src/components/test-interactive-modal.tsx`: Adicionado suporte a aba "Texto" (que dispara `POST /message/sendText/:instanceName`), expandido a contagem de colunas do grid de abas para 6 e adicionada a classe `max-h-[90vh] overflow-y-auto` ao `<DialogContent>` para permitir rolagem de tela nos payloads longos.
+- `frontend/src/translate/languages/*.json`: Adicionadas as traduções para a nova aba de texto ("Texto"/"Text"/"Texte") em português, inglês, espanhol e francês.
 
 **Backend**
 - `backend/src/routes/message.routes.ts`: Implementados os endpoints `POST /message/sendButtons/:instanceName`, `POST /message/sendList/:instanceName` e `POST /message/sendCarousel/:instanceName` para suportar testes de botões interativos, menus de lista e carrosséis mapeando os payloads recebidos para o formato `zapo-js`. Para evitar que o WhatsApp descarte silenciosamente os templates, as mensagens interativas foram empacotadas em contêineres `viewOnceMessage` e as listas foram convertidas para usar o botão de fluxo nativo `single_select`. Adicionado também o helper `resolveJid` para resolver automaticamente a incompatibilidade de 9 dígitos vs 8 dígitos para todos os envios de mensagens direcionados a números do Brasil.

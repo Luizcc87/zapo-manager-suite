@@ -67,6 +67,7 @@
     "sending": "Enviando...",
     "requiresOpen": "Disponível apenas com a instância conectada",
     "tabs": {
+      "text": "Texto",
       "reply": "Reply",
       "cta": "CTA",
       "pix": "PIX",

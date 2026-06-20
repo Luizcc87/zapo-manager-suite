@@ -67,6 +67,7 @@
     "sending": "Sending...",
     "requiresOpen": "Available only when the instance is connected",
     "tabs": {
+      "text": "Text",
       "reply": "Reply",
       "cta": "CTA",
       "pix": "PIX",
