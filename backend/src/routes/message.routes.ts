@@ -152,7 +152,12 @@ router.post('/sendWhatsAppAudio/:instanceName', checkStrictInstanceApiKey, async
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? {},
+      message: {
+        audioMessage: {
+          mimetype: 'audio/ogg; codecs=opus',
+          ptt: true,
+        }
+      },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
@@ -191,7 +196,20 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
     }
 
     const jid = await resolveJid(active.client, number);
-    const sentMsg = await active.client.message.send(jid, text, options);
+    const content = typeof text === 'object' && text !== null
+      ? text
+      : req.body.linkPreview !== undefined
+        ? {
+            type: 'text',
+            text,
+            linkPreview: req.body.linkPreview,
+          }
+        : text;
+    const linkPreviewRequested = typeof content === 'object' && content !== null && 'linkPreview' in content;
+    if (linkPreviewRequested) {
+      console.log(`[MessageRoutes] sendText linkPreview requested for ${instanceName}`);
+    }
+    const sentMsg = await active.client.message.send(jid, content, options);
 
     const msgData = {
       key: {
@@ -212,7 +230,7 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
         fromMe: true,
         id: sentMsg.id
       },
-      message: {
+      message: typeof text === 'object' && text !== null ? text : {
         conversation: text
       },
       messageTimestamp: Math.floor(Date.now() / 1000),
@@ -475,7 +493,21 @@ router.post('/sendButtons/:instanceName', checkStrictInstanceApiKey, async (req:
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? {},
+      message: {
+        viewOnceMessage: {
+          message: {
+            interactiveMessage: {
+              header: title ? { title, hasMediaAttachment: false } : undefined,
+              body: { text: description || '' },
+              footer: footer ? { text: footer } : undefined,
+              nativeFlowMessage: {
+                buttons: nativeFlowButtons,
+                messageVersion: 1
+              }
+            }
+          }
+        }
+      },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
@@ -557,7 +589,26 @@ router.post('/sendList/:instanceName', checkStrictInstanceApiKey, async (req: Re
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? {},
+      message: {
+        viewOnceMessage: {
+          message: {
+            interactiveMessage: {
+              header: title ? { title, hasMediaAttachment: false } : undefined,
+              body: { text: description || '' },
+              footer: footerText ? { text: footerText } : undefined,
+              nativeFlowMessage: {
+                buttons: [
+                  {
+                    name: 'single_select',
+                    buttonParamsJson: JSON.stringify(listParams)
+                  }
+                ],
+                messageVersion: 1
+              }
+            }
+          }
+        }
+      },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
@@ -658,7 +709,19 @@ router.post('/sendCarousel/:instanceName', checkStrictInstanceApiKey, async (req
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? {},
+      message: {
+        viewOnceMessage: {
+          message: {
+            interactiveMessage: {
+              body: { text: body || '' },
+              carouselMessage: {
+                cards: interactiveCards,
+                messageVersion: 1
+              }
+            }
+          }
+        }
+      },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };

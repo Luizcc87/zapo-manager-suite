@@ -102,6 +102,30 @@ test.describe('Smoke real de envio para número alvo', () => {
     throw new Error('Status da mensagem não ficou disponível após o envio.');
   });
 
+  test('sendText real with linkPreview', async ({ request }) => {
+    await ensureOpen(request);
+    const r = await request.post(`/message/sendText/${resolvedInstance}`, {
+      headers: { apikey: connectedInstanceKey!, 'Content-Type': 'application/json' },
+      data: {
+        number: TARGET_NUMBER,
+        text: {
+          type: 'text',
+          text: 'https://meli.la/2MU3MXd',
+          linkPreview: true,
+        },
+      },
+      timeout: 60_000,
+    });
+    expect(r.status()).toBe(201);
+    const body = await r.json();
+    expect(body.accepted).toBe(true);
+    expect(body.key.remoteJid).toBe(`${TARGET_NUMBER}@s.whatsapp.net`);
+    expect(body.message.type).toBe('text');
+    expect(body.message.text).toBe('https://meli.la/2MU3MXd');
+    expect(body.message.linkPreview).toBe(true);
+    expect(body.status).toBe('PENDING');
+  });
+
   test('sendMedia real', async ({ request }) => {
     await ensureOpen(request);
     const r = await request.post(`/message/sendMedia/${resolvedInstance}`, {

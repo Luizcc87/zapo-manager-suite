@@ -305,6 +305,23 @@ export class ZapoManager {
     return byJid?.get(remoteJid) ?? [];
   }
 
+  private static unwrapMessage(message: any): any {
+    if (!message) return {};
+    let msg = message;
+    while (true) {
+      const inner = msg.ephemeralMessage?.message ??
+        msg.groupMentionedMessage?.message ??
+        msg.botInvokeMessage?.message ??
+        msg.deviceSentMessage?.message ??
+        msg.viewOnceMessage?.message ??
+        msg.viewOnceMessageV2?.message ??
+        msg.documentWithCaptionMessage?.message;
+      if (!inner) break;
+      msg = inner;
+    }
+    return msg;
+  }
+
   public static recordSentMessage(instanceName: string, msgData: any) {
     this.storeMessage(instanceName, msgData);
   }
@@ -315,14 +332,15 @@ export class ZapoManager {
 
     // Detect message type from proto structure
     const msgObj = msgData.message ?? {};
-    const messageType = Object.keys(msgObj)[0] ?? 'unknown';
+    const unwrapped = this.unwrapMessage(msgObj);
+    const messageType = Object.keys(unwrapped)[0] ?? 'unknown';
 
     const normalized = {
       id: msgData.key?.id ?? `${Date.now()}`,
       key: msgData.key,
       pushName: msgData.pushName ?? '',
       messageType,
-      message: msgObj,
+      message: unwrapped,
       messageTimestamp: String(msgData.messageTimestamp ?? Math.floor(Date.now() / 1000)),
       instanceId: instanceName,
       source: 'baileys',

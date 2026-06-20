@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { Checkbox } from "@evoapi/design-system/checkbox";
 import { Button } from "@evoapi/design-system/button";
 import { Label } from "@evoapi/design-system/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@evoapi/design-system/tabs";
@@ -121,6 +122,7 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>("text");
   const [number, setNumber] = useState("");
+  const [linkPreview, setLinkPreview] = useState(false);
   const [payloads, setPayloads] = useState<Record<TabKey, string>>(() => ({
     text: JSON.stringify(TEMPLATES.text, null, 2),
     reply: JSON.stringify(TEMPLATES.reply, null, 2),
@@ -134,6 +136,7 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
   useEffect(() => {
     if (!open) {
       setSending(false);
+      setLinkPreview(false);
     }
   }, [open]);
 
@@ -157,6 +160,14 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
       return;
     }
     payload.number = target;
+    if (tab === "text") {
+      const baseText = typeof payload.text === "string" ? payload.text : "";
+      payload.text = {
+        type: "text",
+        text: baseText,
+        linkPreview: linkPreview ? true : undefined,
+      };
+    }
 
     try {
       setSending(true);
@@ -233,6 +244,17 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
                     onChange={(e) => setPayloads((p) => ({ ...p, [tb.key]: e.target.value }))}
                   />
                 </div>
+                {tb.key === "text" && (
+                  <label className="flex items-center gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+                    <Checkbox checked={linkPreview} onCheckedChange={(checked) => setLinkPreview(checked === true)} />
+                    <span className="flex flex-col">
+                      <span>{t("testInteractive.linkPreview.label", { defaultValue: "Ativar link preview" })}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t("testInteractive.linkPreview.description", { defaultValue: "Exibe prévia automática de links no envio de texto" })}
+                      </span>
+                    </span>
+                  </label>
+                )}
               </TabsContent>
             ))}
           </Tabs>
