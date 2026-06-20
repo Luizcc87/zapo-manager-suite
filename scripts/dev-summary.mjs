@@ -38,31 +38,36 @@ async function findFrontendUrl() {
   return null;
 }
 
-async function main() {
-  let backendUrl = `http://localhost:${backendPort}`;
-  let backendReady = false;
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+async function findBackendUrl() {
+  for (let port = backendPort; port < backendPort + 10; port += 1) {
     try {
-      const result = await requestJson(`${backendUrl}/`);
+      const result = await requestJson(`http://localhost:${port}/`);
       if (result.statusCode === 200) {
-        backendReady = true;
-        break;
+        return {
+          url: `http://localhost:${port}`,
+          port,
+          usedFallbackPort: port !== backendPort,
+        };
       }
     } catch {
-      // aguarda o backend subir
+      // continue searching
     }
+  }
+  return null;
+}
+
+async function main() {
+  let backendInfo = null;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    backendInfo = await findBackendUrl();
+    if (backendInfo) break;
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-
-  if (!backendReady) {
-    backendUrl = `${backendUrl} (indisponível)`;
-  }
-
   const frontendInfo = await findFrontendUrl();
   let connected = 'nenhuma';
-  if (backendReady) {
+  if (backendInfo) {
     try {
-      const result = await requestJson(`${backendUrl}/instance/fetchInstances`, {
+      const result = await requestJson(`${backendInfo.url}/instance/fetchInstances`, {
         apikey: globalKey,
       });
       if (result.statusCode === 200) {
@@ -78,7 +83,14 @@ async function main() {
   console.log('\n╔══════════════════════════════════════════════════╗');
   console.log('║            Zapo Manager — Dev Summary           ║');
   console.log('╚══════════════════════════════════════════════════╝');
-  console.log(`  Backend : ${backendUrl}`);
+  if (backendInfo) {
+    const fallbackNote = backendInfo.usedFallbackPort
+      ? ` (porta alternativa por conflito em ${backendPort})`
+      : '';
+    console.log(`  Backend : ${backendInfo.url}${fallbackNote}`);
+  } else {
+    console.log('  Backend : não encontrado');
+  }
   if (frontendInfo) {
     const fallbackNote = frontendInfo.usedFallbackPort
       ? ` (porta alternativa por conflito em ${frontendBasePort})`

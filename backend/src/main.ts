@@ -196,7 +196,7 @@ async function bootstrap() {
     const startPort = typeof PORT === 'number' ? PORT : parseInt(PORT as string, 10) || 8080;
     const { port } = await startServer(app, startPort);
     console.log(`[Zapo-Manager] Servidor rodando na porta ${port}`);
-    console.log(`[Zapo-Manager] Acesse a UI em: http://localhost:${port}`);
+    console.log(`[Zapo-Manager] Acesse a API em: http://localhost:${port}`);
   } catch (err: any) {
     console.error('[Zapo-Manager] Erro crítico no bootstrap:', err.message);
     process.exit(1);
