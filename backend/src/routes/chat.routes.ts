@@ -11,7 +11,7 @@ router.post('/findChats/:instanceName', checkInstanceApiKey, async (req: Request
     const { instanceName } = req.params;
     const where = req.body?.where ?? {};
 
-    let chats = ZapoManager.getChatList(instanceName);
+    let chats = await ZapoManager.getChatList(instanceName);
 
     if (where.remoteJid) {
       chats = chats.filter((c) => c.remoteJid === where.remoteJid);

@@ -146,6 +146,18 @@ router.post('/sendWhatsAppAudio/:instanceName', checkStrictInstanceApiKey, async
       ptt: true,
     });
 
+    const msgData = {
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id,
+      },
+      message: (sentMsg as any).message ?? {},
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
     return res.status(201).json({
       accepted: true,
       key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
@@ -180,6 +192,18 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
 
     const jid = await resolveJid(active.client, number);
     const sentMsg = await active.client.message.send(jid, text, options);
+
+    const msgData = {
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id,
+      },
+      message: (sentMsg as any).message ?? {},
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
 
     return res.status(201).json({
       accepted: true,
@@ -255,6 +279,18 @@ router.post('/sendMedia/:instanceName', checkStrictInstanceApiKey, upload.single
 
     const sentMsg = await active.client.message.send(jid, sendPayload);
 
+    const msgData = {
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id,
+      },
+      message: (sentMsg as any).message ?? {},
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
     const returnedMsg: any = {};
     if (mediaType === 'image') returnedMsg.imageMessage = { caption };
     else if (mediaType === 'video') returnedMsg.videoMessage = { caption };
@@ -320,6 +356,18 @@ router.post('/sendSticker/:instanceName', checkStrictInstanceApiKey, upload.sing
       media: mediaInput,
       mimetype: 'image/webp'
     });
+
+    const msgData = {
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id,
+      },
+      message: (sentMsg as any).message ?? {},
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
 
     return res.status(201).json({
       accepted: true,
@@ -421,6 +469,18 @@ router.post('/sendButtons/:instanceName', checkStrictInstanceApiKey, async (req:
       }
     });
 
+    const msgData = {
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id,
+      },
+      message: (sentMsg as any).message ?? {},
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
     return res.status(201).json({
       accepted: true,
       key: {
@@ -490,6 +550,18 @@ router.post('/sendList/:instanceName', checkStrictInstanceApiKey, async (req: Re
         }
       }
     });
+
+    const msgData = {
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id,
+      },
+      message: (sentMsg as any).message ?? {},
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
 
     return res.status(201).json({
       accepted: true,
@@ -579,6 +651,18 @@ router.post('/sendCarousel/:instanceName', checkStrictInstanceApiKey, async (req
         }
       }
     });
+
+    const msgData = {
+      key: {
+        remoteJid: jid,
+        fromMe: true,
+        id: sentMsg.id,
+      },
+      message: (sentMsg as any).message ?? {},
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
 
     return res.status(201).json({
       accepted: true,

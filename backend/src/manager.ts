@@ -89,6 +89,9 @@ async function buildStore(instanceName: string): Promise<{ store: any; pgStore: 
     storeBackend = createSqliteStore({ path: sqlitePath });
   }
 
+  const saveMessages = process.env.SAVE_DATA_NEW_MESSAGE === 'true';
+  const saveContacts = process.env.SAVE_DATA_CONTACTS === 'true';
+
   let providersConfig: any = {
     auth: pgStore ? 'pg' : 'sqlite',
     signal: pgStore ? 'pg' : 'sqlite',
@@ -98,9 +101,9 @@ async function buildStore(instanceName: string): Promise<{ store: any; pgStore: 
     senderKey: pgStore ? 'pg' : 'sqlite',
     appState: pgStore ? 'pg' : 'sqlite',
     privacyToken: pgStore ? 'pg' : 'sqlite',
-    messages: 'none',
+    messages: saveMessages && pgStore ? 'pg' : 'none',
     threads: 'none',
-    contacts: 'none'
+    contacts: saveContacts && pgStore ? 'pg' : 'none'
   };
 
   if (process.env.REDIS_URL && pgStore) {
@@ -168,10 +171,38 @@ export class ZapoManager {
 
   // ── In-memory chat/message accessors ────────────────────────────────────────
 
-  static getChatList(instanceName: string): any[] {
+  // FIX 2: lê wa_chats do banco (sobrevive a restarts); overlay com Map em memória.
+  // Retorna promessa — chamador na rota já era async.
+  static async getChatList(instanceName: string): Promise<any[]> {
+    const dbRows = await prisma.chatEntry.findMany({
+      where: { instanceName },
+      orderBy: { updatedAt: 'desc' },
+    }).catch(() => []);
+
+    // Constrói mapa a partir do banco
+    const map = new Map<string, any>();
+    for (const row of dbRows) {
+      map.set(row.remoteJid, {
+        id: row.remoteJid,
+        remoteJid: row.remoteJid,
+        pushName: row.pushName,
+        profilePicUrl: row.profilePicUrl,
+        labels: row.labels,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        instanceId: instanceName,
+      });
+    }
+
+    // Overlay: entradas em memória (mais recentes) sobrescrevem o banco
     const byJid = chatList.get(instanceName);
-    if (!byJid) return [];
-    return Array.from(byJid.values()).sort(
+    if (byJid) {
+      for (const [jid, entry] of byJid.entries()) {
+        map.set(jid, entry);
+      }
+    }
+
+    return Array.from(map.values()).sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
   }
@@ -179,6 +210,10 @@ export class ZapoManager {
   static getMessageList(instanceName: string, remoteJid: string): any[] {
     const byJid = chatMessages.get(instanceName);
     return byJid?.get(remoteJid) ?? [];
+  }
+
+  public static recordSentMessage(instanceName: string, msgData: any) {
+    this.storeMessage(instanceName, msgData);
   }
 
   private static storeMessage(instanceName: string, msgData: any) {
@@ -209,11 +244,11 @@ export class ZapoManager {
       byJid.set(remoteJid, msgs);
     }
 
-    // Update chat entry
+    // Update in-memory chat entry (L1 cache)
     if (!chatList.has(instanceName)) chatList.set(instanceName, new Map());
     const byChat = chatList.get(instanceName)!;
     const existing = byChat.get(remoteJid) ?? {};
-    byChat.set(remoteJid, {
+    const chatEntry = {
       id: remoteJid,
       pushName: msgData.pushName ?? existing.pushName ?? '',
       remoteJid,
@@ -222,6 +257,26 @@ export class ZapoManager {
       createdAt: existing.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       instanceId: instanceName,
+    };
+    byChat.set(remoteJid, chatEntry);
+
+    // FIX 2: Persiste chat no banco (wa_chats) — fire-and-forget para não bloquear evento
+    prisma.chatEntry.upsert({
+      where: { instanceName_remoteJid: { instanceName, remoteJid } },
+      create: {
+        instanceName,
+        remoteJid,
+        pushName: chatEntry.pushName,
+        profilePicUrl: chatEntry.profilePicUrl,
+        labels: chatEntry.labels,
+      },
+      update: {
+        pushName: chatEntry.pushName,
+        profilePicUrl: chatEntry.profilePicUrl,
+        updatedAt: new Date(),
+      },
+    }).catch((err: any) => {
+      console.error(`[ZapoManager] [${instanceName}] Erro ao persistir chat ${remoteJid}:`, err.message);
     });
   }
 
@@ -299,7 +354,11 @@ export class ZapoManager {
       sessionId: instanceName,
       recoverFromClientTooOld: true,
       markOnlineOnConnect: settings.alwaysOnline ?? false,
-      history: { enabled: settings.syncFullHistory ?? false },
+      history: {
+        enabled: process.env.SAVE_DATA_HISTORIC === 'true'
+          || settings.syncFullHistory
+          || false
+      },
       deviceBrowser: process.env.SESSION_DEVICE_BROWSER || 'chrome',
       ...(process.env.SESSION_DEVICE_OS && { deviceOsDisplayName: process.env.SESSION_DEVICE_OS }),
       ...(proxy && { proxy }),
@@ -488,14 +547,28 @@ export class ZapoManager {
     if (cfg.events?.length > 0 && !cfg.events.includes(event)) return;
 
     console.log(`[ZapoWebhook] [${instanceName}] → ${event}`);
-    try {
-      await fetch(cfg.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': instanceName },
-        body: JSON.stringify({ event, instance: instanceName, payload })
-      });
-    } catch (err: any) {
-      console.error(`[ZapoWebhook] Erro ao disparar [${event}] para ${cfg.url}:`, err.message);
-    }
+
+    // FIX 4: 3 tentativas com backoff exponencial (1s, 2s, 4s)
+    const MAX_ATTEMPTS = 3;
+    const attempt = async (n: number): Promise<void> => {
+      try {
+        await fetch(cfg.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': instanceName },
+          body: JSON.stringify({ event, instance: instanceName, payload })
+        });
+      } catch (err: any) {
+        if (n < MAX_ATTEMPTS) {
+          const delayMs = 1000 * Math.pow(2, n - 1); // 1s, 2s, 4s
+          console.warn(`[ZapoWebhook] [${instanceName}] [${event}] tentativa ${n}/${MAX_ATTEMPTS} falhou — retry em ${delayMs}ms: ${err.message}`);
+          await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+          return attempt(n + 1);
+        }
+        console.error(`[ZapoWebhook] Erro definitivo ao disparar [${event}] para ${cfg.url} após ${MAX_ATTEMPTS} tentativas:`, err.message);
+      }
+    };
+
+    await attempt(1);
   }
 }
+

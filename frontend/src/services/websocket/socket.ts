@@ -7,6 +7,13 @@ export interface SocketAuth {
   instanceName: string;
 }
 
+export interface SocketCallbacks {
+  /** Chamado quando a conexão cai (ex: backend reiniciando) */
+  onDisconnect?: (reason: string) => void;
+  /** Chamado quando a reconexão é bem-sucedida */
+  onReconnect?: () => void;
+}
+
 export interface WebSocketConnection {
   on: (event: string, callback: (data: any) => void) => void;
   off: (event: string) => void;
@@ -21,7 +28,11 @@ function makeKey(serverUrl: string, instanceName: string) {
   return `${serverUrl}::${instanceName}`;
 }
 
-export const connectSocket = (serverUrl: string, auth?: Partial<SocketAuth>): WebSocketConnection => {
+export const connectSocket = (
+  serverUrl: string,
+  auth?: Partial<SocketAuth>,
+  callbacks?: SocketCallbacks,
+): WebSocketConnection => {
   const instanceName = auth?.instanceName ?? "";
   const apikey = auth?.apikey ?? getToken(TOKEN_ID.INSTANCE_TOKEN) ?? getToken(TOKEN_ID.TOKEN) ?? "";
 
@@ -36,7 +47,8 @@ export const connectSocket = (serverUrl: string, auth?: Partial<SocketAuth>): We
     transports: ["websocket", "polling"],
     autoConnect: false,
     reconnection: true,
-    reconnectionAttempts: 5,
+    // FIX 3: Infinity garante reconexão mesmo se o backend demorar >5s para subir
+    reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
     timeout: 20000,
   });
@@ -45,10 +57,14 @@ export const connectSocket = (serverUrl: string, auth?: Partial<SocketAuth>): We
 
   socket.on("connect", () => {
     console.log(`[WS] Connected to ${serverUrl} (instance: ${instanceName})`);
+    // FIX 3: notifica chamador para refetch de dados e fechar banner de "reconectando"
+    callbacks?.onReconnect?.();
   });
 
   socket.on("disconnect", (reason) => {
     console.log(`[WS] Disconnected from ${serverUrl}:`, reason);
+    // FIX 3: notifica chamador para exibir banner "Reconectando..."
+    callbacks?.onDisconnect?.(reason);
   });
 
   socket.on("connect_error", (error) => {

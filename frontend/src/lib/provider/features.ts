@@ -4,7 +4,7 @@ type ProviderSupport = Record<Provider, boolean>;
 
 export const FEATURES = {
   dashboard:    { api: true,  go: true,  zapo: true  },
-  chat:         { api: true,  go: false, zapo: false },
+  chat:         { api: true,  go: false, zapo: true  },
   settings:     { api: true,  go: true,  zapo: true  },
   proxy:        { api: true,  go: true,  zapo: true  },
   webhook:      { api: true,  go: true,  zapo: true  },

@@ -21,3 +21,18 @@ model Instance {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+/// Persiste a lista de chats por instância para sobreviver a restarts.
+model ChatEntry {
+  id           String   @id @default(cuid())
+  instanceName String
+  remoteJid    String
+  pushName     String   @default("")
+  profilePicUrl String  @default("")
+  labels       Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([instanceName, remoteJid])
+  @@map("wa_chats")
+}

@@ -279,8 +279,9 @@ async function bootstrap() {
 
     await autoRegisterServerIp();
 
-    await ZapoManager.loadAll();
-
+    // FIX 1: Criar servidor e registrar setSocketEmitter ANTES de loadAll()
+    // para que eventos 'connection.update' emitidos durante a reconexão das
+    // instâncias (loadAll) sejam encaminhados ao frontend em tempo real.
     const startPort = typeof PORT === 'number' ? PORT : parseInt(PORT as string, 10) || 8080;
     const { server, io, port } = await startServer(app, startPort);
     _httpServer = server;
@@ -297,6 +298,9 @@ async function bootstrap() {
 
     console.log(`[Zapo-Manager] Servidor rodando na porta ${port}`);
     console.log(`[Zapo-Manager] Acesse a API em: http://localhost:${port}`);
+
+    // Iniciar reconexão das instâncias — emitter já está registrado
+    await ZapoManager.loadAll();
   } catch (err: any) {
     console.error('[Zapo-Manager] Erro crítico no bootstrap:', err.message);
     process.exit(1);

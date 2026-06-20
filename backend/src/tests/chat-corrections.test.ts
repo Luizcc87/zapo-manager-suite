@@ -128,7 +128,7 @@ describe('Chat Corrections Test Suite', () => {
       ];
       // Stub ZapoManager.getChatList
       const originalGetChatList = ZapoManager.getChatList;
-      ZapoManager.getChatList = (instance) => {
+      ZapoManager.getChatList = async (instance) => {
         assert.strictEqual(instance, mockInstanceName);
         return mockChats;
       };

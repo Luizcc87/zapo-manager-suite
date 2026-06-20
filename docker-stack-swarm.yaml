@@ -88,6 +88,10 @@ services:
       - PROXY_IP_AUTH_URL=${PROXY_IP_AUTH_URL:-}
       - PROXY_REPLACE_API_URL=${PROXY_REPLACE_API_URL:-}
       - PROXY_REPLACE_API_KEY=${PROXY_REPLACE_API_KEY:-}
+      # ── PERSISTÊNCIA DE DADOS ──────────────────────────────────────────────────
+      - SAVE_DATA_NEW_MESSAGE=${SAVE_DATA_NEW_MESSAGE:-false}
+      - SAVE_DATA_CONTACTS=${SAVE_DATA_CONTACTS:-false}
+      - SAVE_DATA_HISTORIC=${SAVE_DATA_HISTORIC:-false}
       - PORT=8080
       - NODE_ENV=production
     networks:

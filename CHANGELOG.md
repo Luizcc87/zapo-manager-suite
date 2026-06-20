@@ -6,6 +6,31 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Persistência de dados e gravação de mensagens outbound
+
+**Backend**
+- `backend/src/manager.ts`: Adicionado suporte a `SAVE_DATA_NEW_MESSAGE`, `SAVE_DATA_CONTACTS` e `SAVE_DATA_HISTORIC` em `buildStore()` e `connectClient()` para controlar a persistência no PostgreSQL/SQLite. Adicionado método `recordSentMessage()` para gravação de mensagens enviadas.
+- `backend/src/routes/message.routes.ts`: Chamada a `ZapoManager.recordSentMessage()` após o envio bem-sucedido de mensagens em todas as 7 rotas de envio.
+- `backend/.env.example`: Documentação das variáveis de ambiente de persistência de dados.
+
+**Infra**
+- `docker-stack-swarm.yaml`: Declaração das variáveis `SAVE_DATA_NEW_MESSAGE`, `SAVE_DATA_CONTACTS` e `SAVE_DATA_HISTORIC` no serviço `app`.
+
+### Fix 1-4: Correções de restart e resiliência pós-análise técnica
+
+**Backend**
+- `backend/src/main.ts`: `bootstrap()` refatorado — servidor HTTP + Socket.io criados e `setSocketEmitter()` registrado **antes** de `ZapoManager.loadAll()`. Elimina janela cega onde eventos `connection.update` disparados durante reconexão das instâncias eram perdidos por `_socketEmitter` ainda ser `null`.
+- `backend/prisma/schema.prisma`: adicionado model `ChatEntry` mapeado para tabela `wa_chats` — persiste a lista de chats por instância no PostgreSQL, sobrevivendo a restarts.
+- `backend/prisma/migrations/20260622000001_add_wa_chats/migration.sql`: migration idempotente (`CREATE TABLE IF NOT EXISTS`, `CREATE UNIQUE INDEX IF NOT EXISTS`) para a tabela `wa_chats`.
+- `backend/src/manager.ts`: `getChatList()` agora `async` — lê `wa_chats` do banco (persistente) com overlay in-memory para entradas recém-chegadas; `storeMessage()` faz upsert fire-and-forget no banco via `prisma.chatEntry.upsert()`.
+- `backend/src/manager.ts`: `sendWebhook()` implementa 3 tentativas com backoff exponencial (1 s, 2 s, 4 s); falha definitiva é logada como `ERROR`. Sem dependências novas.
+- `backend/src/routes/chat.routes.ts`: adicionado `await` em `ZapoManager.getChatList()` (agora async).
+- `backend/src/tests/chat-corrections.test.ts`: stub de `getChatList` atualizado para `async` (match de assinatura).
+
+**Frontend**
+- `frontend/src/services/websocket/socket.ts`: `reconnectionAttempts: 5` → `Infinity`; interface `SocketCallbacks` adicionada (`onDisconnect`, `onReconnect`) para que chamadores possam exibir banner de UX sem acoplar lógica de UI ao módulo de socket.
+- `frontend/src/pages/instance/Chat/index.tsx`: passa `onDisconnect` (exibe toast "Conexão perdida. Reconectando...") e `onReconnect` (fecha toast, exibe "Reconectado.", invalida cache TanStack Query `["chats","findChats"]`) ao `connectSocket()`.
+
 ### Isolamento de chave de mensagens e status de conexão real
 
 **Backend**

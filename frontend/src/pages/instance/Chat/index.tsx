@@ -6,6 +6,8 @@ import { ArrowLeft, MessageCircle, Search, User, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 
 import { useInstance } from "@/contexts/InstanceContext";
 
@@ -32,6 +34,7 @@ function Chat() {
   const [textareaHeight] = useState("auto");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { instance } = useInstance();
+  const queryClient = useQueryClient();
 
   const [realtimeChats, setRealtimeChats] = useState<ChatType[]>([]);
   const [search, setSearch] = useState("");
@@ -58,10 +61,28 @@ function Chat() {
     const serverUrl = getToken(TOKEN_ID.API_URL);
     if (!serverUrl) return;
 
-    const socket = connectSocket(serverUrl, {
-      apikey: instance.token,
-      instanceName: instance.name,
-    });
+    const socket = connectSocket(
+      serverUrl,
+      {
+        apikey: instance.token,
+        instanceName: instance.name,
+      },
+      {
+        // FIX 3: banner de reconexão + invalidação de cache ao reconectar
+        onDisconnect: () => {
+          toast.warn("Conexão perdida. Reconectando...", {
+            toastId: "ws-reconnecting",
+            autoClose: false,
+          });
+        },
+        onReconnect: () => {
+          toast.dismiss("ws-reconnecting");
+          toast.success("Reconectado.", { autoClose: 3000 });
+          // Invalida findChats para refetch imediato do banco (wa_chats persistido)
+          queryClient.invalidateQueries({ queryKey: ["chats", "findChats"] });
+        },
+      },
+    );
 
     const handle = (data: { instance?: string; data?: { key?: { remoteJid?: string; profilePictureUrl?: string }; pushName?: string } }) => {
       if (!instance || data.instance !== instance.name) return;
@@ -96,7 +117,8 @@ function Chat() {
       socket.off("send.message");
       disconnectSocket(socket);
     };
-  }, [instance, instance?.name]);
+  }, [instance, instance?.name, queryClient]);
+
 
   const scrollToBottom = useCallback(() => {
     lastMessageRef.current?.scrollIntoView({});
