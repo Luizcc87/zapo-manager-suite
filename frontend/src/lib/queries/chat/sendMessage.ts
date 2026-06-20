@@ -98,7 +98,7 @@ export function useSendMessage() {
 const MESSAGES_INVALIDATE_KEYS = [
   ["chats", "findMessages"],
   ["chats", "findChats"],
-] as const;
+];
 
 export function useSendMedia() {
   const sendMediaMutation = useManageMutation(sendMedia, {
