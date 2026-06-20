@@ -16,6 +16,10 @@ services:
       - WEBHOOK_URL=http://your-webhook-endpoint.com/webhook
       - SESSION_DEVICE_BROWSER=chrome
       - SESSION_DEVICE_OS=Linux
+      - PROXY_API_KEY=
+      - PROXY_IP_AUTH_URL=
+      - PROXY_REPLACE_API_URL=
+      - PROXY_REPLACE_API_KEY=
       - PORT=8080
     deploy:
       replicas: 1

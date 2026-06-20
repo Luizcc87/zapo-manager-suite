@@ -194,6 +194,8 @@ O `.docker/` contém configs nginx incluindo SPA fallback, SSL e cache headers.
 
 ## Environment Variables
 
+### Frontend (`frontend/.env`)
+
 ```env
 VITE_API_URL=http://localhost:8080             # Opcional: pré-configura/sobrescreve a URL do backend
 VITE_API_KEY=your-api-key                      # Opcional: pré-configura a chave API global no formulário
@@ -201,3 +203,23 @@ VITE_API_KEY=your-api-key                      # Opcional: pré-configura a chav
 ```
 
 Sem essas variáveis, o usuário configura via tela de login.
+
+### Backend (`backend/.env`)
+
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `GLOBAL_API_KEY` | **Sim** | Chave mestra da API. Gerar: `openssl rand -hex 32` |
+| `DATABASE_URL` | **Sim** | PostgreSQL connection string |
+| `REDIS_URL` | Não | Redis para distributed locks (Docker Swarm multi-réplica) |
+| `SERVER_URL` | Não | URL pública do servidor (ex: `https://zapo.dominio.com`) |
+| `WEBHOOK_URL` | Não | Fallback global de webhook (sobreposto por config por-instância) |
+| `SESSION_DEVICE_BROWSER` | Não | Browser anunciado ao WhatsApp (`chrome`, `firefox`, etc.) |
+| `SESSION_DEVICE_OS` | Não | SO exibido em "Dispositivos Vinculados" (ex: `Linux`) |
+| `PROXY_API_KEY` | Não | Chave da API do provedor de proxies para auto-registro de IP |
+| `PROXY_IP_AUTH_URL` | Não | Endpoint de autorização de IPs (POST `{ip_address}` no startup) |
+| `PROXY_REPLACE_API_URL` | Não | Endpoint de substituição de proxy (botão "Substituir IP" no painel) |
+| `PROXY_REPLACE_API_KEY` | Não | Chave para o endpoint de substituição (pode ser igual a `PROXY_API_KEY`) |
+
+**Proxy — fluxo de auto-registro:** se `PROXY_API_KEY` e `PROXY_IP_AUTH_URL` estiverem definidos, o backend detecta o IP público do servidor via `api.ipify.org` e o registra no provedor a cada startup. Útil em Docker Swarm onde o IP do nó pode mudar.
+
+**Proxy — sticky session:** campos `country` e `session` no formulário de proxy por-instância. Se `session` estiver vazio, o backend usa automaticamente o nome da instância como ID de sessão (evita rotação de IP mid-session pelo WhatsApp).

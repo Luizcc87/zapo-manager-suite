@@ -34,6 +34,26 @@ version: '3.8'
 #   SESSION_DEVICE_OS — Nome do SO exibido na lista "Dispositivos Vinculados" (padrão: Linux).
 #                      Exemplo: export SESSION_DEVICE_OS=Linux
 #
+# ─── VARIÁVEIS OPCIONAIS — PROXY ──────────────────────────────────────────────
+#
+#   PROXY_API_KEY    — Chave da API do provedor de proxies.
+#                      Quando definida, o servidor registra automaticamente seu
+#                      IP público no provedor ao iniciar (útil em Docker Swarm
+#                      onde o IP do nó pode mudar entre deploys).
+#                      Exemplo: export PROXY_API_KEY=Token abcdef1234567890
+#
+#   PROXY_IP_AUTH_URL — URL do endpoint de autorização de IPs do provedor.
+#                      Recebe POST com body {"ip_address": "<ip>"}.
+#                      Exemplo: export PROXY_IP_AUTH_URL=https://proxy.exemplo.com/api/v2/ipauthorization/
+#
+#   PROXY_REPLACE_API_URL — URL do endpoint de substituição de proxy.
+#                      Ativado pelo botão "Substituir IP" no painel.
+#                      Exemplo: export PROXY_REPLACE_API_URL=https://proxy.exemplo.com/api/v3/proxy/replace/
+#
+#   PROXY_REPLACE_API_KEY — Chave para o endpoint de substituição.
+#                      Pode ser igual a PROXY_API_KEY ou diferente.
+#                      Exemplo: export PROXY_REPLACE_API_KEY=Token abcdef1234567890
+#
 # ─── CLOUDFLARE TUNNEL ────────────────────────────────────────────────────────
 #   Para expor o painel via Cloudflare Tunnel, crie uma rota pública apontando
 #   para o serviço interno do Swarm:
@@ -64,6 +84,10 @@ services:
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - SESSION_DEVICE_BROWSER=${SESSION_DEVICE_BROWSER:-chrome}
       - SESSION_DEVICE_OS=${SESSION_DEVICE_OS:-Linux}
+      - PROXY_API_KEY=${PROXY_API_KEY:-}
+      - PROXY_IP_AUTH_URL=${PROXY_IP_AUTH_URL:-}
+      - PROXY_REPLACE_API_URL=${PROXY_REPLACE_API_URL:-}
+      - PROXY_REPLACE_API_KEY=${PROXY_REPLACE_API_KEY:-}
       - PORT=8080
       - NODE_ENV=production
     networks:
