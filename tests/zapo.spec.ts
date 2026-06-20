@@ -336,13 +336,14 @@ test.describe('Suite 3 — Envio de Mensagens (requer instância conectada)', ()
 
   test('3.2b sendText com linkPreview — deve aceitar texto objeto', async ({ request }) => {
     requireConnected();
+    const previewText = '*Freezer Horizontal Electrolux 95L Inverter Bivolt Uma Porta Branco (HB100) Bivolt*\n\nR$1.449\n\nhttps://meli.la/2MU3MXd';
     const r = await request.post(`/message/sendText/${resolvedInstance}`, {
       headers: { apikey: connectedInstanceKey!, 'Content-Type': 'application/json' },
       data: {
         number: '5555917896891',
         text: {
           type: 'text',
-          text: 'https://meli.la/2MU3MXd',
+          text: previewText,
           linkPreview: true,
         },
       },
@@ -353,7 +354,7 @@ test.describe('Suite 3 — Envio de Mensagens (requer instância conectada)', ()
 
     expect(body.key.fromMe).toBe(true);
     expect(body.message.type).toBe('text');
-    expect(body.message.text).toBe('https://meli.la/2MU3MXd');
+    expect(body.message.text).toBe(previewText);
     expect(body.message.linkPreview).toBe(true);
     expect(body.status).toBe('PENDING');
   });

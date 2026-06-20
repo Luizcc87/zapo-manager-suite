@@ -68,6 +68,7 @@
     "requiresOpen": "Disponible solo con la instancia conectada",
     "tabs": {
       "text": "Texto",
+      "linkPreview": "Vista previa",
       "reply": "Reply",
       "cta": "CTA",
       "pix": "PIX",

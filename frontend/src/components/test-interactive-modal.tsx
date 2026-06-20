@@ -15,10 +15,11 @@ import { api } from "@/lib/queries/api";
 
 import { Instance } from "@/types/evolution.types";
 
-type TabKey = "text" | "reply" | "cta" | "pix" | "list" | "carousel";
+type TabKey = "text" | "linkPreview" | "reply" | "cta" | "pix" | "list" | "carousel";
 
 const ENDPOINT: Record<TabKey, string> = {
   text: "sendText",
+  linkPreview: "sendText",
   reply: "sendButtons",
   cta: "sendButtons",
   pix: "sendButtons",
@@ -29,6 +30,17 @@ const ENDPOINT: Record<TabKey, string> = {
 const TEMPLATES: Record<TabKey, Record<string, unknown>> = {
   text: {
     text: "Olá! Este é um teste de envio de mensagem de texto.",
+  },
+  linkPreview: {
+    text: {
+      type: "text",
+      text: "*Freezer Horizontal Electrolux 95L Inverter Bivolt Uma Porta Branco (HB100) Bivolt*\n\nR$1.449\n\nhttps://meli.la/2MU3MXd",
+      linkPreview: {
+        title: "Freezer Horizontal Electrolux 95L Inverter Bivolt",
+        description: "R$1.449",
+        image: "https://httpbin.org/image/jpeg",
+      },
+    },
   },
   reply: {
     title: "Resposta Rápida",
@@ -123,8 +135,10 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
   const [tab, setTab] = useState<TabKey>("text");
   const [number, setNumber] = useState("");
   const [linkPreview, setLinkPreview] = useState(false);
+  const [textMessage, setTextMessage] = useState(TEMPLATES.text.text as string);
   const [payloads, setPayloads] = useState<Record<TabKey, string>>(() => ({
-    text: JSON.stringify(TEMPLATES.text, null, 2),
+    text: TEMPLATES.text.text as string,
+    linkPreview: JSON.stringify(TEMPLATES.linkPreview, null, 2),
     reply: JSON.stringify(TEMPLATES.reply, null, 2),
     cta: JSON.stringify(TEMPLATES.cta, null, 2),
     pix: JSON.stringify(TEMPLATES.pix, null, 2),
@@ -137,6 +151,7 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
     if (!open) {
       setSending(false);
       setLinkPreview(false);
+      setTextMessage(TEMPLATES.text.text as string);
     }
   }, [open]);
 
@@ -154,19 +169,26 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
 
     let payload: Record<string, unknown>;
     try {
-      payload = JSON.parse(payloads[tab]);
+      payload =
+        tab === "text"
+          ? { text: textMessage }
+          : tab === "linkPreview"
+            ? JSON.parse(payloads[tab])
+            : JSON.parse(payloads[tab]);
     } catch (e: any) {
       toast.error(t("testInteractive.errors.invalidJson", { message: e.message }));
       return;
     }
     payload.number = target;
     if (tab === "text") {
-      const baseText = typeof payload.text === "string" ? payload.text : "";
-      payload.text = {
-        type: "text",
-        text: baseText,
-        linkPreview: linkPreview ? true : undefined,
-      };
+      payload.text = textMessage;
+    } else if (tab === "linkPreview") {
+      if (typeof payload.text === "object" && payload.text !== null) {
+        payload.text = {
+          ...(payload.text as Record<string, unknown>),
+          linkPreview: (payload.text as Record<string, unknown>).linkPreview ?? true,
+        };
+      }
     }
 
     try {
@@ -191,6 +213,7 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "text", label: t("testInteractive.tabs.text") },
+    { key: "linkPreview", label: t("testInteractive.tabs.linkPreview", { defaultValue: "Link Preview" }) },
     { key: "reply", label: t("testInteractive.tabs.reply") },
     { key: "cta", label: t("testInteractive.tabs.cta") },
     { key: "pix", label: t("testInteractive.tabs.pix") },
@@ -236,13 +259,23 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="ti-payload">{t("testInteractive.payload")}</Label>
-                  <Textarea
-                    id="ti-payload"
-                    rows={12}
-                    className="font-mono text-xs"
-                    value={payloads[tb.key]}
-                    onChange={(e) => setPayloads((p) => ({ ...p, [tb.key]: e.target.value }))}
-                  />
+                  {tb.key === "text" ? (
+                    <Textarea
+                      id="ti-payload"
+                      rows={12}
+                      className="font-mono text-xs"
+                      value={textMessage}
+                      onChange={(e) => setTextMessage(e.target.value)}
+                    />
+                  ) : (
+                    <Textarea
+                      id="ti-payload"
+                      rows={12}
+                      className="font-mono text-xs"
+                      value={payloads[tb.key]}
+                      onChange={(e) => setPayloads((p) => ({ ...p, [tb.key]: e.target.value }))}
+                    />
+                  )}
                 </div>
                 {tb.key === "text" && (
                   <label className="flex items-center gap-3 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">

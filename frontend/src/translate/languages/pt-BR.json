@@ -68,6 +68,7 @@
     "requiresOpen": "Disponível apenas com a instância conectada",
     "tabs": {
       "text": "Texto",
+      "linkPreview": "Link Preview",
       "reply": "Reply",
       "cta": "CTA",
       "pix": "PIX",

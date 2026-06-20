@@ -68,6 +68,7 @@
     "requiresOpen": "Disponible uniquement lorsque l'instance est connectée",
     "tabs": {
       "text": "Texte",
+      "linkPreview": "Aperçu du lien",
       "reply": "Reply",
       "cta": "CTA",
       "pix": "PIX",

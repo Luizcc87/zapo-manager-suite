@@ -217,9 +217,9 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
         fromMe: true,
         id: sentMsg.id,
       },
-      message: typeof text === 'object' && text !== null ? text : {
+      message: (sentMsg as any).message ?? (typeof text === 'object' && text !== null ? text : {
         conversation: text,
-      },
+      }),
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
