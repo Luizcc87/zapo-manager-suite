@@ -97,7 +97,7 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
           )}
         </div>
 
-        <div className="flex border-t border-sidebar-border opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <div className="flex border-t border-sidebar-border">
           <Button
             variant="ghost"
             className="h-12 flex-1 rounded-none text-muted-foreground hover:bg-accent hover:text-foreground"

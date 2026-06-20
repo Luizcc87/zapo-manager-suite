@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useParams } from "react-router-dom";
 
 import { useInstance } from "@/contexts/InstanceContext";
 import { useTheme } from "@/components/theme-provider";
@@ -123,8 +123,9 @@ function InstanceSidebar() {
   const { t } = useTranslation();
   const { instance } = useInstance();
   const { pathname } = useLocation();
+  const { instanceId } = useParams<{ instanceId: string }>();
 
-  const base = instance ? `/manager/instance/${instance.id}` : "";
+  const base = instance ? `/manager/instance/${instance.id}` : (instanceId ? `/manager/instance/${instanceId}` : "");
 
   const menus: Menu[] = useMemo(
     () => [

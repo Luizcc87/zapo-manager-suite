@@ -35,7 +35,7 @@ function Dashboard() {
   const [nameSearch, setNameSearch] = useState("");
   const [searchStatus, setSearchStatus] = useState("all");
   const [primaryRegOpen, setPrimaryRegOpen] = useState(false);
-  const isApiProvider = getProvider() === "api";
+  const isApiProvider = getProvider() !== "go";
 
   const { deleteInstance, logout } = useManageInstance();
   const { data: instances, isLoading, refetch } = useFetchInstances();

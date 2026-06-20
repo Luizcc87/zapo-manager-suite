@@ -34,7 +34,7 @@ const useFetchInstanceApi = (props: UseQueryParams<FetchInstanceResponse> & Part
 
 export const useFetchInstance = (props: UseQueryParams<FetchInstanceResponse> & Partial<IParams>) => {
   const provider = getProvider();
-  const apiQuery = useFetchInstanceApi({ ...props, enabled: (props.enabled ?? true) && provider === "api" });
+  const apiQuery = useFetchInstanceApi({ ...props, enabled: (props.enabled ?? true) && provider !== "go" });
   const goQuery = useFetchInstanceGo({ ...props, enabled: (props.enabled ?? true) && provider === "go" });
 
   return provider === "go" ? goQuery : apiQuery;

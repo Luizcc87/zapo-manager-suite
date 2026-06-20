@@ -6,6 +6,16 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Correção de carregamento inicial e navegação do provider Zapo
+
+**Frontend**
+- `frontend/src/lib/queries/instance/fetchInstances.ts`: Altera verificação `provider === "api"` para `provider !== "go"`, habilitando a busca automática de instâncias no mount para o provider `"zapo"`.
+- `frontend/src/lib/queries/instance/fetchInstance.ts`: Altera verificação `provider === "api"` para `provider !== "go"`, permitindo carregar os detalhes da instância selecionada para o provider `"zapo"`.
+- `frontend/src/pages/Dashboard/index.tsx`: Atualiza `isApiProvider` para `provider !== "go"`, exibindo os botões de ação corretos (como Registro Primário) para o provider `"zapo"`.
+- `frontend/src/components/footer.tsx`: Atualiza verificação de `enabled` no query do servidor para `provider !== "go"`.
+- `frontend/src/components/sidebar.tsx`: Importa `useParams` e implementa fallback de `instanceId` no caminho base dos links da barra lateral, evitando que o link aponte para `/dashboard` (gerando erro 404 no React Router) enquanto o objeto da instância está sendo carregado.
+- `frontend/src/components/instance-card.tsx`: Remove as classes de opacidade e hover na linha de botões de ação do card da instância, mantendo os botões visíveis de forma permanente para melhor clareza.
+
 ### Proxy — sticky session, auto-registro de IP, substituição
 
 **Backend**

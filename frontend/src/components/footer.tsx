@@ -11,7 +11,7 @@ function Footer() {
 
   const url = getToken(TOKEN_ID.API_URL);
   const provider = getProvider();
-  const { data: serverInfo } = useVerifyServer({ url, enabled: provider === "api" });
+  const { data: serverInfo } = useVerifyServer({ url, enabled: provider !== "go" });
 
   const clientName = useMemo(() => serverInfo?.clientName, [serverInfo]);
   const version = useMemo(() => serverInfo?.version, [serverInfo]);
