@@ -223,3 +223,12 @@ Sem essas variáveis, o usuário configura via tela de login.
 **Proxy — fluxo de auto-registro:** se `PROXY_API_KEY` e `PROXY_IP_AUTH_URL` estiverem definidos, o backend detecta o IP público do servidor via `api.ipify.org` e o registra no provedor a cada startup. Útil em Docker Swarm onde o IP do nó pode mudar.
 
 **Proxy — sticky session:** campos `country` e `session` no formulário de proxy por-instância. Se `session` estiver vazio, o backend usa automaticamente o nome da instância como ID de sessão (evita rotação de IP mid-session pelo WhatsApp).
+
+## CHANGELOG — Regra Obrigatória
+
+**Toda implementação relevante deve ser registrada em [CHANGELOG.md](CHANGELOG.md) antes ou junto ao commit.**
+
+- Ler `CHANGELOG.md` ao iniciar nova sessão — evita reimplementar o que já existe
+- Seção `[Unreleased]` para trabalho em curso; manter ordem cronológica reversa
+- Atualizar seção **Pendências ativas** ao concluir ou adicionar itens
+- Ver formato completo e regras de o que registrar em `AGENTS.md` → seção CHANGELOG

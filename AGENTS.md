@@ -142,3 +142,41 @@ Para garantir que a imagem oficial funcione tanto em ambientes Intel/AMD (`amd64
    bash scripts/build-push.sh v1.2.0
    ```
 3. Consulte as instruções detalhadas em [docs/DOCKER.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/DOCKER.md).
+
+---
+
+## 📋 CHANGELOG — Regra Obrigatória
+
+**Todo commit relevante deve ter entrada correspondente em [CHANGELOG.md](CHANGELOG.md).**
+
+### O que registrar
+
+| Tipo | Registrar? |
+|---|---|
+| Nova feature / endpoint | ✅ Sim |
+| Bugfix com impacto em comportamento | ✅ Sim |
+| Mudança de schema / migration | ✅ Sim |
+| Nova variável de ambiente | ✅ Sim |
+| Refactor interno sem impacto externo | Opcional |
+| Chore (lint, formatação, deps) | ❌ Não |
+
+### Formato de entrada
+
+```markdown
+## [Unreleased] — YYYY-MM-DD
+
+### Título curto da feature
+
+**Backend** / **Frontend** / **Infra**
+- `caminho/do/arquivo.ts`: o que mudou e por quê
+- Variáveis de ambiente novas (tabela se houver múltiplas)
+
+**Commits:** `hash1`, `hash2`
+```
+
+### Regras
+
+- Usar `[Unreleased]` até o release ser tagueado
+- Manter ordem cronológica reversa (mais novo no topo)
+- Seção **Pendências ativas** no final — atualizar ao concluir cada item
+- Ao iniciar nova sessão de desenvolvimento: ler `CHANGELOG.md` antes de implementar para evitar duplicações
