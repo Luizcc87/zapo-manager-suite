@@ -45,7 +45,7 @@ services:
       - zapo-network
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_USER=zapo_user
       - POSTGRES_PASSWORD=zapo_pass
