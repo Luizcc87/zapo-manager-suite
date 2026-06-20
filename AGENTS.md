@@ -103,3 +103,37 @@ Ao realizar modificações no backend, siga estritamente estas diretrizes de tip
     npx prisma generate
     ```
     Isso assegura que o autocomplete e as checagens do compilador TypeScript reflitam as alterações no código de rotas do Express.
+
+---
+
+## 🧪 Testes Automatizados (Playwright)
+
+O projeto possui uma suíte de testes de integração implementada com **Playwright** que valida a criação de instâncias, o ciclo de vida da conexão, e as regras de segurança/autorização de API.
+
+*   **Arquivo de Configuração:** [playwright.config.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/playwright.config.ts)
+*   **Testes Integrados:** [tests/zapo.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo.spec.ts)
+
+### Como rodar os testes localmente:
+1. Garanta que o backend local está rodando (e.g. na porta `8082` usando o `docker compose up -d`).
+2. Execute o comando na raiz:
+   ```bash
+   npx playwright test
+   ```
+
+---
+
+## 🐳 Build & Publicação Docker Hub (Multi-arch)
+
+Para garantir que a imagem oficial funcione tanto em ambientes Intel/AMD (`amd64`) quanto ARM (como servidores Oracle ARM, Raspberry Pi, Macs com Apple Silicon), sempre publique imagens usando build multi-arch.
+
+*   **Configuração de Buildx:** Requer a criação de um builder do tipo `docker-container` (ex: `evo-multiarch`).
+*   **Script Automatizado:** [scripts/build-push.sh](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/scripts/build-push.sh)
+
+### Como publicar uma nova versão:
+1. Certifique-se de estar logado no Docker Hub (`docker login`).
+2. Execute o script definindo a tag (ou use `latest` por padrão):
+   ```bash
+   # Compila para linux/amd64 e linux/arm64 e publica no Docker Hub
+   bash scripts/build-push.sh v1.2.0
+   ```
+3. Consulte as instruções detalhadas em [docs/DOCKER.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/DOCKER.md).
