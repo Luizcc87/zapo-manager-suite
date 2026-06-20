@@ -119,10 +119,24 @@ async function buildStore(instanceName: string): Promise<{ store: any; pgStore: 
 function buildProxy(cfg: any): Record<string, any> | undefined {
   if (!cfg?.enabled || !cfg.host || !cfg.port) return undefined;
 
-  const auth = cfg.username && cfg.password
-    ? `${encodeURIComponent(cfg.username)}:${encodeURIComponent(cfg.password)}@`
-    : '';
   const protocol = (cfg.protocol as string) || 'http';
+
+  // Compose username with optional routing suffixes: username-[country]-[session]
+  // country → targets a specific country in backconnect pools (2-letter ISO)
+  // session → sticky session ID so the same IP is reused across reconnections
+  //           (critical for WhatsApp: IP rotation mid-session triggers security checks)
+  let effectiveUser: string = cfg.username || '';
+  if (effectiveUser) {
+    if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase()}`;
+    if (cfg.session) effectiveUser += `-${cfg.session}`;
+  }
+
+  const auth = effectiveUser && cfg.password
+    ? `${encodeURIComponent(effectiveUser)}:${encodeURIComponent(cfg.password)}@`
+    : effectiveUser && !cfg.password
+    ? `${encodeURIComponent(effectiveUser)}@` // passwordless (server IP pre-authorized)
+    : '';
+
   const url = `${protocol}://${auth}${cfg.host}:${cfg.port}`;
 
   if (protocol === 'socks4' || protocol === 'socks5') {
@@ -194,7 +208,13 @@ export class ZapoManager {
     }
 
     const settings = (instance.settingsConfig as any) ?? {};
-    const proxyConfig = (instance.proxyConfig as any) ?? {};
+    const rawProxy = (instance.proxyConfig as any) ?? {};
+    // Auto-inject sticky session per instance when not explicitly set.
+    // Prevents IP rotation between reconnections — WhatsApp treats mid-session
+    // IP changes as suspicious and may trigger security challenges.
+    const proxyConfig = rawProxy.enabled && rawProxy.username && !rawProxy.session
+      ? { ...rawProxy, session: instanceName }
+      : rawProxy;
     const logger = new ConsoleLogger('info');
     const { store, pgStore, redisClient, poller } = await buildStore(instanceName);
     const proxy = buildProxy(proxyConfig);
