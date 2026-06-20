@@ -217,7 +217,9 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? {},
+      message: typeof text === 'object' && text !== null ? text : {
+        conversation: text,
+      },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
@@ -297,23 +299,23 @@ router.post('/sendMedia/:instanceName', checkStrictInstanceApiKey, upload.single
 
     const sentMsg = await active.client.message.send(jid, sendPayload);
 
+    const returnedMsg: any = {};
+    if (mediaType === 'image') returnedMsg.imageMessage = { caption };
+    else if (mediaType === 'video') returnedMsg.videoMessage = { caption };
+    else if (mediaType === 'audio') returnedMsg.audioMessage = {};
+    else returnedMsg.documentMessage = { caption, fileName: sendPayload.fileName };
+
     const msgData = {
       key: {
         remoteJid: jid,
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? {},
+      message: returnedMsg,
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
     ZapoManager.recordSentMessage(instanceName, msgData);
-
-    const returnedMsg: any = {};
-    if (mediaType === 'image') returnedMsg.imageMessage = { caption };
-    else if (mediaType === 'video') returnedMsg.videoMessage = { caption };
-    else if (mediaType === 'audio') returnedMsg.audioMessage = {};
-    else returnedMsg.documentMessage = { caption, fileName: sendPayload.fileName };
 
     return res.status(201).json({
       accepted: true,
@@ -381,7 +383,9 @@ router.post('/sendSticker/:instanceName', checkStrictInstanceApiKey, upload.sing
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? {},
+      message: {
+        stickerMessage: {}
+      },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };

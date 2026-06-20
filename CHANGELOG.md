@@ -6,6 +6,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Correção de exibição de mensagens enviadas (fromMe) no chat
+
+**Backend**
+- `backend/src/manager.ts`:
+  - Implementada a função utilitária `unwrapMessage` que desempacota recursivamente estruturas encapsuladas como `deviceSentMessage`, `viewOnceMessage`, `viewOnceMessageV2`, etc.
+  - Atualizado `storeMessage` para executar `unwrapMessage` antes de salvar e definir o tipo das mensagens, garantindo que o banco de dados e os webhooks trafeguem dados fáceis de processar pelo frontend.
+- `backend/src/routes/message.routes.ts`:
+  - Corrigido o objeto `message` passado para `ZapoManager.recordSentMessage()` nos endpoints de envio de áudio, texto, mídia, sticker, botões, lista e carrossel. Anteriormente, era passado o retorno cru do client `sentMsg.message` que é indefinido (uma vez que o `send()` retorna apenas `{id, ack}`), gerando mensagens em branco (`{}`) e do tipo `'unknown'`. Agora passa a estrutura correta correspondente ao tipo de mensagem enviada.
+
 ### Pareamento QR Code / Código de Pareamento para Zapo Mobile Companion
 
 **Backend**
