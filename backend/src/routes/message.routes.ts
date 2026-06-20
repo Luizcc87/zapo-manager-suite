@@ -42,10 +42,20 @@ function formatJid(num: string): string {
   return `${num.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
 }
 
+// Cache local em memória para evitar requisições repetidas ao WhatsApp (por sessão e número)
+const resolvedJidCache = new Map<string, string>();
+
 // Helper para resolver dinamicamente o JID correto no WhatsApp (tratando o 9 extra brasileiro)
 async function resolveJid(client: any, num: string): Promise<string> {
   const cleanNum = num.replace(/[^0-9]/g, '');
   if (num.includes('@')) return num;
+
+  const cacheKey = `${client.sessionId}:${cleanNum}`;
+  if (resolvedJidCache.has(cacheKey)) {
+    return resolvedJidCache.get(cacheKey)!;
+  }
+
+  let resolvedJid = `${cleanNum}@s.whatsapp.net`;
 
   if (cleanNum.startsWith('55')) {
     let alternateNum = '';
@@ -62,7 +72,7 @@ async function resolveJid(client: any, num: string): Promise<string> {
         const results = await client.profile.getLidsByPhoneNumbers([cleanNum, alternateNum]);
         const found = results.find((r: any) => r.exists);
         if (found) {
-          return found.phoneJid || found.lidJid || `${cleanNum}@s.whatsapp.net`;
+          resolvedJid = found.phoneJid || found.lidJid || resolvedJid;
         }
       } catch (e) {
         // Ignora erro de rede e usa o padrão
@@ -70,7 +80,8 @@ async function resolveJid(client: any, num: string): Promise<string> {
     }
   }
 
-  return `${cleanNum}@s.whatsapp.net`;
+  resolvedJidCache.set(cacheKey, resolvedJid);
+  return resolvedJid;
 }
 
 // Baixa uma URL HTTP/HTTPS e salva em arquivo temporário
