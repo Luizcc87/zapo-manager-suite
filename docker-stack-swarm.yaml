@@ -74,7 +74,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-zapo}
       - POSTGRES_DB=zapo
     volumes:
-      - zapo-db-data:/var/lib/postgresql/data
+      - zapo-db-data:/var/lib/postgresql
     networks:
       - zapo-internal
     deploy:
