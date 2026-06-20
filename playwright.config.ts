@@ -7,9 +7,19 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: 'list',
+  globalSetup: require.resolve('./tests/global-setup'),
   use: {
-    baseURL: 'http://localhost:8082',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080',
     trace: 'on-first-retry',
+  },
+  webServer: {
+    command: 'npm run dev',
+    cwd: './backend',
+    port: 8080,
+    reuseExistingServer: !process.env.CI,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    timeout: 30 * 1000,
   },
   projects: [
     {
@@ -18,3 +28,4 @@ export default defineConfig({
     },
   ],
 });
+

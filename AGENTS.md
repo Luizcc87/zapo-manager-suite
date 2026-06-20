@@ -112,13 +112,18 @@ O projeto possui uma suíte de testes de integração implementada com **Playwri
 
 *   **Arquivo de Configuração:** [playwright.config.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/playwright.config.ts)
 *   **Testes Integrados:** [tests/zapo.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo.spec.ts)
+*   **Setup Global:** [tests/global-setup.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/global-setup.ts)
 
 ### Como rodar os testes localmente:
-1. Garanta que o backend local está rodando (e.g. na porta `8082` usando o `docker compose up -d`).
+1. Certifique-se de que a instância Redis esteja rodando (geralmente via Docker `docker compose up -d redis`).
 2. Execute o comando na raiz:
    ```bash
    npx playwright test
    ```
+
+### 🧠 Ciclo de Vida e Aprendizados Resolvidos:
+- **Limpeza de Redis Automatizada:** O `global-setup.ts` limpa automaticamente os locks ativos (`lock:zapo:*`) do Redis local antes do início dos testes usando o `ioredis` instalado. Isso evita que locks fantasmas travem a reconexão.
+- **Gerenciamento de Processos (Anti-Zombies):** O Playwright está configurado para gerenciar o backend. Ele executa `npm run dev` na porta `8080` de forma segura. Se o servidor backend já estiver rodando, ele é reaproveitado. Se não, o Playwright inicia o servidor e garante o seu desligamento imediato e completo no fim do ciclo de testes.
 
 ---
 

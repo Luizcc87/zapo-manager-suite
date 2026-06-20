@@ -17,6 +17,25 @@ function formatJid(num: string): string {
   return `${num.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
 }
 
+// Baixa uma URL HTTP/HTTPS e salva em arquivo temporário
+// zapo-js trata 'string' como caminho local — URLs devem ser pré-baixadas
+async function downloadMediaUrl(url: string, mimetype: string): Promise<string> {
+  const response = await fetch(url, {
+    headers: {
+      // Alguns servidores bloqueiam bots sem User-Agent
+      'User-Agent': 'Mozilla/5.0 (compatible; ZapoManager/1.0)'
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to download media from URL: ${url} (HTTP ${response.status})`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  // Derivar extensão do mimetype para o arquivo temporário
+  const ext = mimetype.split('/')[1]?.split(';')[0] || 'bin';
+  return saveTempFile(buffer, `download.${ext}`);
+}
+
 // Salva o buffer em arquivo temporário para processamento seguro no sharp/ffmpeg
 function saveTempFile(buffer: Buffer, originalname: string): string {
   const tempDir = os.tmpdir();
@@ -120,7 +139,9 @@ router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file
       tempPath = saveTempFile(req.file.buffer, req.file.originalname);
       mediaInput = tempPath;
     } else if (mediaUrl) {
-      mediaInput = mediaUrl;
+      // zapo-js só aceita paths locais ou Buffers — baixar a URL antes de enviar
+      tempPath = await downloadMediaUrl(mediaUrl, mimetype);
+      mediaInput = tempPath;
     } else {
       return res.status(400).json({ error: 'Either file upload or mediaUrl is required' });
     }
@@ -138,8 +159,9 @@ router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file
       caption: caption
     };
 
-    if (mediaType === 'document' && req.file) {
-      sendPayload.fileName = req.file.originalname;
+    if (mediaType === 'document') {
+      // fileName com 'N' maiúsculo conforme AGENTS.md
+      sendPayload.fileName = req.file ? req.file.originalname : (mediaUrl ? mediaUrl.split('/').pop()?.split('?')[0] || 'document.bin' : 'document.bin');
     }
 
     const sentMsg = await active.client.message.send(jid, sendPayload);
@@ -148,7 +170,7 @@ router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file
     if (mediaType === 'image') returnedMsg.imageMessage = { caption };
     else if (mediaType === 'video') returnedMsg.videoMessage = { caption };
     else if (mediaType === 'audio') returnedMsg.audioMessage = {};
-    else returnedMsg.documentMessage = { caption, fileName: req.file ? req.file.originalname : undefined };
+    else returnedMsg.documentMessage = { caption, fileName: sendPayload.fileName };
 
     return res.status(201).json({
       key: {
@@ -161,6 +183,7 @@ router.post('/sendMedia/:instanceName', checkInstanceApiKey, upload.single('file
       status: 'PENDING'
     });
   } catch (err: any) {
+    console.error(`[MessageRoutes] sendMedia error:`, err.message, err.stack?.split('\n').slice(0, 4).join(' | '));
     return res.status(500).json({ error: err.message });
   } finally {
     // Limpeza de arquivo temporário
@@ -195,7 +218,9 @@ router.post('/sendSticker/:instanceName', checkInstanceApiKey, upload.single('fi
       tempPath = saveTempFile(req.file.buffer, req.file.originalname);
       mediaInput = tempPath;
     } else if (req.body.mediaUrl) {
-      mediaInput = req.body.mediaUrl;
+      // zapo-js só aceita paths locais — baixar a URL antes de enviar
+      tempPath = await downloadMediaUrl(req.body.mediaUrl, 'image/webp');
+      mediaInput = tempPath;
     } else {
       return res.status(400).json({ error: 'File upload or mediaUrl is required' });
     }
@@ -219,6 +244,7 @@ router.post('/sendSticker/:instanceName', checkInstanceApiKey, upload.single('fi
       status: 'PENDING'
     });
   } catch (err: any) {
+    console.error(`[MessageRoutes] sendSticker error:`, err.message, err.stack?.split('\n').slice(0, 4).join(' | '));
     return res.status(500).json({ error: err.message });
   } finally {
     if (tempPath && fs.existsSync(tempPath)) {
