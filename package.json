@@ -6,7 +6,7 @@
     "postinstall": "npm install --prefix backend && npm install --prefix frontend",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
-    "dev": "npx concurrently -n \"backend,frontend\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "node scripts/dev.mjs",
     "test:smoke:real": "npx playwright test tests/zapo-smoke-real.spec.ts",
     "build:backend": "npm --prefix backend run build",
     "build:frontend": "npm --prefix frontend run build",
