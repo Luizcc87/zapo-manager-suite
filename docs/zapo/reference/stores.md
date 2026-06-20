@@ -1,0 +1,239 @@
+# Stores reference
+Source: https://zapo.to/en/reference/stores
+
+Configuration reference for the SQLite, PostgreSQL, MySQL, Redis, and MongoDB store backend packages, including fields, defaults, and examples.
+
+Each backend package exports a `create*Store` factory you pass into a `backends` entry of [`createStore`](/en/concepts/stores). All backends implement the same per-domain store contracts, so switching backends is a config change, not a code change.
+
+## SQLite
+
+`@zapo-js/store-sqlite` — `createSqliteStore(config)`.
+
+```ts theme={null}
+import { createSqliteStore } from '@zapo-js/store-sqlite'
+
+const sqlite = createSqliteStore({
+  path: '.auth/state.sqlite',
+  driver: 'auto'
+})
+```
+
+| Field        | Type                                                              | Description                                                              |
+| ------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `path`       | `string`                                                          | Database file path. Mutually exclusive with `connection`.                |
+| `connection` | `WaSqliteConnection`                                              | Pre-opened connection to reuse. Mutually exclusive with `path`.          |
+| `driver`     | `WaSqliteDriver`                                                  | Native driver selection (`'auto'`, …). Ignored when `connection` is set. |
+| `pragmas`    | `Record<string, string \| number>`                                | SQLite pragmas. Ignored when `connection` is set.                        |
+| `tableNames` | `WaSqliteTableNameOverrides`                                      | Override table names. Ignored when `connection` is set.                  |
+| `batchSizes` | `WaSqliteBatchSizeSelection`                                      | Tune batch sizes.                                                        |
+| `cacheTtlMs` | `{ retryMs?, groupMetadataMs?, deviceListMs?, messageSecretMs? }` | Cache TTLs.                                                              |
+
+Provide exactly one of `path` or `connection`. With `path`, the library opens (and ref-counts) its own connection and closes it on `store.destroy()`. With `connection`, you own the lifecycle — `store.destroy()` leaves it open so you can keep using it elsewhere.
+
+### Bring your own connection
+
+Share a single SQLite handle with the rest of your application by opening it yourself with `openSqliteConnection` and passing it through `connection`:
+
+```ts theme={null}
+import { createStore } from 'zapo-js'
+import { createSqliteStore, openSqliteConnection } from '@zapo-js/store-sqlite'
+
+const connection = await openSqliteConnection({
+  path: 'app.sqlite',
+  sessionId: 'shared',
+  pragmas: { journal_mode: 'WAL', synchronous: 'NORMAL' }
+})
+
+const store = createStore({
+  backends: { sqlite: createSqliteStore({ connection }) },
+  providers: {
+    auth: 'sqlite',
+    signal: 'sqlite',
+    preKey: 'sqlite',
+    session: 'sqlite',
+    identity: 'sqlite',
+    senderKey: 'sqlite',
+    appState: 'sqlite',
+    privacyToken: 'sqlite',
+    messages: 'none',
+    threads: 'none',
+    contacts: 'none'
+  }
+})
+
+// ... use connection elsewhere in your app ...
+
+await store.destroy()
+connection.close() // you opened it, you close it
+```
+
+Requires the `better-sqlite3` peer dependency.
+
+## PostgreSQL
+
+`@zapo-js/store-postgres` — `createPostgresStore(config)`.
+
+```ts theme={null}
+import { createPostgresStore } from '@zapo-js/store-postgres'
+
+const postgres = createPostgresStore({
+  pool: { connectionString: process.env.DATABASE_URL },
+  tablePrefix: 'wa_'
+})
+```
+
+| Field                  | Type                        | Description                                                                                                                     |
+| ---------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pool`                 | `Pool \| PoolConfig`        | An existing `pg` pool or a pool config. **Required.**                                                                           |
+| `tablePrefix`          | `string`                    | Prefix for created tables.                                                                                                      |
+| `cacheTtlMs`           | object                      | Cache TTLs (same shape as SQLite).                                                                                              |
+| `cleanup`              | `{ intervalMs?, onError? }` | Background cleanup poller.                                                                                                      |
+| `batchInsertChunkSize` | `number`                    | Upper bound on rows per multi-row `INSERT` in batch writes. Default `500`. See [Batch insert chunking](#batch-insert-chunking). |
+
+Also exports `createPgPool` and `ensurePgMigrations`. Requires the `pg` peer dependency.
+
+## MySQL
+
+`@zapo-js/store-mysql` — `createMysqlStore(config)`.
+
+```ts theme={null}
+import { createMysqlStore } from '@zapo-js/store-mysql'
+
+const mysql = createMysqlStore({
+  pool: { uri: process.env.MYSQL_URL },
+  tablePrefix: 'wa_'
+})
+```
+
+| Field                  | Type                                  | Description                                                                                                                     |
+| ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pool`                 | `Pool \| PoolOptions`                 | A `mysql2` pool or options. **Required.**                                                                                       |
+| `tablePrefix`          | `string`                              | Prefix for created tables.                                                                                                      |
+| `cacheTtlMs`           | object                                | Cache TTLs.                                                                                                                     |
+| `cleanup`              | `{ enabled?, intervalMs?, onError? }` | Background cleanup poller.                                                                                                      |
+| `batchInsertChunkSize` | `number`                              | Upper bound on rows per multi-row `INSERT` in batch writes. Default `500`. See [Batch insert chunking](#batch-insert-chunking). |
+
+Also exports `createMysqlPool` and `ensureMysqlMigrations`. Requires the `mysql2` peer dependency.
+
+### Batch insert chunking
+
+`batchInsertChunkSize` caps how many rows the PostgreSQL and MySQL backends fold into a single multi-row `INSERT` for batch writes — Signal sessions, remote identities, sender-key distributions, prekey generation, and the message/thread/contact `upsertBatch` paths used by [write-behind persistence](/en/concepts/configuration#write-behind-persistence).
+
+The value is rounded **down to the nearest power of two** internally (`500 → 256`, `1000 → 512`, …), and each batch is decomposed into power-of-two sub-chunks. That keeps the set of distinct prepared statements per connection bounded at `log2(chunkSize) + 1` regardless of how `N` varies between calls — important for staying under the mysql2 client-side cache and MySQL's `max_prepared_stmt_count` quota, and for keeping `pg`'s named statement cache stable.
+
+Leave the default unless benchmarks for your workload show it helps. Raise it for steady high-fanout group sends; lower it if your database limits are tight.
+
+```ts theme={null}
+createPostgresStore({
+  pool: { connectionString: process.env.DATABASE_URL },
+  batchInsertChunkSize: 2000 // → effective 1024
+})
+```
+
+## Redis
+
+`@zapo-js/store-redis` — `createRedisStore(config)`.
+
+```ts theme={null}
+import { createRedisStore } from '@zapo-js/store-redis'
+
+const redis = createRedisStore({
+  redis: { host: '127.0.0.1', port: 6379 },
+  keyPrefix: 'wa:'
+})
+```
+
+| Field        | Type                    | Description                                     |
+| ------------ | ----------------------- | ----------------------------------------------- |
+| `redis`      | `Redis \| RedisOptions` | An `ioredis` instance or options. **Required.** |
+| `keyPrefix`  | `string`                | Prefix for all keys.                            |
+| `cacheTtlMs` | object                  | Cache TTLs.                                     |
+
+Requires the `ioredis` peer dependency.
+
+## MongoDB
+
+`@zapo-js/store-mongo` — `createMongoStore(config)`.
+
+```ts theme={null}
+import { createMongoStore } from '@zapo-js/store-mongo'
+
+const mongo = createMongoStore({
+  db: { uri: process.env.MONGO_URL, database: 'zapo' },
+  collectionPrefix: 'wa_'
+})
+```
+
+| Field              | Type                                | Description                                        |
+| ------------------ | ----------------------------------- | -------------------------------------------------- |
+| `db`               | `Db \| { uri, database, options? }` | A `mongodb` `Db` or connection info. **Required.** |
+| `collectionPrefix` | `string`                            | Prefix for created collections.                    |
+| `cacheTtlMs`       | object                              | Cache TTLs.                                        |
+
+Requires the `mongodb` peer dependency.
+
+Bulk writes use `{ ordered: false }` so independent upserts run in parallel — a per-document failure does not abort the rest of the batch.
+
+## Cache expiry and cleanup
+
+The four cache domains (`retry`, `groupMetadata`, `deviceList`, `messageSecret`) carry a TTL set through `cacheTtlMs`. How expired entries are *evicted* differs per backend:
+
+| Backend    | Mechanism                                                                  | Action required                    |
+| ---------- | -------------------------------------------------------------------------- | ---------------------------------- |
+| `memory`   | Periodic in-process sweep (interval `min(60s, ttl/2)`, `unref()`-ed timer) | None — automatic                   |
+| `sqlite`   | Filter on read; expired rows are skipped and overwritten on next upsert    | None                               |
+| `postgres` | Filter on read **+** background poller deletes expired rows                | **Call `startCleanup(sessionId)`** |
+| `mysql`    | Filter on read **+** background poller deletes expired rows                | **Call `startCleanup(sessionId)`** |
+| `redis`    | Native key `EXPIRE`                                                        | None                               |
+| `mongo`    | TTL index (server-side monitor, \~60s sweep latency)                       | None                               |
+
+<Warning>
+  For PostgreSQL and MySQL, without `startCleanup` your cache tables grow monotonically. Reads still ignore expired rows so stale data is never served, but disk usage climbs forever. Start one poller **per session id**.
+</Warning>
+
+```ts theme={null}
+const result = createPostgresStore({
+  pool: { connectionString: process.env.DATABASE_URL },
+  cleanup: { intervalMs: 60_000, onError: (e) => log.warn('cache cleanup failed', e) }
+})
+
+const store = createStore({ backends: { pg: result }, providers: { /* ... */ } })
+const client = new WaClient({ store, sessionId: 'default' }, logger)
+
+const poller = result.startCleanup('default')
+
+process.on('SIGTERM', async () => {
+  await client.disconnect()
+  await result.destroy() // also stops every poller it tracks
+})
+```
+
+`cleanup.intervalMs` defaults to `60_000` (60s). `result.destroy()` stops every poller started through it, so calling `poller.stop()` yourself is only useful if you want to halt cleanup before tearing down the backend.
+
+For MongoDB, the TTL monitor's \~60s latency means cache entries can linger past the configured TTL. Acceptable for `groupMetadata`/`deviceList`; switch to Redis if you need tighter eviction.
+
+## Mixing backends
+
+`createStore` lets each domain choose a backend by name, so you can combine them:
+
+```ts theme={null}
+createStore({
+  backends: { redis, postgres },
+  providers: {
+    auth: 'redis',
+    signal: 'redis',
+    preKey: 'redis',
+    session: 'redis',
+    identity: 'redis',
+    senderKey: 'redis',
+    appState: 'redis',
+    privacyToken: 'redis',
+    messages: 'postgres',
+    threads: 'postgres',
+    contacts: 'postgres'
+  }
+})
+```
+
+Every persistence domain must be listed once `backends` is set — see [Stores](/en/concepts/stores#providers-are-required-when-you-set-backends) for the rule and the accepted values (`'<backend>'`, `'memory'`, `'none'`).
+

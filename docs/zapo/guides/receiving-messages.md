@@ -1,0 +1,212 @@
+# Receiving messages
+Source: https://zapo.to/en/guides/receiving-messages
+
+Handle incoming message events: extract text and media, send delivery and read receipts, decrypt addons, and request older history.
+
+Incoming messages arrive on the `message` event as a `WaIncomingMessageEvent`.
+
+```ts theme={null}
+import type { WaIncomingMessageEvent } from 'zapo-js'
+
+client.on('message', (event: WaIncomingMessageEvent) => {
+  // ...
+})
+```
+
+## The event payload
+
+`WaIncomingMessageEvent` carries a rich `key` (a superset of `Proto.IMessageKey`) plus a few top-level fields. Pass the event (or just its `key`) verbatim to reply / edit / react / revoke / pin / keep.
+
+| Field                                                  | Type             | Description                                                                                                                      |
+| ------------------------------------------------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `key.remoteJid`                                        | `string`         | Deviceless conversation JID (group or 1:1) — the `:device` segment is stripped; the device id is exposed via `key.senderDevice`. |
+| `key.id`                                               | `string`         | The message (stanza) id.                                                                                                         |
+| `key.fromMe`                                           | `boolean`        | True when the message was sent by this account.                                                                                  |
+| `key.participant`                                      | `string?`        | The author in groups / broadcasts (omitted in 1:1).                                                                              |
+| `key.isGroup` / `key.isBroadcast` / `key.isNewsletter` | `boolean`        | Chat-kind flags derived from `remoteJid`.                                                                                        |
+| `key.remoteJidAlt`                                     | `string?`        | The `remoteJid`'s alternate addressing (PN if addressed by LID, or vice-versa) in 1:1 chats.                                     |
+| `key.participantAlt`                                   | `string?`        | The `participant`'s alternate addressing in group chats.                                                                         |
+| `key.senderDevice`                                     | `number`         | Sender's device id; `0` when the source JID has no `:device` segment.                                                            |
+| `key.senderUsername`                                   | `string?`        | Sender's username when the server attached it.                                                                                   |
+| `key.recipientJid` / `key.recipientAlt`                | `string?`        | Your receiving JID and its alternate form.                                                                                       |
+| `key.serverId`                                         | `number?`        | Server-assigned message id for newsletter / channel messages.                                                                    |
+| `message`                                              | `Proto.IMessage` | The decrypted message content.                                                                                                   |
+| `timestampSeconds`                                     | `number?`        | Server timestamp (unix seconds).                                                                                                 |
+| `expirationSeconds`                                    | `number?`        | Disappearing-message TTL the sender attached to this message, when present.                                                      |
+| `pushName`                                             | `string?`        | The sender's display name.                                                                                                       |
+
+<Note>
+  You also receive your **own** outgoing messages here (multi-device sync), flagged with `key.fromMe === true`. Filter them out if you only want inbound traffic.
+</Note>
+
+<Tip>
+  The whole event (or `event.key`) is accepted as the `target` for replies/reactions/revokes/pins/keeps and as `editKey` for edits — no need to reshape it.
+</Tip>
+
+## Extracting text
+
+A message's text lives in different fields depending on its type. A small helper covers the common cases:
+
+```ts theme={null}
+function extractText(message?: Proto.IMessage | null): string | undefined {
+  if (!message) return undefined
+  return (
+    message.conversation ??
+    message.extendedTextMessage?.text ??
+    message.imageMessage?.caption ??
+    message.videoMessage?.caption ??
+    undefined
+  )
+}
+
+client.on('message', (event) => {
+  const text = extractText(event.message)
+  if (text) console.log(`${event.pushName}: ${text}`)
+})
+```
+
+## Identifying the message type
+
+`message` is a protobuf union — inspect which field is set:
+
+```ts theme={null}
+client.on('message', (event) => {
+  const m = event.message
+  if (!m) return
+
+  if (m.conversation || m.extendedTextMessage) console.log('text')
+  else if (m.imageMessage) console.log('image')
+  else if (m.videoMessage) console.log('video')
+  else if (m.audioMessage) console.log('audio')
+  else if (m.documentMessage) console.log('document')
+  else if (m.stickerMessage) console.log('sticker')
+  else if (m.pollCreationMessage) console.log('poll')
+  else if (m.locationMessage) console.log('location')
+})
+```
+
+To download media from an image/video/audio/document message, see [Media → downloading](/en/guides/media#downloading-incoming-media).
+
+## Sending receipts
+
+`client.message.sendReceipt` marks messages as received/read/played. The easiest form takes the event(s) directly:
+
+```ts theme={null}
+client.on('message', async (event) => {
+  // mark as read
+  await client.message.sendReceipt(event, { type: 'read' })
+})
+```
+
+You can also pass an array of events, or address it manually by <Tooltip href="/en/concepts/identities">JID</Tooltip> and ids:
+
+```ts theme={null}
+await client.message.sendReceipt(chatJid, [id1, id2], { type: 'read' })
+```
+
+## Calls
+
+<Badge icon="eye">Read-only</Badge>
+
+Incoming call signaling surfaces as the read-only `call` event ([`WaIncomingCallEvent`](/en/concepts/events)). zapo **reports** calls — it does not place, accept, or reject them.
+
+```ts theme={null}
+client.on('call', (event) => {
+  console.log(
+    event.type,          // 'offer' | 'accept' | 'terminate' | … | 'unknown'
+    event.isVideo ? 'video' : 'voice',
+    'from', event.callerPnJid ?? event.callCreatorJid,
+    event.groupJid ? `(group ${event.groupJid})` : ''
+  )
+})
+```
+
+Useful fields: `type` (the signaling stage), `callId`, `callCreatorJid` / `callerPnJid` (who's calling), `isVideo`, `groupJid` (group calls), and `callerPushName`. There is no API to answer a call.
+
+## Addons
+
+**Addons** are encrypted follow-ups attached to a message: reactions, poll votes, and comments. They surface as the `message_addon` event.
+
+### Automatic decryption
+
+Addons are decrypted and emitted for you by default — just subscribe to `message_addon`:
+
+```ts theme={null}
+const client = new WaClient({ store, sessionId: 'default' }, logger)
+
+client.on('message_addon', (event) => {
+  console.log('addon:', event)
+})
+```
+
+### Manual decryption
+
+Pass `addons: { autoDecrypt: false }` to receive the encrypted payload and decrypt on demand from the originating message event:
+
+```ts theme={null}
+const client = new WaClient({
+  store,
+  sessionId: 'default',
+  addons: { autoDecrypt: false }
+}, logger)
+
+client.on('message', async (event) => {
+  await client.message.tryDecryptAddon(event)
+})
+```
+
+## Protocol messages
+
+Edits, revokes, and other protocol-level updates arrive on `message_protocol` as `WaIncomingProtocolMessageEvent` (it extends the message event with a `protocolMessage` field):
+
+```ts theme={null}
+client.on('message_protocol', (event) => {
+  console.log(event.protocolMessage)
+})
+```
+
+## Requesting older history
+
+The initial pairing flow streams a bounded window of message history. To pull older messages for a specific chat on demand, call `client.message.requestHistorySync`:
+
+```ts theme={null}
+const { messageId } = await client.message.requestHistorySync({
+  chatJid,
+  oldestMsgId: topMessage.key.id,
+  oldestMsgFromMe: topMessage.key.fromMe,
+  oldestMsgTimestampMs: topMessage.timestampSeconds * 1000,
+  count: 50
+})
+```
+
+The method returns once the request is dispatched — **not** when the chunk arrives. The backfill is delivered later as a `history_sync_chunk` event, same as the bootstrap history. Subscribe before calling if you need to react to it:
+
+```ts theme={null}
+client.on('history_sync_chunk', (event) => {
+  // event.conversations, event.pushnamesCount, event.progress, ...
+})
+
+await client.message.requestHistorySync({ chatJid })
+```
+
+Pair `oldestMsgId`, `oldestMsgFromMe`, and `oldestMsgTimestampMs` from the topmost message currently visible to page backwards correctly. Omit `count` to let the server apply its own default (\~50).
+
+## Receipts (inbound)
+
+When others read or play your messages, you receive `receipt` events:
+
+```ts theme={null}
+client.on('receipt', (event) => {
+  // event.status: 'delivered' | 'read' | 'played' | 'inactive'
+  for (const id of event.messageIds) {
+    console.log(event.status, 'for', id)
+  }
+})
+```
+
+`event.messageIds` is the full set of stanza ids this receipt acknowledges. WhatsApp batches read/delivery receipts into a single `<receipt>` carrying a `<list><item id=…/>` block — `messageIds` mirrors wa-web's `externalIds`: list items first, then `event.stanzaId` appended last. Single-message receipts contain just `[event.stanzaId]`.
+
+<Note>
+  `receipt` events still expose `stanzaId` / `chatJid` directly (they extend `WaIncomingBaseEvent`); the rename only applies to `message`, `message_addon`, and `message_bot_chunk` payloads, which now use `event.key`. `event.stanzaId` is still the **last** id in the batch — iterate `messageIds` to cover the rest.
+</Note>
+

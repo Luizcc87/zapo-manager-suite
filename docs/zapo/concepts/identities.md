@@ -1,0 +1,132 @@
+# Identities: phone numbers & LID
+Source: https://zapo.to/en/concepts/identities
+
+How WhatsApp's phone-number JIDs (PN) and privacy LIDs differ, why both exist in multi-device, and how zapo maps and resolves between them.
+
+WhatsApp addresses users two ways, and `zapo` surfaces both. Understanding the distinction matters as soon as you touch groups, because WhatsApp is migrating group identities to **LID** for privacy.
+
+## PN vs LID
+
+|                          | Phone-number JID (PN)          | LID               |
+| ------------------------ | ------------------------------ | ----------------- |
+| Form                     | `5511999999999@s.whatsapp.net` | `<opaque-id>@lid` |
+| Server suffix            | `@s.whatsapp.net`              | `@lid`            |
+| Reveals the phone number | Yes                            | **No**            |
+| Detect with              | `!isLidJid(jid)`               | `isLidJid(jid)`   |
+
+A **LID** ("linked identity") is a stable, opaque identifier that represents a user **without exposing their phone number**. WhatsApp increasingly uses LIDs in groups and communities so members can interact without sharing their number.
+
+```ts theme={null}
+import { isLidJid } from 'zapo-js'
+
+isLidJid('5511999999999@s.whatsapp.net') // false  (PN)
+isLidJid('199998888777@lid')             // true   (LID)
+```
+
+## Addressing mode
+
+When sending into a **group**, the message is addressed to participants either by PN or by LID — the `addressingMode: 'pn' | 'lid'`. `zapo` resolves this automatically: it scans the group participants and uses **`lid`** if *any* participant is a LID, otherwise **`pn`**. The server can confirm or override the choice, which is reflected back in the publish result:
+
+```ts theme={null}
+const result = await client.message.send(groupJid, 'hi')
+console.log(result.ack.addressingMode) // 'pn' | 'lid'
+```
+
+You normally don't set this yourself — it's derived from the group's membership.
+
+## What you get on an incoming message
+
+`WaIncomingMessageEvent.key` carries both identifiers when the server provides them. In groups the **sender** is `key.participant`; in 1:1 chats it is `key.remoteJid`. Each gets a parallel `*Alt` field with the alternate addressing.
+
+| Field                | Meaning                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `key.remoteJid`      | The chat JID (group, 1:1 peer, broadcast, newsletter). In 1:1 chats this is also the sender. |
+| `key.remoteJidAlt`   | The alternate form of `remoteJid` (PN ↔ LID) in 1:1 chats, when the server shares it.        |
+| `key.participant`    | The sender's JID in groups / broadcasts (the addressing mode matches the chat).              |
+| `key.participantAlt` | The alternate form of `participant` in groups, when the server shares it.                    |
+| `key.recipientJid`   | Your receiving JID.                                                                          |
+| `key.recipientAlt`   | The alternate form of the recipient (when available).                                        |
+
+```ts theme={null}
+client.on('message', (event) => {
+  const sender = event.key.participant ?? event.key.remoteJid
+  const senderAlt = event.key.participantAlt ?? event.key.remoteJidAlt
+  console.log('primary:', sender)    // e.g. 1999...@lid in a LID group
+  console.log('alt:    ', senderAlt) // e.g. 5511...@s.whatsapp.net
+})
+```
+
+So in a LID-addressed group you'll typically see `key.participant` as a `@lid` and `key.participantAlt` as the phone JID (if the server shares it).
+
+## Replying — which JID to use
+
+`client.message.send` accepts **either** a PN or a LID JID and normalizes the target for you, so you rarely have to convert:
+
+```ts theme={null}
+// All valid:
+await client.message.send('5511999999999', 'hi')                  // digits → PN JID
+await client.message.send('5511999999999@s.whatsapp.net', 'hi')   // PN JID
+await client.message.send('199998888777@lid', 'hi')               // LID JID
+```
+
+<Warning>
+  **Always prefer sending by LID when you have one.** The LID is the privacy-preserving, forward-compatible identity WhatsApp is migrating to — addressing a peer by LID is the future-proof choice and avoids leaking/relying on phone numbers. Fall back to the PN only when no LID is available.
+
+  Get the LID from the incoming event's `key.participantAlt` / `key.remoteJidAlt` (when the primary is a PN) or resolve it with [`getLidsByPhoneNumbers`](#mapping-a-phone-number-to-its-lid).
+</Warning>
+
+<Tip>
+  **In a group, always reply to `event.key.remoteJid`** (the group JID), not to a participant's JID. For 1:1 chats, prefer the peer's LID; `event.key.remoteJid` also works whether it is a PN or a LID.
+</Tip>
+
+## Mapping a phone number to its LID
+
+To resolve LIDs for a set of phone numbers, use the profile coordinator:
+
+```ts theme={null}
+const results = await client.profile.getLidsByPhoneNumbers([
+  '5511999999999',
+  '5511888888888'
+])
+
+for (const r of results) {
+  // SignalLidSyncResult: { phoneJid, lidJid, exists }
+  console.log(r.phoneJid, '→', r.lidJid, '(exists:', r.exists, ')')
+}
+```
+
+`lidJid` is `null` when the server has no LID mapping for that number.
+
+## LID changes
+
+A user's LID can change (server-side, for privacy). When it does, you receive a `mex_notification` of kind `lid_change`:
+
+```ts theme={null}
+client.on('mex_notification', (event) => {
+  if (event.kind === 'lid_change') {
+    console.log('LID changed:', event.oldLidJid, '→', event.newLidJid)
+    // WaMexLidChangeEvent
+  }
+})
+```
+
+`zapo` handles the underlying Signal-session bookkeeping; this event is for your own caches/bookkeeping.
+
+## Where PN ↔ LID linkage is stored
+
+Several app-state schemas track the relationship and sync it across your devices (see [chat mutations](/en/reference/chat-mutations#contacts)):
+
+| Schema         | Role                                                                   |
+| -------------- | ---------------------------------------------------------------------- |
+| `LidContact`   | Contact profile (name/username) keyed by a LID.                        |
+| `PnForLidChat` | Remembers the phone JID for a chat that is primarily addressed by LID. |
+| `ShareOwnPn`   | Whether your own phone number is shared in a given context.            |
+
+## Signal sessions
+
+Signal sessions are keyed by the canonical JID (PN or LID) plus device id. `zapo` canonicalizes hosted server variants (`hosted.lid` → `lid`, hosted → `s.whatsapp.net`) before lookups, and maintains sessions for both addressing forms. If you ever need to force a fresh session sync for a peer, use:
+
+```ts theme={null}
+await client.message.syncSignalSession(jid)
+```
+

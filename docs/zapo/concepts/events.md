@@ -1,0 +1,149 @@
+# Events
+Source: https://zapo.to/en/concepts/events
+
+Reference for every WaClient event you can subscribe to: messages, receipts, groups, history sync, app-state mutations, and failures.
+
+`WaClient` is a strongly-typed event emitter. Every incoming activity — messages, receipts, group changes, presence — is surfaced as an event with a typed payload.
+
+## Listening
+
+```ts theme={null}
+import type { WaIncomingMessageEvent } from 'zapo-js'
+
+client.on('message', (event: WaIncomingMessageEvent) => {
+  console.log(event.key.remoteJid, event.message)
+})
+
+client.once('auth_paired', ({ credentials }) => {
+  console.log('paired', credentials.meJid)
+})
+
+const handler = (e) => { /* ... */ }
+client.on('receipt', handler)
+client.off('receipt', handler) // stop listening
+```
+
+`on`, `once`, and `off` are all type-checked against the event map — the payload type is inferred from the event name, so listeners get full autocomplete.
+
+## Auth & connection
+
+| Event                   | Payload             | Description                             |
+| ----------------------- | ------------------- | --------------------------------------- |
+| `auth_qr`               | `{ qr, ttlMs }`     | A QR code to render for pairing.        |
+| `auth_pairing_code`     | `{ code }`          | An 8-character pairing code was issued. |
+| `auth_pairing_required` | `{ forceManual }`   | The session needs pairing input.        |
+| `auth_paired`           | `{ credentials }`   | Pairing succeeded.                      |
+| `connection`            | `WaConnectionEvent` | Socket opened or closed (see below).    |
+
+The `connection` event is a discriminated union on `status`:
+
+```ts theme={null}
+client.on('connection', (event) => {
+  if (event.status === 'open') {
+    console.log('online; new login?', event.isNewLogin)
+  } else {
+    console.log('closed:', event.reason, 'logout?', event.isLogout)
+  }
+})
+```
+
+See [Reconnection](/en/guides/reconnection) for the handling pattern.
+
+## Messages
+
+| Event               | Payload                          | Description                                         |
+| ------------------- | -------------------------------- | --------------------------------------------------- |
+| `message`           | `WaIncomingMessageEvent`         | An incoming (or self-sent) message.                 |
+| `message_addon`     | `WaIncomingAddonEvent`           | Reactions, poll votes, comments (decrypted addons). |
+| `message_protocol`  | `WaIncomingProtocolMessageEvent` | Protocol messages (edits, revokes, …).              |
+| `message_bot_chunk` | `WaIncomingBotChunkEvent`        | Streamed bot response chunks.                       |
+| `receipt`           | `WaIncomingReceiptEvent`         | Delivery / read / played receipts.                  |
+
+See [Receiving messages](/en/guides/receiving-messages) for payload details and text extraction.
+
+## Presence & chat-state
+
+| Event       | Payload                    | Description                                           |
+| ----------- | -------------------------- | ----------------------------------------------------- |
+| `presence`  | `WaIncomingPresenceEvent`  | A contact's presence changed (available / last-seen). |
+| `chatstate` | `WaIncomingChatstateEvent` | Typing / recording / paused.                          |
+| `call`      | `WaIncomingCallEvent`      | Incoming call signaling.                              |
+
+## Groups, newsletters & profiles
+
+| Event                       | Payload                                  | Description                                          |
+| --------------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `group`                     | `WaGroupEvent`                           | Group create/subject/participant/setting changes.    |
+| `newsletter`                | `WaIncomingNewsletterEvent`              | Newsletter activity.                                 |
+| `newsletter_message_update` | `WaIncomingNewsletterMessageUpdateEvent` | Edits/reactions/poll updates on newsletter messages. |
+| `business`                  | `WaBusinessEvent`                        | Business profile changes.                            |
+| `picture`                   | `WaPictureEvent`                         | Profile/group picture changes.                       |
+
+## State, history & MEX
+
+| Event                | Payload                   | Description                                                                                                                                                |
+| -------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mutation`           | `WaAppStateMutationEvent` | App-state mutation (mute, pin, archive, …) synced from another device.                                                                                     |
+| `history_sync_chunk` | `WaHistorySyncChunkEvent` | A chunk of synced message history (initial bootstrap or `message.requestHistorySync` backfill). Skipped only when `history.enabled` is explicitly `false`. |
+| `offline_resume`     | `WaOfflineResumeEvent`    | Progress of the post-connect offline-message drain.                                                                                                        |
+| `mex_notification`   | `WaMexNotificationEvent`  | MEX (GraphQL) notifications: username, status, LID changes, capping.                                                                                       |
+
+### MEX notification kinds
+
+`WaMexNotificationEvent` is a discriminated union on `kind`. Every variant carries `operationName` (the upstream GraphQL operation) and `errors: readonly WaMexNotificationGraphQlError[]` (any GraphQL errors the server attached — typically empty).
+
+| `kind`                    | `operationName`                       | Extra fields                                                                                                                                                                                                                                                                |
+| ------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `username_set`            | `UsernameSetNotification`             | `lidJid`, `username` — a contact set or changed their username.                                                                                                                                                                                                             |
+| `username_delete`         | `UsernameDeleteNotification`          | `lidJid`, `displayName: string \| null` — username cleared (`null` means the server omitted the fallback name).                                                                                                                                                             |
+| `username_update_hint`    | `UsernameUpdateNotification`          | `contactHash` — side-channel hint that something changed for a contact bucket; refetch through the regular profile path.                                                                                                                                                    |
+| `own_username_sync`       | `AccountSyncUsernameNotification`     | `ownLidJid`, `username \| null`, `state \| null`, `pin \| null` — your own username state synced from another device. `null` username means it was removed.                                                                                                                 |
+| `text_status_update`      | `TextStatusUpdateNotification`        | `jid`, `text \| null`, `emoji \| null`, `ephemeralDurationSec \| null`, `lastUpdateTime \| null` — a contact's about/status changed. `null` `text`/`emoji` clears that field.                                                                                               |
+| `text_status_update_hint` | `TextStatusUpdateNotificationSideSub` | `contactHash` — side-channel hint; refetch the status.                                                                                                                                                                                                                      |
+| `lid_change`              | `LidChangeNotification`               | `oldLidJid`, `newLidJid` — a user's LID rotated. See [LID changes](/en/concepts/identities#lid-changes).                                                                                                                                                                    |
+| `message_capping`         | `MessageCappingInfoNotification`      | `cappingStatus` (`'NONE' \| 'FIRST_WARNING' \| 'SECOND_WARNING' \| 'CAPPED' \| string`), plus optional `oteStatus`, `mvStatus`, `totalQuota`, `usedQuota`, `cycleStartTimestamp`, `cycleEndTimestamp`, `serverSentTimestamp` — your account's outgoing-message quota state. |
+| `unknown`                 | *(whatever the server sent)*          | `data: unknown` — catch-all for an `operationName` without a typed variant; the raw GraphQL `data` payload is passed through verbatim so you can decode it yourself.                                                                                                        |
+
+```ts theme={null}
+client.on('mex_notification', (event) => {
+  switch (event.kind) {
+    case 'username_set':
+      console.log(`${event.lidJid} now goes by @${event.username}`)
+      break
+    case 'text_status_update':
+      console.log(`${event.jid} status:`, event.text, event.emoji)
+      break
+    case 'message_capping':
+      console.log(`capping ${event.cappingStatus}:`, event.usedQuota, '/', event.totalQuota)
+      break
+    case 'lid_change':
+      console.log('LID rotated:', event.oldLidJid, '→', event.newLidJid)
+      break
+  }
+})
+```
+
+<Note>
+  `*_hint` kinds (`username_update_hint`, `text_status_update_hint`) carry only a `contactHash`, not the new value — the server is telling you "something changed for this bucket" and the client is expected to refetch through the regular profile / status fetch path.
+</Note>
+
+## Failures
+
+| Event            | Payload                      | Description                                        |
+| ---------------- | ---------------------------- | -------------------------------------------------- |
+| `stream_failure` | `WaIncomingFailureEvent`     | A stream-level failure (may precede a disconnect). |
+| `stanza_error`   | `WaIncomingErrorStanzaEvent` | An error stanza from the server.                   |
+
+## Debug events
+
+A family of `debug_*` events expose low-level internals — raw frames, decoded nodes, decode errors, unhandled stanzas, and client errors. They are useful for protocol debugging but noisy; subscribe selectively.
+
+```ts theme={null}
+client.on('debug_transport_node_in', ({ node }) => console.dir(node, { depth: null }))
+client.on('debug_client_error', ({ error }) => console.error(error))
+```
+
+<Note>
+  Mobile-registration events (`mobile_registration_code`, `mobile_account_takeover_notice`) exist for the mobile-registration path and are not part of the standard companion flow.
+</Note>
+

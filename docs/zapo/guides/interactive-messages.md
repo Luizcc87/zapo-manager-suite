@@ -1,0 +1,198 @@
+# Polls, reactions & edits
+Source: https://zapo.to/en/guides/interactive-messages
+
+Send polls and votes, react to messages, pin and edit content, revoke sent messages, and handle the events for each — through the typed content union.
+
+Beyond text and media, `client.message.send` accepts a family of typed interactive content objects. Each is discriminated by its `type` field.
+
+## Targeting a message
+
+Reply / reaction / revoke / pin / keep / event-response all accept a `WaMessageTargetInput`: either a received `message` event passed **verbatim** (its `key` is used) or an explicit `WaMessageKey`:
+
+```ts theme={null}
+interface WaMessageKey {
+  remoteJid: string     // the chat the target lives in
+  id: string            // the target's message (stanza) id
+  fromMe: boolean       // was the target sent by you?
+  participant?: string  // the author — required in groups when targeting someone else's message
+}
+```
+
+The easiest path is to pass the event you already have — `event.key` is already a `WaMessageKey`:
+
+```ts theme={null}
+client.on('message', async (event) => {
+  // Use the event itself as the target — its key is read for you.
+  await client.message.send(event.key.remoteJid, {
+    type: 'reaction',
+    emoji: '👍',
+    target: event
+  })
+})
+```
+
+## Reactions
+
+```ts theme={null}
+// Pass the event verbatim, or an explicit WaMessageKey
+await client.message.send(jid, {
+  type: 'reaction',
+  emoji: '👍',
+  target: event
+})
+```
+
+Pass an **empty string** as `emoji` to remove a previous reaction:
+
+```ts theme={null}
+await client.message.send(jid, { type: 'reaction', emoji: '', target: event })
+```
+
+## Polls
+
+```ts theme={null}
+const result = await client.message.send(jid, {
+  type: 'poll',
+  name: 'Lunch?',
+  options: ['Pizza', 'Sushi', 'Salad'],
+  selectableCount: 1,        // how many options a voter may pick
+  allowAddOption: false
+})
+```
+
+Options may be plain strings or `{ name }` objects. **Order matters** — it is used for vote hashing.
+
+### Voting on a poll
+
+Voting requires the original poll's identity and its `messageSecret` (32 bytes from the poll's `messageContextInfo.messageSecret`):
+
+```ts theme={null}
+await client.message.send(jid, {
+  type: 'poll-vote',
+  poll: {
+    id: pollStanzaId,                  // the poll's stanza id
+    fromMe: false,
+    authorJid: pollAuthorJid,
+    messageSecret: pollMessageSecret,  // Uint8Array, 32 bytes
+    participant: pollAuthorJid         // required outside 1:1 chats
+  },
+  selectedOptionNames: ['Pizza']       // exactly as they appeared in the poll
+})
+```
+
+<Note>
+  Incoming votes arrive as [`message_addon`](/en/guides/receiving-messages#addons) events once decrypted.
+</Note>
+
+## Editing a message
+
+To edit, send the **new** content and pass `editKey` in the options. The original must be `fromMe`. You can pass the received `message` event verbatim, its `key`, or an explicit `WaSendEditKey` (`{ id, participant?, timestampMs? }`):
+
+```ts theme={null}
+// Easiest: forward the original event
+await client.message.send(jid, 'Corrected text', { editKey: originalEvent })
+
+// Or build one explicitly
+await client.message.send(jid, 'Corrected text', {
+  editKey: {
+    id: originalStanzaId,
+    // participant required in groups for lid/pn-addressed originals
+    participant: undefined
+  }
+})
+```
+
+The new payload is wrapped in a `MESSAGE_EDIT` protocol message targeting `editKey.id`.
+
+## Revoking (delete for everyone)
+
+```ts theme={null}
+// Easiest: pass the event you want to revoke
+await client.message.send(jid, { type: 'revoke', target: event })
+
+// Or build the target explicitly
+await client.message.send(jid, {
+  type: 'revoke',
+  target: {
+    remoteJid: jid,
+    id: targetStanzaId,
+    fromMe: true,
+    // participant required when an admin revokes someone else's message in a group
+    participant: undefined
+  }
+})
+```
+
+Sender-vs-admin revoke is auto-detected from `target.fromMe`: `false` triggers an admin revoke. There is no `subtype` option to pass.
+
+## Pinning
+
+```ts theme={null}
+await client.message.send(jid, { type: 'pin', target: event })   // pin
+await client.message.send(jid, { type: 'unpin', target: event }) // unpin
+```
+
+Pins expire — pass `durationSecs` to override the default. wa-web offers three presets:
+
+```ts theme={null}
+await client.message.send(jid, { type: 'pin', target: event, durationSecs: 604_800 })   // 7 days
+await client.message.send(jid, { type: 'pin', target: event, durationSecs: 2_592_000 }) // 30 days
+```
+
+Default is **`86_400`** (24h). The TTL travels with the pin via `messageContextInfo.messageAddOnDurationInSecs`; without it receiving clients silently drop the pin, so the lib always stamps the default when you omit it. `durationSecs` is ignored on `unpin`.
+
+## Keep-in-chat
+
+For disappearing-message chats, keep (or un-keep) a specific message:
+
+```ts theme={null}
+await client.message.send(jid, { type: 'keep', target: event })
+await client.message.send(jid, { type: 'unkeep', target: event })
+```
+
+## Events
+
+Create a calendar-style event message:
+
+```ts theme={null}
+await client.message.send(groupJid, {
+  type: 'event',
+  name: 'Team sync',
+  description: 'Weekly catch-up',
+  startTime: Math.floor(Date.now() / 1000) + 3600, // unix seconds
+  location: { latitude: -23.5, longitude: -46.6, name: 'HQ' },
+  joinLink: 'https://meet.example.com/abc',
+  hasReminder: true,
+  reminderOffsetSec: 600
+})
+```
+
+### Responding to an event
+
+```ts theme={null}
+await client.message.send(jid, {
+  type: 'event-response',
+  event: {
+    id: eventStanzaId,                 // the event's stanza id
+    fromMe: false,
+    authorJid: eventAuthorJid,
+    messageSecret: eventMessageSecret  // 32 bytes
+  },
+  response: 'going' // 'going' | 'not_going' | 'maybe'
+})
+```
+
+## Locations & contacts
+
+There is no dedicated builder for static locations or contact cards yet — send them as a raw `Proto.IMessage`:
+
+```ts theme={null}
+await client.message.send(jid, {
+  locationMessage: { degreesLatitude: -23.5, degreesLongitude: -46.6 }
+})
+
+await client.message.send(jid, {
+  contactMessage: { displayName: 'Jane', vcard: 'BEGIN:VCARD\n...\nEND:VCARD' }
+})
+```
+

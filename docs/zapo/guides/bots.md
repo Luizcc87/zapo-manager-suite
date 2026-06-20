@@ -1,0 +1,110 @@
+# Bots
+Source: https://zapo.to/en/guides/bots
+
+Discover WhatsApp bots, send prompts, and receive streamed responses with zapo. Works with any WhatsApp bot, including Meta AI and third-party agents.
+
+`client.bot` ([`WaBotCoordinator`](/en/reference/client#bot)) works with WhatsApp **bots** - any account on the `@bot` domain. Meta AI is the most common one, but it is **not** the only bot; `listBots()` returns every bot available to your account. The coordinator discovers bots, reads their profiles, sends prompts, and decrypts the **streamed** chunks of a bot's reply.
+
+## Discovering bots & getting a bot JID
+
+You don't hard-code bot JIDs - you discover them with `listBots()` and pick one:
+
+```ts theme={null}
+const bots = await client.bot.listBots()
+// WaBotInfo[]: { jid, fbidJid, personaId, isDefault, section?, count? }
+
+// Pick the default bot (typically Meta AI), or choose another by section/name
+const bot = bots.find((b) => b.isDefault) ?? bots[0]
+const botJid = bot.jid // e.g. '13135550002@bot'
+
+// Inspect a bot's profile (commands, prompts, creator metadata)
+const profile = await client.bot.getBotProfile(botJid)
+// WaBotProfileResult | null: name, description, category, prompts, commands, creator…
+```
+
+`WaBotInfo.jid` is the value you pass below as `to` (direct path) or `options.botJid` (mention path).
+
+## Sending a prompt
+
+`sendPrompt(to, content, options?)` invokes a bot. There are two paths depending on `to`:
+
+### Direct path — chat with the bot
+
+When `to` is a `@bot` JID, you're chatting with the bot directly. zapo generates a fresh `aiThreadId` (a conversation id); reuse it on later prompts to keep context:
+
+```ts theme={null}
+// Start a conversation
+const first = await client.bot.sendPrompt(botJid, 'Explain WebSockets in one line')
+
+// Continue it — pass the same aiThreadId to keep context
+await client.bot.sendPrompt(botJid, 'Now in two lines', {
+  aiThreadId: myThreadId
+})
+```
+
+### Mention path — invoke a bot inside a group
+
+When `to` is a **group/chat** JID, you must name the bot via `options.botJid`. The bot is invoked indirectly through a mention:
+
+```ts theme={null}
+// botJid comes from listBots() — see "Discovering bots" above
+await client.bot.sendPrompt(groupJid, '@MetaAI summarize the last messages', {
+  botJid,
+  extraMentionedJids: [] // optional extra mentions alongside the bot
+})
+```
+
+<Note>
+  On the mention path, `aiThreadId` / `aiThreadType` are ignored — bots drop the request if persona/thread metadata is attached to a mention.
+</Note>
+
+`WaBotPromptOptions` extends [`WaSendMessageOptions`](/en/guides/sending-messages#send-options-reference) and adds `botJid`, `personaId`, `capabilities`, `extraMentionedJids`, `aiThreadId`, and `aiThreadType`.
+
+## Receiving the streamed reply
+
+A bot's reply does **not** arrive as one `message`. It streams as multiple encrypted chunks, surfaced on the `message_bot_chunk` event. zapo decrypts them automatically on every incoming message, so you just listen:
+
+```ts theme={null}
+const buffers = new Map<string, string>()
+
+client.on('message_bot_chunk', (event) => {
+  // WaIncomingBotChunkEvent
+  const text = event.message?.conversation ?? ''
+
+  // Concatenate chunks in arrival order using editType
+  const prev = buffers.get(event.targetMessageId) ?? ''
+  buffers.set(event.targetMessageId, prev + text)
+
+  if (event.editType === 'last' || event.editType === 'full') {
+    console.log('full reply:', buffers.get(event.targetMessageId))
+    buffers.delete(event.targetMessageId)
+  }
+})
+```
+
+The chunk event fields:
+
+| Field                               | Meaning                                                         |
+| ----------------------------------- | --------------------------------------------------------------- |
+| `key.participant` / `key.remoteJid` | The bot (sender = `key.participant ?? key.remoteJid`).          |
+| `targetMessageId`                   | The id of the prompt this reply answers — your stream key.      |
+| `editType`                          | Chunk position: `first` → `inner` → `last`, or a single `full`. |
+| `message`                           | The decrypted chunk content (`Proto.IMessage`).                 |
+| `plaintext`                         | Raw decrypted bytes.                                            |
+
+<Tip>
+  Reconstruct the full answer by concatenating chunks for a given `targetMessageId` in arrival order until you see `last` (or a single `full`).
+</Tip>
+
+## Manual chunk decryption
+
+zapo calls `tryDecryptChunk` for you on each incoming message, so you rarely need it. If you manage incoming events yourself, you can invoke it explicitly:
+
+```ts theme={null}
+client.on('message', async (event) => {
+  await client.bot.tryDecryptChunk(event)
+})
+```
+
+It silently no-ops when the chunk isn't addressed to you or the parent prompt secret isn't available.
+

@@ -1,0 +1,177 @@
+# Profile, privacy & business
+Source: https://zapo.to/en/guides/profile-privacy
+
+Manage your WhatsApp profile, change privacy settings, edit the blocklist, and read business profiles and hours with the profile coordinator.
+
+## Profile
+
+`client.profile` ([`WaProfileCoordinator`](/en/reference/client#profile)) reads and writes profile fields for your account and looks them up for others.
+
+### Profile picture
+
+```ts theme={null}
+import { readFile } from 'node:fs/promises'
+
+// Read someone's picture (or your own) — defaults to the low-res preview
+const pic = await client.profile.getProfilePicture(jid)
+
+// High-resolution original (the full-size avatar the user uploaded)
+const fullPic = await client.profile.getProfilePicture(jid, 'image')
+
+// Set your own
+await client.profile.setProfilePicture(await readFile('./avatar.jpg'))
+
+// Remove it
+await client.profile.deleteProfilePicture()
+```
+
+`getProfilePicture(jid, type?, existingId?)` returns a `WaProfilePictureResult` — `{ url?, directPath?, id?, type? }`. The second argument picks between the compact **`'preview'`** variant (default) and the high-resolution **`'image'`** original; both flavors are returned as the same envelope, only the bytes behind `url` / `directPath` differ. Pass the cached `existingId` to let the server short-circuit when the picture hasn't changed (the result then comes back without the new `url`/`directPath`).
+
+### About / status text
+
+```ts theme={null}
+const about = await client.profile.getStatus(jid)
+await client.profile.setStatus('Available')
+```
+
+### Push name
+
+`pushName` is the display name peers see for your account in chats and group participant lists. The change is applied to the **local** credentials immediately (so `client.getCredentials()?.pushName` reflects the new value right away) and is routed through an app-state mutation; peers see the new name on your next outgoing message.
+
+```ts theme={null}
+await client.profile.setPushName('Alice')
+```
+
+Passing an empty string resets the name to the device fingerprint default.
+
+### Default disappearing mode
+
+`setDisappearingMode` sets the account-wide default lifetime applied to **new** 1:1 chats you start. Existing chats keep their per-chat setting.
+
+```ts theme={null}
+// 0 disables, 86400 = 24h, 604800 = 7d, 7776000 = 90d
+await client.profile.setDisappearingMode(604_800)
+
+// Disable
+await client.profile.setDisappearingMode(0)
+```
+
+For per-group disappearing messages, see [Groups → disappearing messages](/en/guides/groups#disappearing-messages).
+
+### Batched lookups
+
+```ts theme={null}
+const profiles = await client.profile.getProfiles([jidA, jidB])
+const usernames = await client.profile.getUsernames([jidA, jidB])
+const modes = await client.profile.getDisappearingMode([jidA, jidB])
+```
+
+### Check if a number is on WhatsApp
+
+Resolve phone numbers to their [LID](/en/concepts/identities) and learn whether each is registered on WhatsApp:
+
+```ts theme={null}
+const results = await client.profile.getLidsByPhoneNumbers(['+55 11 99999-9999'])
+// → [{ phoneJid: '5511999999999@s.whatsapp.net', lidJid: '…@lid', exists: true }]
+
+for (const r of results) {
+  if (r.exists) console.log(r.phoneJid, 'is on WhatsApp →', r.lidJid)
+}
+```
+
+### Usernames
+
+```ts theme={null}
+const mine = await client.profile.getOwnUsername()
+const available = await client.profile.checkUsernameAvailability('myhandle')
+
+await client.profile.setUsername({ username: 'myhandle' })
+await client.profile.deleteUsername()
+```
+
+## Privacy
+
+`client.privacy` ([`WaPrivacyCoordinator`](/en/reference/client#privacy)) controls privacy categories and the blocklist.
+
+### Privacy settings
+
+```ts theme={null}
+const settings = await client.privacy.getPrivacySettings()
+
+// Update a single setting
+await client.privacy.setPrivacySetting('last', 'contacts')
+```
+
+Setting names and values come from the `WA_PRIVACY_*` constants (`last`, `online`, `profile`, `status`, `readreceipts`, `groupadd`, …). See the [JID & constants reference](/en/reference/jid-helpers#constants).
+
+### Blocklist
+
+```ts theme={null}
+const { jids } = await client.privacy.getBlocklist()
+
+await client.privacy.blockUser(jid)
+await client.privacy.unblockUser(jid)
+```
+
+### Disallowed lists
+
+For settings scoped to a specific list of contacts (e.g. "share with everyone except…"):
+
+```ts theme={null}
+const result = await client.privacy.getDisallowedList(category)
+```
+
+## Business
+
+`client.business` ([`WaBusinessCoordinator`](/en/reference/client#business)) reads business profiles and verified names, and manages your own business profile.
+
+<Badge icon="briefcase">Business account</Badge> — required to **edit** your own profile or cover photo; the read methods work for any account.
+
+```ts theme={null}
+// Read business profiles (batched)
+const profiles = await client.business.getBusinessProfile([jidA, jidB])
+
+// Verified-name lookups
+const name = await client.business.getVerifiedName(jid)
+const names = await client.business.getVerifiedNames([jidA, jidB])
+
+// Edit your own business profile
+await client.business.editBusinessProfile({ /* WaEditBusinessProfileInput */ })
+
+// Cover photo
+await client.business.updateCoverPhoto(mediaSource)
+await client.business.deleteCoverPhoto(coverId)
+```
+
+### Typed business hours
+
+`WaBusinessHoursDay` and `WaBusinessHoursMode` are union aliases (`'sun' | 'mon' | …`, `'open_24h' | 'specific_hours' | 'appointment_only'`). The values are also frozen on `WA_BUSINESS_HOURS_DAYS` and `WA_BUSINESS_HOURS_MODES`. Passing an unknown `mode` to `editBusinessProfile` now throws a clear local error instead of the server replying with `406 not-acceptable` — closed days are still expressed by **omitting** them from `config`, not by a dedicated mode.
+
+```ts theme={null}
+import { WA_BUSINESS_HOURS_DAYS, WA_BUSINESS_HOURS_MODES } from 'zapo-js'
+
+await client.business.editBusinessProfile({
+  businessHours: {
+    timezone: 'America/Sao_Paulo',
+    config: [
+      {
+        dayOfWeek: WA_BUSINESS_HOURS_DAYS.MON,
+        mode: WA_BUSINESS_HOURS_MODES.SPECIFIC_HOURS,
+        openTime: 540,  // minutes from midnight; 540 = 09:00
+        closeTime: 1080 // 18:00
+      },
+      { dayOfWeek: WA_BUSINESS_HOURS_DAYS.SAT, mode: WA_BUSINESS_HOURS_MODES.OPEN_24H }
+      // sun is closed — omit it
+    ]
+  }
+})
+```
+
+## Chat settings
+
+Per-chat settings — mute, pin, archive, read, lock, star, clear, delete — live on `client.chat` and sync across your devices. They have their own guide:
+
+<Card title="Managing chats" icon="comments" href="/en/guides/chats">
+  Mute, pin, archive, mark read, lock, star messages, clear, and delete chats.
+</Card>
+

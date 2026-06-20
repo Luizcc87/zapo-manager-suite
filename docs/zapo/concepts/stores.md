@@ -1,0 +1,250 @@
+# Stores
+Source: https://zapo.to/en/concepts/stores
+
+Persist authentication state, Signal sessions, and per-domain protocol data through zapo's pluggable store interface and bundled backend packages.
+
+A **store** is where `zapo` persists everything a session needs to survive a restart: pairing credentials, Signal protocol state, app-state collections, and optionally your message/thread/contact archive. You build one with `createStore` and pass it to the client.
+
+```ts theme={null}
+import { createStore } from 'zapo-js'
+import { createSqliteStore } from '@zapo-js/store-sqlite'
+
+const store = createStore({
+  backends: {
+    sqlite: createSqliteStore({ path: '.auth/state.sqlite', driver: 'auto' })
+  },
+  providers: {
+    auth: 'sqlite',
+    signal: 'sqlite',
+    preKey: 'sqlite',
+    session: 'sqlite',
+    identity: 'sqlite',
+    senderKey: 'sqlite',
+    appState: 'sqlite',
+    privacyToken: 'sqlite',
+    messages: 'sqlite',
+    threads: 'sqlite',
+    contacts: 'sqlite'
+  }
+})
+```
+
+## The model
+
+`createStore` separates **backends** (where data lives) from **providers** (which backend each domain uses). This lets you mix backends — e.g. keep hot signal state in Redis while archiving messages in Postgres.
+
+```ts theme={null}
+createStore({
+  backends: {
+    redis: createRedisStore({ redis }),
+    postgres: createPostgresStore({ pool })
+  },
+  providers: {
+    auth: 'redis',
+    signal: 'redis',
+    preKey: 'redis',
+    session: 'redis',
+    identity: 'redis',
+    senderKey: 'redis',
+    appState: 'redis',
+    privacyToken: 'redis',
+    messages: 'postgres',
+    threads: 'postgres',
+    contacts: 'postgres'
+  }
+})
+```
+
+## Providers are required when you set `backends`
+
+As soon as `backends` contains at least one entry, **every persistence domain must be assigned explicitly** in `providers`. The required domains are `auth`, `signal`, `preKey`, `session`, `identity`, `senderKey`, `appState`, `privacyToken`, `messages`, `threads`, and `contacts`. Both the TypeScript types and a runtime check enforce this — `createStore` throws and lists the missing `providers.*` keys when any are omitted.
+
+Three values are valid for each domain:
+
+* A backend name from `backends` (e.g. `'sqlite'`) — persist that domain there.
+* `'memory'` — keep that domain in the in-tree memory provider for this run.
+* `'none'` — only valid for the optional archive domains (`messages`, `threads`, `contacts`); skips the domain entirely.
+
+This guard exists because partial coverage is almost always a bug. If you persist only `auth` and let Signal state, app-state, or the mailbox fall back to memory, the device pairs once and then loses its protocol state on every restart. Pick `'memory'` deliberately when that is what you want.
+
+```ts theme={null}
+createStore({
+  backends: { sqlite: createSqliteStore({ path: '.auth/state.sqlite' }) },
+  providers: {
+    auth: 'sqlite',
+    signal: 'sqlite',
+    preKey: 'sqlite',
+    session: 'sqlite',
+    identity: 'sqlite',
+    senderKey: 'sqlite',
+    appState: 'sqlite',
+    privacyToken: 'sqlite',
+    messages: 'none',  // skip the message archive
+    threads: 'none',
+    contacts: 'none'
+  }
+})
+```
+
+When `backends` is empty or omitted, every domain falls back to memory (mailbox domains to `'none'`) — useful for tests, but the device re-pairs on every restart.
+
+## Persisted domains
+
+These hold the state required to keep a session alive. Back them with a durable backend in production.
+
+| Domain         | Holds                                                      |
+| -------------- | ---------------------------------------------------------- |
+| `auth`         | Pairing credentials and device identity. **Persist this.** |
+| `signal`       | Signal sessions (umbrella over the sub-stores below).      |
+| `preKey`       | Signal pre-keys.                                           |
+| `session`      | Signal sessions.                                           |
+| `identity`     | Signal identity keys.                                      |
+| `senderKey`    | Group sender keys.                                         |
+| `appState`     | App-state collections (mute, pin, read, archive, …).       |
+| `privacyToken` | Trusted-contact / privacy tokens.                          |
+
+## Optional archive domains
+
+These accept `'none'` to disable persistence entirely:
+
+| Domain     | Holds                                        |
+| ---------- | -------------------------------------------- |
+| `messages` | Message archive (`B \| 'memory' \| 'none'`). |
+| `threads`  | Thread metadata.                             |
+| `contacts` | Contact directory.                           |
+
+## Cache domains
+
+Configured under `cacheProviders` and default to bounded memory with TTLs:
+
+| Domain          | Holds                            |
+| --------------- | -------------------------------- |
+| `retry`         | Outbound message retry queue.    |
+| `groupMetadata` | Group metadata cache.            |
+| `deviceList`    | Device list cache.               |
+| `messageSecret` | Message-secret cache for addons. |
+
+```ts theme={null}
+createStore({
+  backends: { sqlite },
+  providers: { /* ... */ },
+  cacheProviders: { groupMetadata: 'sqlite', deviceList: 'sqlite' },
+  memory: {
+    cacheTtlMs: { groupMetadataMs: 600_000, deviceListMs: 600_000 }
+  }
+})
+```
+
+Each backend evicts expired entries differently: `memory` runs an in-process sweep, Redis and MongoDB use native TTL, SQLite filters on read, and **PostgreSQL/MySQL require an opt-in poller** (`result.startCleanup(sessionId)`) or cache tables grow forever. See [Cache expiry and cleanup](/en/reference/stores#cache-expiry-and-cleanup) for the per-backend matrix.
+
+## Read-through cache layer
+
+When a hot signal domain points at a persistent backend, every send/recv round-trip pays the backend's latency to fetch the same peer's session, identity, or sender key. The `cacheLayer` option wraps the backend store with a bounded-LRU L1 (the in-tree memory provider) so repeated reads of the same peer skip the backend, while writes stay write-through so the backend remains authoritative.
+
+Four hot domains can be cached:
+
+| Domain         | Strategy                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
+| `session`      | Signal Double-Ratchet sessions. Read-through + write-through.                                                 |
+| `identity`     | Remote identity keys. Read-through + write-through.                                                           |
+| `senderKey`    | Per-(group, sender) sender keys. Read-through + write-through.                                                |
+| `privacyToken` | Trusted-contact tokens. Read-through + **invalidate-on-write** (the backend merges partial fields on upsert). |
+
+All flags default to `false`. A flag is a no-op unless that domain resolves to a real backend in `providers` — caching `'memory'` or `'none'` in front of itself buys nothing and is skipped.
+
+```ts theme={null}
+createStore({
+  backends: { postgres, redis },
+  providers: {
+    auth: 'postgres',
+    signal: 'postgres',
+    preKey: 'postgres',
+    session: 'postgres',
+    identity: 'postgres',
+    senderKey: 'postgres',
+    appState: 'postgres',
+    privacyToken: 'postgres',
+    messages: 'postgres',
+    threads: 'postgres',
+    contacts: 'postgres'
+  },
+  cacheLayer: {
+    session: true,
+    identity: true,
+    senderKey: true,
+    privacyToken: true,
+    limits: {
+      session: 10_000,
+      identity: 10_000,
+      senderKey: 5_000,
+      privacyToken: 5_000
+    }
+  }
+})
+```
+
+`limits` caps per-domain entry counts; once exceeded, the L1 evicts LRU. When unset, each domain defaults to the matching memory-provider cap.
+
+### When to enable it
+
+Turn it on when your backend is a network hop (Redis, Postgres, MySQL, MongoDB) and you send or receive at a rate where the same peers repeat — typical for bots, group fan-out, and multi-tenant gateways. With a local SQLite backend the wins are smaller; measure before flipping it on.
+
+### Single-writer assumption
+
+The L1 is per-process and has no cross-process invalidation channel. Enable `cacheLayer` only when a single process owns a given `sessionId`'s backend rows — the library's standard connection model. Different sessions sharing one backend are fine; the same session opened from two processes is not.
+
+<Warning>
+  Do not enable `cacheLayer` when multiple processes share one backend for the **same** `sessionId`. Another process's writes would leave this cache stale and corrupt the Signal ratchet.
+</Warning>
+
+### Why not every domain?
+
+`signal`, `appState`, and `preKey` are deliberately excluded:
+
+* **`signal`** — the per-send registration read is already memoized inside the signal lock; a second cache adds nothing.
+* **`appState`** — the sync client already caches collection state for the sync-context lifetime, the only scope where reads both repeat and stay coherent.
+* **`preKey`** — one-time pre-keys are read exactly once then consumed. Serving a consumed key from a stale cache would reuse it and break forward secrecy.
+
+## Backends
+
+<CardGroup>
+  <Card title="SQLite" icon="database" href="/en/reference/stores#sqlite">
+    `@zapo-js/store-sqlite` — local, single-process.
+  </Card>
+
+  <Card title="PostgreSQL" icon="elephant" href="/en/reference/stores#postgresql">
+    `@zapo-js/store-postgres` — distributed, relational.
+  </Card>
+
+  <Card title="MySQL" icon="dolphin" href="/en/reference/stores#mysql">
+    `@zapo-js/store-mysql` — distributed, relational.
+  </Card>
+
+  <Card title="Redis" icon="bolt" href="/en/reference/stores#redis">
+    `@zapo-js/store-redis` — cache + persistence.
+  </Card>
+
+  <Card title="MongoDB" icon="leaf" href="/en/reference/stores#mongodb">
+    `@zapo-js/store-mongo` — document store.
+  </Card>
+
+  <Card title="Memory" icon="memory">
+    Built in. Great for tests; does not survive a restart.
+  </Card>
+</CardGroup>
+
+See the [stores reference](/en/reference/stores) for each backend's config options.
+
+## Memory-only (tests)
+
+For quick experiments or tests, omit `backends` entirely — every domain falls back to memory:
+
+```ts theme={null}
+const store = createStore({})
+const client = new WaClient({ store, sessionId: 'test' }, logger)
+```
+
+<Warning>
+  A memory-only store loses all credentials on restart, so you re-pair every boot. Use a durable backend for anything long-lived.
+</Warning>
+

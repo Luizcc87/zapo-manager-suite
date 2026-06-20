@@ -1,0 +1,139 @@
+# Installation
+Source: https://zapo.to/en/installation
+
+Install zapo-js with npm, pnpm, or yarn, choose a storage backend for credentials, and add the optional peer dependencies your features depend on.
+
+## Requirements
+
+<Info>
+  `zapo` requires **Node.js `>= 20.9.0`**. The package ships dual ESM/CJS builds and full TypeScript types.
+</Info>
+
+## Install the core package
+
+<CodeGroup>
+  ```bash npm theme={null}
+  npm install zapo-js
+  ```
+
+  ```bash pnpm theme={null}
+  pnpm add zapo-js
+  ```
+
+  ```bash yarn theme={null}
+  yarn add zapo-js
+  ```
+</CodeGroup>
+
+The core package has **no mandatory runtime dependencies**. Everything else — storage, logging, and the WebSocket transport — is an opt-in peer dependency, so you only install what you use.
+
+## The package ecosystem
+
+`zapo-js` is the only required install. Everything else is an optional `@zapo-js/*` package you add as needed:
+
+<Tree>
+  <Tree.Folder name="zapo-js — core client, coordinators, store contract">
+    <Tree.File name="@zapo-js/store-sqlite — SQLite backend" />
+
+    <Tree.File name="@zapo-js/store-postgres — PostgreSQL backend" />
+
+    <Tree.File name="@zapo-js/store-mysql — MySQL backend" />
+
+    <Tree.File name="@zapo-js/store-redis — Redis backend" />
+
+    <Tree.File name="@zapo-js/store-mongo — MongoDB backend" />
+
+    <Tree.File name="@zapo-js/media-utils — thumbnails, probes, waveforms" />
+
+    <Tree.File name="@zapo-js/mcp-server — dev tool: drive from an AI agent" />
+
+    <Tree.File name="@zapo-js/fake-server — dev tool: in-process test server" />
+  </Tree.Folder>
+</Tree>
+
+## Add a storage backend
+
+`zapo` persists authentication and Signal state through a pluggable [store](/en/concepts/stores). Pick the backend that matches your deployment and install its package:
+
+| Package                   | Backend                       | Best for                |
+| ------------------------- | ----------------------------- | ----------------------- |
+| `@zapo-js/store-sqlite`   | SQLite (via `better-sqlite3`) | Local / single-process  |
+| `@zapo-js/store-postgres` | PostgreSQL                    | Distributed, relational |
+| `@zapo-js/store-mysql`    | MySQL                         | Distributed, relational |
+| `@zapo-js/store-redis`    | Redis                         | Cache + persistence     |
+| `@zapo-js/store-mongo`    | MongoDB                       | Document store          |
+
+<CodeGroup>
+  ```bash SQLite theme={null}
+  npm install @zapo-js/store-sqlite better-sqlite3
+  ```
+
+  ```bash PostgreSQL theme={null}
+  npm install @zapo-js/store-postgres pg
+  ```
+
+  ```bash MySQL theme={null}
+  npm install @zapo-js/store-mysql mysql2
+  ```
+
+  ```bash Redis theme={null}
+  npm install @zapo-js/store-redis ioredis
+  ```
+
+  ```bash MongoDB theme={null}
+  npm install @zapo-js/store-mongo mongodb
+  ```
+</CodeGroup>
+
+<Note>
+  You can also run with no backend at all — the built-in **memory** store works out of the box and is great for tests. It just does not survive a process restart, so you would re-pair on every boot.
+</Note>
+
+## Optional peer dependencies
+
+Install these only if you use the corresponding feature:
+
+<CodeGroup>
+  ```bash Structured logging theme={null}
+  npm install pino pino-pretty
+  ```
+
+  ```bash WebSocket proxy theme={null}
+  npm install ws
+  ```
+
+  ```bash Mobile connections theme={null}
+  npm install argo-codec
+  ```
+</CodeGroup>
+
+* **`pino` + `pino-pretty`** — required only if you use [`createPinoLogger`](/en/concepts/configuration#logging). Without them, the built-in `ConsoleLogger` is used.
+* **`ws`** — only needed to route the WebSocket through a **proxy**. The runtime's native `WebSocket` can't take an HTTP `Agent`/dispatcher, so `zapo` falls back to `ws` for the `proxy.ws` leg. Without a proxy, the built-in `WebSocket` is used and you don't need this package.
+* **`argo-codec`** — only needed for **mobile** connections (for now). The standard companion (QR / pairing-code) flow does not use it.
+
+## Sending media
+
+<Warning>
+  **`@zapo-js/media-utils` is effectively required to send usable media.** Media still uploads without it, but there's no processor to generate **thumbnails/previews, image-video dimensions, or voice-note waveforms** — so it can render as a plain attachment or with no preview. Install it whenever your app sends images, video, audio, documents, or stickers.
+</Warning>
+
+```bash theme={null}
+npm install @zapo-js/media-utils
+```
+
+It shells out to `ffmpeg`/`ffprobe` and uses `sharp`, so make sure those binaries are available. See the [media guide](/en/guides/media#media-processing) for how to wire the processor into the client.
+
+<Note>
+  `@zapo-js/media-utils` also lists [`file-type`](https://github.com/sindresorhus/file-type) (`^19`) as an **optional** peer dependency. Install it (`npm install file-type`) to enable automatic mimetype detection — without it, the [media guide's mimetype resolution](/en/guides/media#mimetype-resolution) falls back to requiring an explicit `mimetype` on each send.
+</Note>
+
+## Verify your setup
+
+```ts theme={null}
+import { WaClient } from 'zapo-js'
+
+console.log(typeof WaClient) // "function"
+```
+
+Next, head to the [quickstart](/en/quickstart) to connect and send your first message.
+

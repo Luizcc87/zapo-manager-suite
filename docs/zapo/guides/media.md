@@ -1,0 +1,213 @@
+# Media
+Source: https://zapo.to/en/guides/media
+
+Send images, video, audio voice notes, documents, and stickers — and stream or download incoming WhatsApp media attachments with zapo's media helpers.
+
+Media is sent through the same `client.message.send` method, using a typed media content object. The builder fills in the protocol-managed fields (encryption keys, SHA-256 digests, direct path, upload) for you — you provide the source and, optionally, a `mimetype`.
+
+<Warning>
+  For **usable** media, install [`@zapo-js/media-utils`](/en/installation#sending-media) and wire a processor through the [`media`](#media-processing) client option. Media still uploads without it, but without a processor it has **no thumbnail/preview, dimensions, or waveform** — so it may arrive as a plain attachment.
+</Warning>
+
+## Mimetype resolution
+
+`mimetype` is optional. The builder resolves it in this order:
+
+1. The `mimetype` you pass on the content object wins.
+2. If a `WaMediaProcessor` with `detectMimetype` is configured, the builder calls it (sniffing magic bytes). `@zapo-js/media-utils` implements this on top of [`file-type`](https://github.com/sindresorhus/file-type) ^19 — install `file-type` to enable detection.
+3. Otherwise the builder throws for `image`/`video`/`audio`/`document`/`ptv` messages.
+
+Stickers default to `image/webp` when no `mimetype` is set. `Readable` stream inputs with no mimetype are staged to a temp file before detection runs.
+
+## Media input
+
+The `media` field accepts several input types:
+
+```ts theme={null}
+type MediaInput = Uint8Array | ArrayBuffer | Readable | string
+```
+
+<Tip>
+  **Prefer a file path (`string`) or a `Readable` stream over a `Buffer`/`Uint8Array`.** `zapo` streams media through the pipeline without buffering the whole file in memory — passing a path or stream keeps memory flat regardless of file size. Reading a large file into a `Buffer` first defeats that and is discouraged. (`Buffer` is also avoided internally in favor of `Uint8Array`.)
+</Tip>
+
+## Images
+
+```ts theme={null}
+// Preferred — pass a file path; zapo streams it
+await client.message.send(jid, {
+  type: 'image',
+  media: './photo.jpg',
+  mimetype: 'image/jpeg',
+  caption: 'A photo'
+})
+
+// Or a Readable stream (e.g. from an HTTP response)
+import { createReadStream } from 'node:fs'
+
+await client.message.send(jid, {
+  type: 'image',
+  media: createReadStream('./photo.jpg'),
+  mimetype: 'image/jpeg'
+})
+```
+
+## Video
+
+```ts theme={null}
+await client.message.send(jid, {
+  type: 'video',
+  media: './clip.mp4',
+  mimetype: 'video/mp4',
+  caption: 'A clip',
+  gifPlayback: false
+})
+```
+
+For a round **push-to-video** (PTV) message, use `type: 'ptv'` with the same shape.
+
+## Audio & voice notes
+
+```ts theme={null}
+// Regular audio
+await client.message.send(jid, {
+  type: 'audio',
+  media: './song.mp3',
+  mimetype: 'audio/mpeg'
+})
+
+// Voice note (push-to-talk)
+await client.message.send(jid, {
+  type: 'audio',
+  media: './voice.ogg',
+  mimetype: 'audio/ogg; codecs=opus',
+  ptt: true
+})
+```
+
+<Tip>
+  Voice notes render best as Opus in an OGG container. Enable [media processing](#media-processing) to auto-generate waveforms and normalize voice notes.
+</Tip>
+
+## Documents
+
+```ts theme={null}
+await client.message.send(jid, {
+  type: 'document',
+  media: './report.pdf',
+  mimetype: 'application/pdf',
+  fileName: 'Q3 Report.pdf',
+  caption: 'The quarterly report'
+})
+```
+
+## Stickers
+
+```ts theme={null}
+await client.message.send(jid, {
+  type: 'sticker',
+  media: await readFile('./sticker.webp'),
+  mimetype: 'image/webp'
+})
+```
+
+For a full **sticker pack**, use `type: 'sticker-pack'` with `stickers`, a `trayIcon`, and pack metadata (`stickerPackId`, `name`, `publisher`).
+
+## View-once
+
+Wrap image/video/audio as view-once with the send option:
+
+```ts theme={null}
+await client.message.send(jid, {
+  type: 'image',
+  media: './secret.jpg',
+  mimetype: 'image/jpeg'
+}, {
+  viewOnce: true
+})
+```
+
+## Downloading incoming media
+
+The message coordinator decrypts and downloads media from an incoming event. Three flavors are available — **prefer the streaming ones**:
+
+```ts theme={null}
+client.on('message', async (event) => {
+  if (!event.message?.imageMessage) return
+
+  // Preferred — stream to a file (constant memory)
+  await client.message.downloadToFile(event, './incoming.jpg')
+
+  // Or consume the Readable stream yourself
+  const stream = await client.message.download(event)
+
+  // Avoid for large media — buffers the entire file in memory
+  const bytes = await client.message.downloadBytes(event)
+})
+```
+
+<Tip>
+  `download()` / `downloadToFile()` stream the media and keep memory flat regardless of size. `downloadBytes()` materializes the whole file in memory — reach for it only on small media, and cap it with `maxBytes`.
+</Tip>
+
+All three accept either a `WaIncomingMessageEvent` or a raw `Proto.IMessage`, plus optional `WaDownloadMediaOptions` (for example `maxBytes` to cap `downloadBytes`).
+
+### Without a connected client
+
+`downloadMediaMessage` is a free function that mirrors `client.message.download` but does not need a paired session. The encrypted-media metadata travels inside the (already decrypted) message itself, so you can re-download media from a persisted event long after the original socket is gone — useful for offline workers, archive replays, or anything that processes stored messages without spinning up a `WaClient`.
+
+```ts theme={null}
+import { downloadMediaMessage } from 'zapo-js'
+import { createWriteStream } from 'node:fs'
+
+const stream = await downloadMediaMessage(event)
+stream.pipe(createWriteStream('photo.jpg'))
+```
+
+Accepts a `WaIncomingMessageEvent` or a raw `Proto.IMessage`, returns a `Readable` you own (pipe it or `.destroy()` it — an unconsumed stream leaks the socket). MAC + SHA-256 verification runs as bytes are consumed, same semantics as the coordinator method. Throws when the message has no downloadable media.
+
+| Option                              | Type                            | Notes                                                                                                                                                                                                                                                                              |
+| ----------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transfer`                          | `WaMediaTransferClient`         | Reuse an existing transfer client — inherits its proxy agents, timeouts, and MAC-verification toggle, and avoids spinning up a new HTTP client per call in a loop. A stateless one is created when omitted (fine for one-offs).                                                    |
+| `proxy`                             | `WaProxyTransport`              | Per-call proxy for the CDN download leg, mirroring the client's `proxy.mediaDownload`. The fetch runs over `node:http`/`node:https`, so only the `http.Agent` form is honored — an undici dispatcher is ignored. Takes precedence over the default agent of a `transfer` you pass. |
+| `signal` / `timeoutMs` / `maxBytes` | (from `WaDownloadMediaOptions`) | Same semantics as the coordinator methods.                                                                                                                                                                                                                                         |
+
+For lower-level access — when you want to do the CDN fetch yourself, hand the keys to another process, or just inspect what's downloadable — `resolveMediaPayload` returns the keys + hashes without doing any I/O:
+
+```ts theme={null}
+import { resolveMediaPayload } from 'zapo-js'
+
+const payload = resolveMediaPayload(event.message)
+// → WaResolvedMediaPayload | null
+// { mediaType, directPath, mediaKey, fileSha256?, fileEncSha256?, mimetype?, fileLength? }
+```
+
+Returns `null` when the message has no downloadable media, or when the proto carried no `directPath` / `mediaKey`. It unwraps `ephemeralMessage`, `viewOnceMessage` / `viewOnceMessageV2`, and `documentWithCaptionMessage` before resolving. Supported kinds: `image`, `video` (`gif` when `gifPlayback`), `audio` (`ptt` when `ptt`), `document`, `sticker`, `ptv`.
+
+<Warning>
+  `payload.mediaKey` is the AES/MAC seed for the encrypted blob — treat it like a secret. Don't log it, don't put it in error messages, and don't ship it to a third-party service unless that's the whole point of your pipeline.
+</Warning>
+
+## Media processing
+
+For proper media, use a **media processor**. Install `@zapo-js/media-utils` and pass one through the `media` client option — it probes and processes media (dimensions, duration, thumbnails, waveforms, voice-note normalization) before upload. Without it, media still uploads but lacks this processing:
+
+```ts theme={null}
+import { createMediaProcessor } from '@zapo-js/media-utils'
+
+const client = new WaClient({
+  store,
+  sessionId: 'default',
+  media: {
+    processor: createMediaProcessor(),
+    generateThumbnail: true,
+    generateWaveform: true,
+    normalizeVoiceNote: true
+  }
+}, logger)
+```
+
+<Note>
+  `@zapo-js/media-utils` shells out to `ffmpeg`/`ffprobe` and uses `sharp`. Make sure those binaries are available in your environment.
+</Note>
+

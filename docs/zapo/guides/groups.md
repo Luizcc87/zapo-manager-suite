@@ -1,0 +1,196 @@
+# Groups & communities
+Source: https://zapo.to/en/guides/groups
+
+Create groups, manage participants and admins, handle invites, configure community sub-groups, and react to group events with zapo.
+
+Group operations live on `client.group` ([`WaGroupCoordinator`](/en/reference/client#group)). Group JIDs end in `@g.us`.
+
+## Querying groups
+
+```ts theme={null}
+// All groups the account belongs to
+const groups = await client.group.queryAllGroups()
+
+// One group's metadata
+const meta = await client.group.queryGroupMetadata('123456@g.us')
+console.log(meta.subject, meta.participants.length)
+```
+
+`WaGroupMetadata` includes the subject, owner, participant list (`WaGroupParticipant[]` with `isAdmin` / `isSuperAdmin`), and the full set of group flags (`announce`, `restrict`, `ephemeral`, community flags, …).
+
+## Creating a group
+
+`createGroup` returns the full `WaGroupMetadata` for the new group — no need to call `queryGroupMetadata` afterward:
+
+```ts theme={null}
+const group = await client.group.createGroup('My group', [
+  '5511999999999@s.whatsapp.net',
+  '5511888888888@s.whatsapp.net'
+])
+
+console.log(group.jid, group.participants.length)
+```
+
+## Managing participants
+
+The four participant methods (`addParticipants`, `removeParticipants`, `promoteParticipants`, `demoteParticipants`) return a typed `WaParticipantActionResult[]` — one entry per jid you passed in. The IQ as a whole succeeds even when some participants fail (blocked you, privacy settings disallow add, already a member, …), so inspect the per-jid `code` to surface partial failures.
+
+```ts theme={null}
+const jids = ['5511999999999@s.whatsapp.net']
+
+const results = await client.group.addParticipants(groupJid, jids)
+
+for (const r of results) {
+  if (r.status === 'ok') {
+    console.log('added', r.jid)
+  } else {
+    // HTTP-style code: 403 = privacy block, 408 = not allowed,
+    // 409 = already in, 404 = not on WhatsApp, ...
+    console.warn('failed', r.jid, r.code)
+  }
+}
+
+await client.group.removeParticipants(groupJid, jids)
+await client.group.promoteParticipants(groupJid, jids) // make admin
+await client.group.demoteParticipants(groupJid, jids)  // remove admin
+```
+
+Each result also carries `phoneNumber` and `username` when the server resolved them, plus the raw `BinaryNode` under `raw` for any extra tags the server attached (some `409`/`408` partial failures hint at how to recover).
+
+## Group settings
+
+```ts theme={null}
+await client.group.setSubject(groupJid, 'New name')
+await client.group.setDescription(groupJid, 'A description')   // null to clear
+await client.group.setSetting(groupJid, 'announcement', true)  // admins-only messages
+await client.group.setSetting(groupJid, 'restrict', true)      // admins-only edit info
+await client.group.setSetting(groupJid, 'ephemeral', true)     // disappearing messages on/off
+```
+
+`setSetting` also covers the boolean toggles `ephemeral`, `group_history`, `allow_admin_reports`, `no_frequently_forwarded`, and the community flags. Use it to flip a feature on or off; for settings that need a value (mode or duration), use the dedicated setters below.
+
+### Who can add, link, and share history
+
+```ts theme={null}
+// Who can add new members
+await client.group.setMemberAddMode(groupJid, 'admin_add')        // admins only
+await client.group.setMemberAddMode(groupJid, 'all_member_add')   // anyone
+
+// Who can share the invite link
+await client.group.setMemberLinkMode(groupJid, 'admin_link')
+await client.group.setMemberLinkMode(groupJid, 'all_member_link')
+
+// Whether new members see prior chat history
+await client.group.setMemberShareGroupHistoryMode(groupJid, 'admin_share')      // hide history
+await client.group.setMemberShareGroupHistoryMode(groupJid, 'all_member_share') // expose backlog
+```
+
+All three are admin-only — non-admins receive a `403 not-authorized` error.
+
+### Disappearing messages
+
+`setSetting(groupJid, 'ephemeral', false)` is the explicit disable path. To turn disappearing messages on with a specific lifetime, use `setEphemeralDuration`:
+
+```ts theme={null}
+// 24h / 7d / 90d in seconds
+await client.group.setEphemeralDuration(groupJid, 86_400)
+await client.group.setEphemeralDuration(groupJid, 604_800)
+await client.group.setEphemeralDuration(groupJid, 7_776_000)
+
+// Disable
+await client.group.setSetting(groupJid, 'ephemeral', false)
+```
+
+Admin-only. Passing `0` disables disappearing messages — the same as `setSetting('ephemeral', false)`.
+
+## Invites
+
+```ts theme={null}
+// Preview an invite code (the path segment of chat.whatsapp.com/<code>)
+const info = await client.group.queryGroupInviteInfo('AbCdEf...')
+console.log(info.subject, info.size, info.desc)
+// info.participants is a trimmed sample — not the full roster.
+// Call queryGroupMetadata after joining for everyone.
+
+// Fetch the current invite code for a group you admin — does NOT rotate it.
+const code = await client.group.queryInviteCode(groupJid)
+console.log('current invite:', `https://chat.whatsapp.com/${code}`)
+
+// Join via invite code — returns the joined group's metadata
+const joined = await client.group.joinGroupViaInvite('AbCdEf...')
+console.log(joined.jid, joined.participants.length)
+
+// Rotate the invite — returns the freshly-issued code
+const { code: rotated, affectedParticipants } = await client.group.revokeInvite(groupJid)
+console.log('new invite:', `https://chat.whatsapp.com/${rotated}`)
+// affectedParticipants lists anyone who joined via the now-revoked code
+// that the server surfaced in the response (typically with code: 404).
+```
+
+<Note>
+  `queryInviteCode` and `revokeInvite` are admin-only — non-admins receive a `403 not-authorized`.
+</Note>
+
+## Leaving
+
+```ts theme={null}
+await client.group.leaveGroup([groupJid]) // batched — accepts multiple
+```
+
+`leaveGroup` resolves to `void` once the server acknowledges the request.
+
+## Membership approval
+
+For groups that require admin approval to join:
+
+```ts theme={null}
+const requests = await client.group.queryMembershipApprovalRequests(groupJid)
+
+await client.group.approveMembershipRequests(groupJid, [requesterJid])
+await client.group.rejectMembershipRequests(groupJid, [requesterJid])
+
+// Cancel your own pending request
+await client.group.cancelMembershipRequests(groupJid, [myJid])
+```
+
+## Communities
+
+Communities are parent groups that link sub-groups:
+
+```ts theme={null}
+// Create a community
+const community = await client.group.createCommunity('My community')
+
+// Link / unlink existing groups as sub-groups
+await client.group.linkSubGroups(community.jid, [subGroupJidA, subGroupJidB])
+await client.group.unlinkSubGroups(community.jid, [subGroupJidA], {
+  removeOrphanedMembers: true
+})
+
+// List sub-groups (and the announcement group)
+const subs = await client.group.fetchSubGroups(community.jid)
+
+// Join a linked sub-group you don't yet belong to.
+// The IQ result carries no group payload — call queryGroupMetadata
+// on the sub-group after this resolves to get the full metadata.
+await client.group.joinLinkedGroup(community.jid, subGroupJid)
+const subMeta = await client.group.queryGroupMetadata(subGroupJid)
+
+// Merged participants across the whole community
+const everyone = await client.group.queryLinkedGroupsParticipants(community.jid)
+```
+
+Other community operations include `deactivateCommunity`, `transferCommunityOwnership`, and `fetchSubgroupSuggestions`.
+
+## Group events
+
+Changes made by others (subject, participants, settings) arrive on the `group` event:
+
+```ts theme={null}
+client.on('group', (event) => {
+  console.log(event.action, 'in', event.groupJid)
+})
+```
+
+See [Events](/en/concepts/events#groups-newsletters--profiles) for the full payload.
+

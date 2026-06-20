@@ -1,0 +1,123 @@
+# Mobile connections
+Source: https://zapo.to/en/concepts/mobile
+
+Connect zapo as a primary mobile (Android) WhatsApp client over the TCP transport instead of a companion device, including the limitations involved.
+
+Besides the standard **companion** mode (linking via QR / pairing code, like WhatsApp Web), `zapo` can connect as a **primary mobile client** — speaking the Android app's protocol over a raw TCP socket.
+
+<Note>
+  Mobile support is **stable and functional.** The one thing `zapo` does **not** provide is a **registration API** — requesting an SMS/voice code, submitting an OTP, or approving a takeover. Registering a number is complex and requires a physical phone, so it's intentionally out of scope. You connect with an **already-registered** credential set, and that path is solid.
+</Note>
+
+## How it differs from companion mode
+
+|             | Companion (default)   | Mobile                                          |
+| ----------- | --------------------- | ----------------------------------------------- |
+| Transport   | WebSocket (`wss://…`) | TCP socket (`tcp://g.whatsapp.net:443`)         |
+| Auth        | QR / pairing code     | Pre-registered credentials + device fingerprint |
+| Identity    | Linked device         | Primary account                                 |
+| Platform    | Browser (`chrome`, …) | `android`                                       |
+| Device info | Not required          | **Required** (hardware fingerprint)             |
+
+## Enabling mobile mode
+
+Mobile mode is triggered by the `mobileTransport` option (a `WaMobileTransportOptions`). Its presence — or persisted `deviceInfo` in the loaded credentials — switches the client from the WebSocket transport to the TCP transport.
+
+```ts theme={null}
+const client = new WaClient(
+  {
+    store,
+    sessionId: 'mobile',
+    mobileTransport: {
+      deviceInfo: {
+        manufacturer: 'OnePlus',
+        device: 'OnePlus8Pro',
+        osVersion: '12',
+        osBuildNumber: 'SKQ1.210216.001',
+        appVersion: '2.23.1.1',
+        mcc: '55',  // mobile country code (optional)
+        mnc: '11'   // mobile network code (optional)
+      },
+      passive: false // send keep-alives
+    }
+  },
+  logger
+)
+
+await client.connect()
+```
+
+### `WaMobileTransportOptions`
+
+| Field                    | Type                          | Notes                                          |
+| ------------------------ | ----------------------------- | ---------------------------------------------- |
+| `deviceInfo`             | `WaMobileTransportDeviceInfo` | **Required** hardware fingerprint (see below). |
+| `tcpUrl`                 | `string`                      | Defaults to `tcp://g.whatsapp.net:443`.        |
+| `passive`                | `boolean`                     | `false` sends keep-alives; `true` is idle.     |
+| `pushName`               | `string`                      | Display name.                                  |
+| `yearClass` / `memClass` | `number`                      | Device performance/memory class.               |
+
+### `WaMobileTransportDeviceInfo`
+
+`manufacturer`, `device`, `osVersion`, `osBuildNumber`, `appVersion` are required; `mcc`, `mnc`, `localeLanguageIso6391`, `localeCountryIso31661Alpha2`, `phoneId`, `deviceBoard`, `deviceModelType` are optional. A **stable** fingerprint across runs matters — persist it and reuse the same values.
+
+## Credentials
+
+Mobile mode needs an **already-registered** credential set: a `WaAuthCredentials` with `meJid` populated, `platform: 'android'`, and `deviceInfo` attached. You seed these into the auth store before connecting (e.g. imported from a device bundle).
+
+<Note>
+  Once credentials with `deviceInfo` are persisted, later reconnects **automatically** run in full mobile-primary mode — TCP transport, mobile-style IQ / message id formats, app-state primary gating, and placeholder-resend withholding (see below) all derive from the loaded `deviceInfo`. You don't need to re-pass `mobileTransport` on every construction.
+</Note>
+
+### Placeholder-resend withholding
+
+When a companion device fails to decrypt an incoming message, it normally asks a paired peer for the original plaintext via a placeholder-resend request. A **primary phone has no peer device** holding the plaintext, so a mobile-primary session **skips the placeholder request entirely** and falls back to a plain retry receipt — the standard re-encrypt path the sender already supports. This avoids the request silently timing out and the message being dropped.
+
+## Registration events
+
+While your mobile session is connected, you're notified when **someone tries to register your number on another device** — a security-relevant signal, surfaced as these events:
+
+```ts theme={null}
+client.on('mobile_registration_code', (event) => {
+  // WaRegistrationCodeEvent — someone requested a code to register YOUR number elsewhere
+  console.log('registration code issued:', event.code, 'expires:', event.expiryTimestampMs)
+})
+
+client.on('mobile_account_takeover_notice', (event) => {
+  // WaAccountTakeoverNoticeEvent — another device is taking over your number
+  console.log('takeover attempt from', event.newDevicePlatform, event.newDeviceName)
+})
+```
+
+| Event                            | Payload                                                                                         | Meaning                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `mobile_registration_code`       | `{ code, expiryTimestampMs, fromDeviceId }`                                                     | Someone requested a registration code to register **your** number on another phone; the issued code is surfaced here. |
+| `mobile_account_takeover_notice` | `{ serverToken, attemptTimestampMs, newDeviceName?, newDevicePlatform?, newDeviceAppVersion? }` | Another device is claiming (taking over) your number.                                                                 |
+
+<Note>
+  These events are **informational** — `zapo` surfaces them but intentionally does not expose methods to submit a code or respond to a takeover. Provisioning a number is done on a real phone; bring the resulting credentials to zapo and connect.
+</Note>
+
+## Email binding
+
+<Badge icon="mobile">Mobile-only</Badge>
+
+`client.email` ([`WaEmailCoordinator`](/en/reference/client)) binds and verifies an email address on the account — a recovery/login factor. It is **mobile-only**: every method throws on a Web/companion connection.
+
+```ts theme={null}
+// Current binding state
+const status = await client.email.getStatus()
+// { email: string | null, verified: boolean, confirmed: boolean }
+
+// Bind an address, request a code, submit it, then confirm
+await client.email.setEmail('me@example.com')
+await client.email.requestVerificationCode({ /* BuildRequestEmailVerificationCodeInput */ })
+const result = await client.email.verifyCode('123456')
+// { verified, autoVerifyFailed, email }
+await client.email.confirm()
+```
+
+## Standard features still apply
+
+Once connected in mobile mode, the rest of the API is unchanged — `client.message`, `client.group`, events, stores, etc. all work the same way. The only difference is the transport and the auth/identity model.
+

@@ -1,0 +1,116 @@
+# JIDs, helpers & constants
+Source: https://zapo.to/en/reference/jid-helpers
+
+Build, parse, and inspect WhatsApp JIDs, plus every WA_* protocol constant exported from the zapo-js package root for use in your own code.
+
+A **JID** (Jabber ID) is how WhatsApp addresses every entity. `zapo` exports a set of helpers to build and classify them, all from the package root:
+
+```ts theme={null}
+import { parsePhoneJid, isGroupJid, splitJid } from 'zapo-js'
+```
+
+## JID shapes
+
+| Entity               | Example                         |
+| -------------------- | ------------------------------- |
+| User (phone)         | `5511999999999@s.whatsapp.net`  |
+| Group                | `123456789-987654@g.us`         |
+| Newsletter / channel | `120363000000000000@newsletter` |
+| Status broadcast     | `status@broadcast`              |
+| LID (privacy id)     | `123456789@lid`                 |
+
+## Building JIDs
+
+```ts theme={null}
+// Phone number → user JID
+parsePhoneJid('5511999999999')        // '5511999999999@s.whatsapp.net'
+
+// Normalize anything into a recipient JID (accepts a number or string)
+normalizeRecipientJid('5511999999999')
+
+// Strip a device suffix down to the base user JID
+toUserJid('5511999999999:12@s.whatsapp.net') // '5511999999999@s.whatsapp.net'
+
+// Build a device-scoped JID
+buildDeviceJid('5511999999999', 's.whatsapp.net', 12)
+```
+
+## Parsing & splitting
+
+```ts theme={null}
+splitJid('5511999999999@s.whatsapp.net')  // { user, server }
+parseJidFull(jid)                         // ParsedJid with full breakdown
+parseSignalAddressFromJid(jid)            // { user, server, device }
+```
+
+## Classifying JIDs
+
+Boolean predicates for routing logic:
+
+| Helper                       | True for                   |
+| ---------------------------- | -------------------------- |
+| `isGroupJid(jid)`            | Group (`@g.us`)            |
+| `isGroupOrBroadcastJid(jid)` | Group or broadcast         |
+| `isBroadcastJid(jid)`        | Broadcast list             |
+| `isStatusBroadcastJid(jid)`  | `status@broadcast`         |
+| `isNewsletterJid(jid)`       | Newsletter (`@newsletter`) |
+| `isLidJid(jid)`              | LID (`@lid`)               |
+| `isBotJid(jid)`              | A bot (`@bot`)             |
+| `isHostedDeviceJid(jid)`     | Hosted device              |
+
+```ts theme={null}
+client.on('message', (event) => {
+  if (isGroupJid(event.key.remoteJid)) {
+    console.log('a group message')
+  }
+})
+```
+
+## Constants
+
+The full set of protocol constants is exported as frozen `WA_*` objects (the library uses these instead of TypeScript enums). The most commonly used:
+
+| Constant                                      | Contains                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| `WA_DEFAULTS`                                 | Default timeouts, the status-broadcast JID, the default device browser, … |
+| `WA_BROWSERS`                                 | Browser identifiers for the device fingerprint.                           |
+| `WA_PRIVACY_CATEGORIES` / `WA_PRIVACY_VALUES` | Privacy setting names and allowed values.                                 |
+| `WA_DISCONNECT_REASONS` / `WA_LOGOUT_REASONS` | Reason strings on connection events.                                      |
+| `WA_MESSAGE_TYPES` / `WA_MESSAGE_TAGS`        | Message classification.                                                   |
+| `WA_NODE_TAGS` / `WA_XMLNS`                   | Protocol node tags and XML namespaces.                                    |
+| `WA_APP_STATE_COLLECTIONS`                    | App-state collection names.                                               |
+
+```ts theme={null}
+import { WA_DEFAULTS, WA_LOGOUT_REASONS } from 'zapo-js'
+
+await client.logout(WA_LOGOUT_REASONS.USER_INITIATED)
+```
+
+Associated string-literal **types** are also exported for annotation: `WaPrivacyCategory`, `WaPrivacySettingName`, `WaPrivacyValue`, `WaDisconnectReason`, `WaLogoutReason`, `WaConnectionCode`, `WaStreamErrorCode`, `WaFailureReasonCode`, and `ParsedJid`.
+
+## Message helpers
+
+Two helpers for inspecting and targeting messages, exported from the package root:
+
+| Export                 | Signature                                                         | Description                                                                                                                                                                                                                                                                      |
+| ---------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getContentType`       | `(content?: Proto.IMessage) => keyof Proto.IMessage \| undefined` | Returns the populated content-type key (`'conversation'`, `'imageMessage'`, `'extendedTextMessage'`, …) of a message, or `undefined` for an empty message. Skips `senderKeyDistributionMessage` so group messages report their real payload kind.                                |
+| `resolveMessageTarget` | `(ref: WaMessageTargetInput) => WaMessageKey`                     | Normalizes a reply/edit/reaction/revoke/pin target into a bare `WaMessageKey`. Accepts an explicit `WaMessageKey` (returned as-is) or a received `message` event (`rawNode`-bearing reference — its `key` is returned). Throws when an event is passed without a valid `key.id`. |
+
+```ts theme={null}
+import { getContentType, resolveMessageTarget } from 'zapo-js'
+
+client.on('message', (event) => {
+  console.log(getContentType(event.message)) // e.g. 'extendedTextMessage'
+  const key = resolveMessageTarget(event)    // identical to event.key for real events
+})
+```
+
+## Other utilities
+
+| Export                     | Purpose                                                            |
+| -------------------------- | ------------------------------------------------------------------ |
+| `proto`                    | The full protobuf namespace — build raw `Proto.IMessage` payloads. |
+| `delay(ms)`                | Promise-based sleep.                                               |
+| `parseUsyncResultEnvelope` | Parse a USync IQ result envelope.                                  |
+

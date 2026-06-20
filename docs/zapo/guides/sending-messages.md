@@ -1,0 +1,183 @@
+# Sending messages
+Source: https://zapo.to/en/guides/sending-messages
+
+Send WhatsApp text, threaded replies, mentions, and rich link previews with client.message.send, the typed entry point for all outgoing content.
+
+All outgoing content goes through a single method:
+
+```ts theme={null}
+client.message.send(to, content, options?): Promise<WaMessagePublishResult>
+```
+
+* **`to`** — the recipient <Tooltip href="/en/concepts/identities">JID</Tooltip> (`5511999999999@s.whatsapp.net`, a group `...@g.us`, etc.). See [JID helpers](/en/reference/jid-helpers) for building these.
+* **`content`** — a string, a typed content object, or a raw `Proto.IMessage`.
+* **`options`** — quoting, mentions, forwarding, view-once, edits, and more.
+
+The promise resolves to a `WaMessagePublishResult` once the server acks:
+
+```ts theme={null}
+const result = await client.message.send(jid, 'Hello!')
+console.log(result.id) // the message id (stanza id)
+```
+
+## Plain text
+
+The simplest content is a string:
+
+```ts theme={null}
+await client.message.send(jid, 'Hello from zapo!')
+```
+
+For more control, use the text object form — it lets you attach context info and tune link previews:
+
+```ts theme={null}
+await client.message.send(jid, {
+  type: 'text',
+  text: 'Check this out: https://example.com',
+  linkPreview: true // auto-fetch a preview
+})
+```
+
+## Replying (quoting)
+
+Pass the original message event (or a reference) as `options.quote`:
+
+```ts theme={null}
+client.on('message', async (event) => {
+  await client.message.send(event.key.remoteJid, 'Replying to you', {
+    quote: event
+  })
+})
+```
+
+The quote is rendered as a reply bubble referencing the original message.
+
+## Mentions
+
+`options.mentions` is a list of JIDs to tag. Include the matching `@number` text in the body so WhatsApp renders the mention:
+
+```ts theme={null}
+await client.message.send(groupJid, {
+  type: 'text',
+  text: 'Hey @5511999999999, welcome!'
+}, {
+  mentions: ['5511999999999@s.whatsapp.net']
+})
+```
+
+## Link previews
+
+Link-preview behavior is controlled per message via the text object's `linkPreview` field:
+
+| Value       | Behavior                                                     |
+| ----------- | ------------------------------------------------------------ |
+| `undefined` | Follow the global `linkPreview` default.                     |
+| `false`     | Disable the preview.                                         |
+| `true`      | Force auto-fetch of the preview.                             |
+| object      | Skip the fetch and use the provided preview fields directly. |
+
+```ts theme={null}
+// Provide your own preview instead of fetching
+await client.message.send(jid, {
+  type: 'text',
+  text: 'https://example.com',
+  linkPreview: { title: 'Example', description: 'My custom preview' }
+})
+```
+
+Configure the default fetcher globally with the `linkPreview` client option.
+
+## Forwarding
+
+Set `options.forward` to mark a message as forwarded:
+
+```ts theme={null}
+await client.message.send(jid, 'Forwarded text', { forward: true })
+// or with a frequently-forwarded score
+await client.message.send(jid, content, { forward: { score: 4 } })
+```
+
+## Send options reference
+
+`WaSendMessageOptions` (third argument) includes:
+
+| Option                                          | Type                                                   | Purpose                                                                                                                                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `quote`                                         | `WaIncomingMessageEvent \| WaQuoteRef \| WaMessageKey` | Reply to a message — pass the event verbatim, its `key`, or a `WaQuoteRef`.                                                                                                                                   |
+| `mentions`                                      | `string[]`                                             | JIDs to mention.                                                                                                                                                                                              |
+| `forward`                                       | `boolean \| { score }`                                 | Mark as forwarded.                                                                                                                                                                                            |
+| `viewOnce`                                      | `boolean`                                              | Wrap image/video/audio as view-once.                                                                                                                                                                          |
+| `editKey`                                       | `WaMessageKey \| WaSendEditKey \| WaMessageRef`        | Edit a previously sent message (see [interactive](/en/guides/interactive-messages#editing-a-message)).                                                                                                        |
+| `expirationSeconds`                             | `number`                                               | Disappearing-message TTL for this message. **Wins over** `contextInfo.expirationSeconds` and over the automatic group-ephemeral inject (the latter is short-circuited as soon as this is defined — even `0`). |
+| `disableGroupEphemeralAutoInject`               | `boolean`                                              | Skip the automatic ephemeral-setting injection when sending into a group with disappearing-mode on. Redundant when `expirationSeconds` is set.                                                                |
+| `contextInfo`                                   | `WaSendContextInfo`                                    | Raw context info (advanced).                                                                                                                                                                                  |
+| `id`                                            | `string`                                               | Use a specific message id.                                                                                                                                                                                    |
+| `ackTimeoutMs` / `maxAttempts` / `retryDelayMs` | `number`                                               | Per-send retry tuning.                                                                                                                                                                                        |
+
+<Tip>
+  To send a single message with **no** expiration into a group with disappearing-mode on, prefer `disableGroupEphemeralAutoInject: true` over `expirationSeconds: 0` — the latter still writes `expiration=0` into the outgoing `contextInfo`.
+</Tip>
+
+## The content union
+
+`content` accepts any `WaSendMessageContent`. The typed variants are documented across these guides:
+
+<CardGroup>
+  <Card title="Media" icon="image" href="/en/guides/media">
+    Images, video, audio, documents, stickers.
+  </Card>
+
+  <Card title="Polls & reactions" icon="square-poll-vertical" href="/en/guides/interactive-messages">
+    Polls, votes, reactions, pins, edits, revokes, events.
+  </Card>
+</CardGroup>
+
+You can always drop down to a raw `Proto.IMessage` for anything not covered by a typed builder:
+
+```ts theme={null}
+import { proto } from 'zapo-js'
+
+await client.message.send(jid, {
+  conversation: 'Raw protobuf message'
+})
+```
+
+### Location and contact
+
+Message types without a typed builder are sent as raw `Proto.IMessage` fields — for example **location** and **contact**:
+
+```ts theme={null}
+// Location
+await client.message.send(jid, {
+  locationMessage: {
+    degreesLatitude: -23.5613,
+    degreesLongitude: -46.6565,
+    name: 'Av. Paulista',
+    address: 'São Paulo, BR'
+  }
+})
+
+// Contact (vCard)
+const vcard = [
+  'BEGIN:VCARD',
+  'VERSION:3.0',
+  'FN:Jeff Singh',
+  'TEL;type=CELL;type=VOICE;waid=5511999999999:+55 11 99999-9999',
+  'END:VCARD'
+].join('\n')
+
+await client.message.send(jid, {
+  contactMessage: { displayName: 'Jeff', vcard }
+})
+
+// Multiple contacts
+await client.message.send(jid, {
+  contactsArrayMessage: {
+    displayName: '2 contacts',
+    contacts: [{ displayName: 'Jeff', vcard }]
+  }
+})
+```
+
+The full set of recognized `Proto.IMessage` fields (location, live location, contacts, group invite, product, order, …) is listed in the [message types reference](/en/reference/message-types).
+

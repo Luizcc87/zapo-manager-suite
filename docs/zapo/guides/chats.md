@@ -1,0 +1,106 @@
+# Managing chats
+Source: https://zapo.to/en/guides/chats
+
+Mute, pin, archive, mark as read, lock, star, clear, and delete WhatsApp chats with the typed client.chat coordinator backed by app-state mutations.
+
+Per-chat settings live on `client.chat` (`WaAppStateMutationCoordinator`). These are [app-state](/en/reference/glossary#app-state) mutations — they sync across **all your linked devices**, and changes made elsewhere arrive back as the [`mutation`](/en/concepts/events#state-history--mex) event.
+
+<Info>
+  These operations affect **your** account's view (and your other devices). They do **not** change anything for the other participants — e.g. deleting a chat doesn't delete it for them. For delete-for-everyone, use a [revoke](/en/guides/interactive-messages#revoking-delete-for-everyone).
+</Info>
+
+## Mute
+
+```ts theme={null}
+// Mute for 8 hours
+await client.chat.setChatMute(chatJid, true, Date.now() + 8 * 3600_000)
+
+// Unmute
+await client.chat.setChatMute(chatJid, false)
+```
+
+`muteEndTimestampMs` is required when muting (epoch ms). For "mute forever", pass a far-future timestamp. The client does **not** auto-unmute when the timer expires — that's when WhatsApp re-enables notifications.
+
+## Pin & archive
+
+```ts theme={null}
+await client.chat.setChatPin(chatJid, true)      // pin
+await client.chat.setChatArchive(chatJid, true)  // archive
+```
+
+<Note>
+  Pin and archive are **mutually exclusive** — pinning a chat clears its archive flag and vice-versa. WhatsApp caps the number of pinned chats server-side.
+</Note>
+
+## Read / unread
+
+```ts theme={null}
+await client.chat.setChatRead(chatJid, true)   // mark read
+await client.chat.setChatRead(chatJid, false)  // mark unread
+```
+
+## Lock
+
+```ts theme={null}
+await client.chat.setChatLock(chatJid, true)
+```
+
+Locking also clears archive and pin.
+
+## Star a message
+
+A message is identified by a `WaAppStateMessageKey`:
+
+```ts theme={null}
+interface WaAppStateMessageKey {
+  chatJid: string
+  id: string            // the message (stanza) id
+  fromMe: boolean
+  participantJid?: string // group sender
+}
+
+await client.chat.setMessageStar(
+  { chatJid, id: stanzaId, fromMe: false, participantJid: senderJid },
+  true
+)
+```
+
+## Clear & delete
+
+```ts theme={null}
+// Clear messages but keep the chat (local-only)
+await client.chat.clearChat(chatJid, { deleteStarred: false, deleteMedia: true })
+
+// Delete the chat entirely (removes it from the list + stored messages)
+await client.chat.deleteChat(chatJid, { deleteMedia: true })
+```
+
+`clearChat` keeps starred messages and media by default; set `deleteStarred` / `deleteMedia` to wipe those too. Neither leaves a group — use [`client.group.leaveGroup`](/en/guides/groups#leaving) for that.
+
+## Delete a message for me
+
+Removes a single message from your own device(s) only — recipients still see it:
+
+```ts theme={null}
+await client.chat.deleteMessageForMe(
+  { chatJid, id: stanzaId, fromMe: false },
+  { deleteMedia: true }
+)
+```
+
+To delete for everyone instead, send a [revoke](/en/guides/interactive-messages#revoking-delete-for-everyone).
+
+## Beyond the helpers
+
+The methods above are typed shortcuts. For anything without a dedicated helper — contacts, labels, quick replies, status privacy, and the full list of app-state schemas — use the generic `client.chat.set()` / `client.chat.remove()`. See the [chat mutations reference](/en/reference/chat-mutations).
+
+## Reacting to changes
+
+When a chat setting changes on another device, you receive a `mutation` event:
+
+```ts theme={null}
+client.on('mutation', (event) => {
+  console.log(event.collection, event.schema, event.operation)
+})
+```
+

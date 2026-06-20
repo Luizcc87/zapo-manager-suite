@@ -1,0 +1,182 @@
+# Migrating from Baileys
+Source: https://zapo.to/en/guides/migrating-from-baileys
+
+Coming from Baileys? Here's how the connection lifecycle, store layout, message API, and event names map onto zapo's coordinator-based client.
+
+`zapo` is an **independent** implementation of the WhatsApp Web protocol — not a fork of Baileys. The concepts overlap (companion pairing, Signal sessions, an event stream), but the API is different and it is **not** a drop-in replacement. This page maps the patterns you already know.
+
+<Note>
+  Auth state, message shapes, and method names differ. Plan to rewrite your socket setup and handlers — but the mental model (pair → listen → send) carries over directly.
+</Note>
+
+## Move existing sessions over (no re-pair)
+
+Switching libraries doesn't have to mean re-pairing every session. [`wa-store-migrate`](https://www.npmjs.com/package/wa-store-migrate) converts Baileys auth state directly into zapo's store layout — same device identity, same Signal sessions with every peer, no QR scan.
+
+```bash theme={null}
+npm i wa-store-migrate
+```
+
+The library is **pure conversion**: it doesn't read files, open sockets, or talk to any database itself. You hand it a `BaileysAuthSnapshot` (the same `{ creds, keys }` shape `useMultiFileAuthState` holds in memory), it returns a `ZapoStoreSnapshot`, and you write that into a fresh zapo store.
+
+```ts theme={null}
+import { migrate, bufferJsonReviver, type BaileysAuthSnapshot } from 'wa-store-migrate'
+import { createStore } from 'zapo-js'
+import { createSqliteStore } from '@zapo-js/store-sqlite'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+
+// 1. Read your Baileys auth folder into a snapshot
+function readBaileysMultiFile(dir: string): BaileysAuthSnapshot {
+  const creds = JSON.parse(readFileSync(join(dir, 'creds.json'), 'utf-8'), bufferJsonReviver)
+  const keys: Record<string, Record<string, unknown>> = {}
+  for (const f of readdirSync(dir)) {
+    if (f === 'creds.json') continue
+    const m = /^([a-z-]+)-(.+)\.json$/i.exec(f)
+    if (!m) continue
+    const id = m[2]!.replace(/__/g, '/').replace(/-/g, ':')
+    ;(keys[m[1]!] ??= {})[id] = JSON.parse(
+      readFileSync(join(dir, f), 'utf-8'),
+      bufferJsonReviver
+    )
+  }
+  return { creds, keys: keys as never }
+}
+
+// 2. Convert to zapo's snapshot shape (pure, no I/O)
+const baileys = readBaileysMultiFile('.auth/baileys')
+const { data, losses } = migrate({ from: 'baileys', to: 'zapo', data: baileys })
+for (const l of losses) {
+  console.warn(`[${l.severity}] ${l.domain} x${l.count}: ${l.reason}`)
+}
+
+// 3. Write into a brand-new zapo store
+const store = createStore({
+  backends: { sqlite: createSqliteStore({ path: '.auth/zapo.sqlite', driver: 'auto' }) },
+  providers: {
+    auth: 'sqlite', signal: 'sqlite', preKey: 'sqlite', session: 'sqlite',
+    identity: 'sqlite', senderKey: 'sqlite', appState: 'sqlite',
+    privacyToken: 'sqlite',
+    messages: 'none', threads: 'none', contacts: 'none'
+  }
+})
+const s = store.session('default')
+
+await s.auth.save(data.credentials)
+for (const k of data.preKeys ?? []) await s.preKey.putPreKey(k)
+if (data.identities?.length) {
+  await s.identity.setRemoteIdentities(
+    data.identities.map((i) => ({ address: i.address, identityKey: i.identityKey }))
+  )
+}
+if (data.sessions?.length) {
+  await s.session.setSessionsBatch(
+    data.sessions.map((x) => ({ address: x.address, session: x.record as never }))
+  )
+}
+for (const sk of data.senderKeys ?? []) await s.senderKey.upsertSenderKey(sk.record as never)
+if (data.appState?.keys?.length) await s.appState.upsertSyncKeys(data.appState.keys)
+if (data.privacyTokens?.length) await s.privacyToken.upsertBatch(data.privacyTokens)
+```
+
+Point a new `WaClient({ store, sessionId: 'default' })` at the resulting store and call `connect()` — it comes up as the existing device, with every peer Signal session intact.
+
+<Note>
+  **Auth state in a database, not files?** The `BaileysAuthSnapshot` shape is just `{ creds, keys: { 'pre-key': {...}, 'session': {...}, 'sender-key': {...}, ... } }`. If your Baileys storage is custom (one MySQL table per session, Postgres rows, Redis hashes, …), point your reader at that store and produce the same object — the `migrate()` call and the zapo write side stay identical. For multiple sessions, run the pipeline once per `sessionId`.
+</Note>
+
+<Note>
+  **Loss expectations.** Migrating to zapo has **no drops** — every Signal domain transfers. Expect a few `warn`-severity entries in `losses`: skipped HKDF message keys are dropped (sessions self-heal on the next message), only the latest sender-key state is kept (libsignal stores up to 5), and privacy-token timestamps lose sub-second precision. Full table on [`wa-store-migrate`](https://www.npmjs.com/package/wa-store-migrate#loss-matrix).
+</Note>
+
+## Creating the socket
+
+Baileys gives you a socket from a factory; zapo gives you a `WaClient` plus an explicit [store](/en/concepts/stores).
+
+```ts theme={null}
+// Baileys (typical)
+const { state, saveCreds } = await useMultiFileAuthState('auth')
+const sock = makeWASocket({ auth: state })
+sock.ev.on('creds.update', saveCreds)
+
+// zapo
+import { createStore, WaClient } from 'zapo-js'
+import { createSqliteStore } from '@zapo-js/store-sqlite'
+
+const store = createStore({
+  backends: { sqlite: createSqliteStore({ path: '.auth/state.sqlite', driver: 'auto' }) },
+  providers: {
+    auth: 'sqlite',
+    signal: 'sqlite',
+    preKey: 'sqlite',
+    session: 'sqlite',
+    identity: 'sqlite',
+    senderKey: 'sqlite',
+    appState: 'sqlite',
+    privacyToken: 'sqlite',
+    messages: 'none',
+    threads: 'none',
+    contacts: 'none'
+  }
+})
+const client = new WaClient({ store, sessionId: 'default' }, logger)
+await client.connect()
+```
+
+There is **no `creds.update` to save by hand** — the store persists credentials automatically. Pick any backend (SQLite, Postgres, MySQL, Redis, Mongo) on [Installation](/en/installation#add-a-storage-backend).
+
+## Events
+
+Baileys multiplexes everything through `sock.ev`; zapo exposes a typed event per concern on `client`.
+
+| Baileys                                                                      | zapo                                                                                     |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `sock.ev.on('connection.update', ({ connection, qr, lastDisconnect }) => …)` | `client.on('connection', …)` + `client.on('auth_qr', …)` + `client.on('auth_paired', …)` |
+| `sock.ev.on('creds.update', saveCreds)`                                      | *(automatic — the store persists creds)*                                                 |
+| `sock.ev.on('messages.upsert', ({ messages }) => …)`                         | `client.on('message', (event) => …)`                                                     |
+| `sock.ev.on('messages.update', …)` (edits/reactions/polls)                   | `client.on('message_addon', …)` / `client.on('message_protocol', …)`                     |
+| `sock.ev.on('message-receipt.update', …)`                                    | `client.on('receipt', …)`                                                                |
+| `sock.ev.on('groups.update' / 'group-participants.update', …)`               | `client.on('group', …)`                                                                  |
+| `sock.ev.on('presence.update', …)`                                           | `client.on('presence', …)` / `client.on('chatstate', …)`                                 |
+
+The full map is in [Events](/en/concepts/events). Each event is strongly typed via `WaClientEventMap`.
+
+## Sending messages
+
+```ts theme={null}
+// Baileys
+await sock.sendMessage(jid, { text: 'hello' })
+await sock.sendMessage(jid, { image: { url: './pic.jpg' }, caption: 'hi' })
+
+// zapo
+await client.message.send(jid, 'hello') // string shorthand for text
+await client.message.send(jid, { type: 'image', media: './pic.jpg', mimetype: 'image/jpeg', caption: 'hi' })
+```
+
+zapo uses a discriminated [content union](/en/guides/sending-messages#the-content-union) (`{ type: 'image' | 'video' | 'audio' | 'document' | 'poll' | 'reaction' | … }`) instead of Baileys' shape-by-key object. Quoting/mentions move from the content object into the `options` argument (`{ quote, mentions }`).
+
+## API mapping
+
+| Baileys                                                       | zapo                                                                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `makeWASocket(...)`                                           | `new WaClient(options, logger)`                                                                        |
+| `useMultiFileAuthState(...)`                                  | `createStore({ backends, providers })`                                                                 |
+| `sock.sendMessage(jid, content)`                              | `client.message.send(jid, content, options?)`                                                          |
+| `downloadMediaMessage(...)`                                   | `client.message.download(event)` / `downloadToFile(event, path)`                                       |
+| `sock.groupMetadata(jid)`                                     | `client.group.queryGroupMetadata(jid)`                                                                 |
+| `sock.groupCreate(...)` / `groupParticipantsUpdate(...)`      | `client.group.createGroup(...)` / `addParticipants` / `removeParticipants` / `promoteParticipants` / … |
+| `sock.updateProfilePicture(...)` / `updateProfileStatus(...)` | `client.profile.setProfilePicture(...)` / `setStatus(...)`                                             |
+| `sock.updateBlockStatus(...)`                                 | `client.privacy.blockUser(jid)` / `unblockUser(jid)`                                                   |
+| `sock.sendPresenceUpdate(...)`                                | `client.presence.send(...)` / `sendChatstate(...)`                                                     |
+| `sock.logout()`                                               | `client.logout()`                                                                                      |
+| `jidNormalizedUser(...)` / `jidDecode(...)`                   | `toUserJid(...)` / `splitJid(...)` / `parseJidFull(...)` ([JID helpers](/en/reference/jid-helpers))    |
+| `proto.Message`                                               | `proto` (exported from the package root)                                                               |
+
+## Key differences to keep in mind
+
+* **LID-first.** zapo prefers the privacy-preserving [LID](/en/concepts/identities) identity over the phone-number JID. Reply to `event.key.remoteJid`, and prefer LIDs when you have them.
+* **Coordinator API.** Features are grouped on getters (`client.message`, `client.group`, `client.privacy`, …) instead of flat socket methods — see [Architecture](/en/concepts/architecture).
+* **Pluggable, typed stores.** Persistence is a first-class layer with official backends, not a JSON folder. See [Stores](/en/concepts/stores).
+* **No auto-reconnect.** Like Baileys, you drive reconnection — but read [Errors & disconnects](/en/guides/errors) for the reason codes.
+* **No number registration.** zapo connects with already-paired/registered credentials; it does not register new numbers.
+
