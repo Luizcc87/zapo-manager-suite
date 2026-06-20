@@ -287,11 +287,19 @@ export class ZapoManager {
         }
       } else if (event.status === 'close') {
         activeData.qrCode = undefined;
-        await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
-        ZapoManager.sendWebhook(instanceName, 'connection.update', {
-          status: 'disconnected',
-          reason: (event as any).reason
-        });
+        const isLogout = (event as any).isLogout || (event as any).reason === 'stream_error_device_removed';
+        if (isLogout) {
+          console.log(`[ZapoManager] [${instanceName}] Desconexão permanente (logout/device_removed). Limpando recursos.`);
+          ZapoManager.disconnectClient(instanceName).catch(err => {
+            console.error(`[ZapoManager] [${instanceName}] Erro ao desconectar no evento de close:`, err.message);
+          });
+        } else {
+          await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
+          ZapoManager.sendWebhook(instanceName, 'connection.update', {
+            status: 'disconnected',
+            reason: (event as any).reason
+          });
+        }
       }
     });
 

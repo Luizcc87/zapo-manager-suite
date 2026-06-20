@@ -18,7 +18,9 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `frontend/src/pages/instance/DashboardInstance/index.tsx`: Importa `DialogTitle` e corrige avisos do console do Radix UI adicionando título acessível e definindo `aria-describedby` adequadamente nos diálogos de QR Code e Código de Pareamento.
 
 **Backend**
-- `backend/src/manager.ts`: Verifica se o cliente está registrado (`client.getState().registered`) no manipulador de eventos `connection` com status `open` antes de definir o status da instância como `connected` no banco de dados. Isso impede que a tela de QR code seja fechada erroneamente ao abrir a conexão de rede sem o escaneamento do QR code.
+- `backend/src/manager.ts`: 
+  - Verifica se o cliente está registrado (`client.getState().registered`) no manipulador de eventos `connection` com status `open` antes de definir o status da instância como `connected` no banco de dados. Isso impede que a tela de QR code seja fechada erroneamente ao abrir a conexão de rede sem o escaneamento do QR code.
+  - No manipulador de eventos `connection` com status `close`, se for detectado um logout permanente (`isLogout: true` ou `reason === "stream_error_device_removed"`), executa a limpeza completa dos recursos chamando `disconnectClient()`. Isso remove o cliente do mapa `activeClients` e libera os locks no Redis, garantindo que o status no card do painel mude corretamente para desablitado em vez de ficar preso em "Conectado".
 
 ### Proxy — sticky session, auto-registro de IP, substituição
 
