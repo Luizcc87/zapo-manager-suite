@@ -15,6 +15,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `frontend/src/components/footer.tsx`: Atualiza verificação de `enabled` no query do servidor para `provider !== "go"`.
 - `frontend/src/components/sidebar.tsx`: Importa `useParams` e implementa fallback de `instanceId` no caminho base dos links da barra lateral, evitando que o link aponte para `/dashboard` (gerando erro 404 no React Router) enquanto o objeto da instância está sendo carregado.
 - `frontend/src/components/instance-card.tsx`: Remove as classes de opacidade e hover na linha de botões de ação do card da instância, mantendo os botões visíveis de forma permanente para melhor clareza.
+- `frontend/src/pages/instance/DashboardInstance/index.tsx`: Importa `DialogTitle` e corrige avisos do console do Radix UI adicionando título acessível e definindo `aria-describedby` adequadamente nos diálogos de QR Code e Código de Pareamento.
 
 ### Proxy — sticky session, auto-registro de IP, substituição
 

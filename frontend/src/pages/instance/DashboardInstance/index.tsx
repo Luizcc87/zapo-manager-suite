@@ -3,7 +3,7 @@ import { Alert, AlertTitle } from "@evoapi/design-system/alert";
 import { Avatar, AvatarImage } from "@evoapi/design-system/avatar";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@evoapi/design-system/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CircleUser, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -223,8 +223,10 @@ function DashboardInstance() {
                           {t("instance.dashboard.button.qrcode.label")}
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>{t("instance.dashboard.button.qrcode.title")}</DialogHeader>
+                      <DialogContent aria-describedby={undefined}>
+                        <DialogHeader>
+                          <DialogTitle>{t("instance.dashboard.button.qrcode.title")}</DialogTitle>
+                        </DialogHeader>
                         <div className="flex flex-col items-center gap-3 py-4">
                           {qrCode ? (
                             <>
@@ -249,6 +251,7 @@ function DashboardInstance() {
                         </DialogTrigger>
                         <DialogContent onCloseAutoFocus={closeQRCodePopup}>
                           <DialogHeader>
+                            <DialogTitle>{t("instance.dashboard.button.pairingCode.label")}</DialogTitle>
                             <DialogDescription>
                               {pairingCode ? (
                                 <div className="py-3">
