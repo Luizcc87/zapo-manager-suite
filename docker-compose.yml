@@ -2,16 +2,17 @@ version: '3.8'
 
 services:
   zapo-manager-app:
-    image: zapo-manager:latest
+    image: lc1868/zapo-manager:latest
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
       - DATABASE_URL=postgresql://zapo_user:zapo_pass@postgres:5432/zapo_db?schema=public
       - REDIS_URL=redis://redis:6379/0
       - GLOBAL_API_KEY=global_key
+      - SERVER_URL=http://localhost:8082
       - WEBHOOK_URL=http://your-webhook-endpoint.com/webhook
       - PORT=8080
     deploy:

@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+.git
+.auth
+dist
+**/dist
+.env
+.env.*
+*.log
+.gemini
+.remember

@@ -91,8 +91,9 @@ async function checkInstanceApiKey(req: Request, res: Response, next: any) {
       return res.status(404).json({ error: 'Instance not found' });
     }
 
-    if (instance.apiKey !== requestKey) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid Instance API Key' });
+    const globalApiKey = process.env.GLOBAL_API_KEY;
+    if (instance.apiKey !== requestKey && globalApiKey !== requestKey) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid API Key' });
     }
 
     next();
@@ -352,7 +353,8 @@ router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, r
     }
 
     // Se já estiver conectado ou sem QR ainda
-    const connected = active.client.getState().connected;
+    const clientState = active.client.getState();
+    const connected = clientState.connected && clientState.registered;
     return res.status(200).json({
       code: '',
       count: 0,
@@ -381,7 +383,8 @@ router.get('/connectionState/:instanceName', checkInstanceApiKey, async (req: Re
       });
     }
 
-    const connected = active.client.getState().connected;
+    const clientState = active.client.getState();
+    const connected = clientState.connected && clientState.registered;
     const state = connected ? 'open' : (active.qrCode ? 'connecting' : 'close');
     return res.status(200).json({
       instance: {
@@ -406,7 +409,11 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
       const isMockConnected = inst.status === 'connected' && !active;
-      const connected = active ? active.client.getState().connected : isMockConnected;
+      let connected = isMockConnected;
+      if (active) {
+        const clientState = active.client.getState();
+        connected = clientState.connected && clientState.registered;
+      }
       const state = connected ? 'open' : (active?.qrCode ? 'connecting' : 'close');
       
       let ownerJid: string | null = null;

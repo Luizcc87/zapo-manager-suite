@@ -4,3 +4,16 @@ dist/
 .env.local
 .env.*.local
 *.log
+
+# BMad and agent folders
+_bmad-output/
+.agents/
+.agent/
+.claude/
+_bmad/**/*.user.toml
+_bmad/*.user.toml
+
+# Playwright test outputs
+test-results/
+playwright-report/
+blob-report/
