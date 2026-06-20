@@ -17,6 +17,9 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `frontend/src/components/instance-card.tsx`: Remove as classes de opacidade e hover na linha de botões de ação do card da instância, mantendo os botões visíveis de forma permanente para melhor clareza.
 - `frontend/src/pages/instance/DashboardInstance/index.tsx`: Importa `DialogTitle` e corrige avisos do console do Radix UI adicionando título acessível e definindo `aria-describedby` adequadamente nos diálogos de QR Code e Código de Pareamento.
 
+**Backend**
+- `backend/src/manager.ts`: Verifica se o cliente está registrado (`client.getState().registered`) no manipulador de eventos `connection` com status `open` antes de definir o status da instância como `connected` no banco de dados. Isso impede que a tela de QR code seja fechada erroneamente ao abrir a conexão de rede sem o escaneamento do QR code.
+
 ### Proxy — sticky session, auto-registro de IP, substituição
 
 **Backend**

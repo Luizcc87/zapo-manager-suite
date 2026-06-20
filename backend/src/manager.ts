@@ -277,10 +277,16 @@ export class ZapoManager {
     client.on('connection', async (event) => {
       console.log(`[ZapoManager] [${instanceName}] Evento de conexão:`, event);
       if (event.status === 'open') {
-        activeData.qrCode = undefined;
-        await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
-        ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connected' });
+        const isRegistered = client.getState().registered;
+        if (isRegistered) {
+          activeData.qrCode = undefined;
+          await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
+          ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connected' });
+        } else {
+          console.log(`[ZapoManager] [${instanceName}] Conexão de rede aberta, aguardando autenticação (registered=false).`);
+        }
       } else if (event.status === 'close') {
+        activeData.qrCode = undefined;
         await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
         ZapoManager.sendWebhook(instanceName, 'connection.update', {
           status: 'disconnected',
