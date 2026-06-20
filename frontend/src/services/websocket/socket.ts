@@ -55,10 +55,14 @@ export const connectSocket = (
 
   activeSockets.set(key, socket);
 
+  let hasConnectedOnce = false;
   socket.on("connect", () => {
     console.log(`[WS] Connected to ${serverUrl} (instance: ${instanceName})`);
-    // FIX 3: notifica chamador para refetch de dados e fechar banner de "reconectando"
-    callbacks?.onReconnect?.();
+    if (hasConnectedOnce) {
+      // Reconexão real após queda — notifica para exibir toast e refetch
+      callbacks?.onReconnect?.();
+    }
+    hasConnectedOnce = true;
   });
 
   socket.on("disconnect", (reason) => {
