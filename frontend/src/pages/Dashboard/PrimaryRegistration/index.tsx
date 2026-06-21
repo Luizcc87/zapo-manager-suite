@@ -24,6 +24,7 @@ import {
   confirmRegistrationCode,
   requestRegistrationCode,
 } from "@/lib/queries/instance/registrationApi";
+import { useFetchProxy } from "@/lib/queries/proxy/fetchProxy";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,23 @@ export function PrimaryRegistrationDialog({
   const [proxyPort, setProxyPort] = useState("");
   const [proxyUsername, setProxyUsername] = useState("");
   const [proxyPassword, setProxyPassword] = useState("");
+
+  // Pré-popula proxy quando reabrindo para instância existente
+  const { data: existingProxy } = useFetchProxy({
+    instanceName: defaultInstanceName ?? null,
+    enabled: !!defaultInstanceName && open,
+  });
+
+  useEffect(() => {
+    if (!existingProxy?.host) return;
+    setProxyOpen(true);
+    setProxyEnabled(existingProxy.enabled ?? true);
+    setProxyProtocol(existingProxy.protocol || "http");
+    setProxyHost(existingProxy.host || "");
+    setProxyPort(existingProxy.port || "");
+    setProxyUsername(existingProxy.username || "");
+    setProxyPassword(existingProxy.password || "");
+  }, [existingProxy]);
 
   const formMethods = useForm<FormData>({
     resolver: zodResolver(formSchema),
