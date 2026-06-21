@@ -24,7 +24,7 @@ const ProxyBadge = ({ enabled, connected }: { enabled?: boolean; connected?: boo
     return (
       <Badge className="gap-1 bg-muted text-muted-foreground hover:bg-muted/80" title="Proxy desativado">
         <ShieldCheck className="h-3 w-3" />
-        <span className="font-mono text-[10px]">—</span>
+        <span className="font-mono text-[10px]"><span className="hidden sm:inline">Proxy </span>—</span>
       </Badge>
     );
   }
@@ -32,14 +32,14 @@ const ProxyBadge = ({ enabled, connected }: { enabled?: boolean; connected?: boo
     return (
       <Badge className="gap-1 bg-red-500/10 text-red-500 hover:bg-red-500/20" title="Proxy configurado mas falhou na conexão">
         <ShieldAlert className="h-3.5 w-3.5" />
-        <span className="font-mono text-[10px] font-semibold">ERR</span>
+        <span className="font-mono text-[10px] font-semibold"><span className="hidden sm:inline">Proxy </span>ERR</span>
       </Badge>
     );
   }
   return (
     <Badge className="gap-1 bg-purple-500/10 text-purple-500 hover:bg-purple-500/20" title="Proxy ativo e conectado">
       <ShieldCheck className="h-3 w-3" />
-      <span className="font-mono text-[10px] font-semibold">OK</span>
+      <span className="font-mono text-[10px] font-semibold"><span className="hidden sm:inline">Proxy </span>OK</span>
     </Badge>
   );
 };
@@ -49,14 +49,14 @@ const WebhookBadge = ({ enabled }: { enabled?: boolean }) => {
     return (
       <Badge className="gap-1 bg-muted text-muted-foreground hover:bg-muted/80" title="Webhook desativado">
         <SquareMousePointer className="h-3 w-3" />
-        <span className="font-mono text-[10px]">OFF</span>
+        <span className="font-mono text-[10px]"><span className="hidden sm:inline">Webhook </span>OFF</span>
       </Badge>
     );
   }
   return (
     <Badge className="gap-1 bg-sky-500/10 text-sky-500 hover:bg-sky-500/20" title="Webhook ativo">
       <SquareMousePointer className="h-3 w-3" />
-      <span className="font-mono text-[10px] font-semibold">ON</span>
+      <span className="font-mono text-[10px] font-semibold"><span className="hidden sm:inline">Webhook </span>ON</span>
     </Badge>
   );
 };
