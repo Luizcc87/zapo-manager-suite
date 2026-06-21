@@ -2,7 +2,6 @@ import { Badge } from "@evoapi/design-system/badge";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent } from "@evoapi/design-system/card";
 import { FlaskConical, Globe, ShieldCheck, ShieldAlert, Settings, SquareMousePointer, Smartphone, Trash2, KeyRound } from "lucide-react";
-import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -20,32 +19,44 @@ const StatusBadge = ({ status }: { status?: string }) => {
 
 const formatOwnerJid = (ownerJid: string) => ownerJid.split("@")[0].split(":")[0];
 
-const FlagBadge = ({
-  active,
-  activeLabel,
-  inactiveLabel,
-  activeClassName,
-  inactiveClassName,
-  activeIcon,
-  inactiveIcon,
-}: {
-  active: boolean;
-  activeLabel: string;
-  inactiveLabel: string;
-  activeClassName: string;
-  inactiveClassName: string;
-  activeIcon: ReactNode;
-  inactiveIcon: ReactNode;
-}) => {
-  return active ? (
-    <Badge className={activeClassName}>
-      <span className="mr-1 inline-flex items-center">{activeIcon}</span>
-      {activeLabel}
+const ProxyBadge = ({ enabled, connected }: { enabled?: boolean; connected?: boolean }) => {
+  if (!enabled) {
+    return (
+      <Badge className="gap-1 bg-muted text-muted-foreground hover:bg-muted/80" title="Proxy desativado">
+        <ShieldCheck className="h-3 w-3" />
+        <span className="font-mono text-[10px]">—</span>
+      </Badge>
+    );
+  }
+  if (connected === false) {
+    return (
+      <Badge className="gap-1 bg-red-500/10 text-red-500 hover:bg-red-500/20" title="Proxy configurado mas falhou na conexão">
+        <ShieldAlert className="h-3.5 w-3.5" />
+        <span className="font-mono text-[10px] font-semibold">ERR</span>
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="gap-1 bg-purple-500/10 text-purple-500 hover:bg-purple-500/20" title="Proxy ativo e conectado">
+      <ShieldCheck className="h-3 w-3" />
+      <span className="font-mono text-[10px] font-semibold">OK</span>
     </Badge>
-  ) : (
-    <Badge className={inactiveClassName}>
-      <span className="mr-1 inline-flex items-center">{inactiveIcon}</span>
-      {inactiveLabel}
+  );
+};
+
+const WebhookBadge = ({ enabled }: { enabled?: boolean }) => {
+  if (!enabled) {
+    return (
+      <Badge className="gap-1 bg-muted text-muted-foreground hover:bg-muted/80" title="Webhook desativado">
+        <SquareMousePointer className="h-3 w-3" />
+        <span className="font-mono text-[10px]">OFF</span>
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="gap-1 bg-sky-500/10 text-sky-500 hover:bg-sky-500/20" title="Webhook ativo">
+      <SquareMousePointer className="h-3 w-3" />
+      <span className="font-mono text-[10px] font-semibold">ON</span>
     </Badge>
   );
 };
@@ -104,24 +115,8 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
 
         <div className="space-y-1 px-4 py-3 text-xs text-sidebar-foreground/70">
           <div className="flex flex-wrap gap-2 pb-2">
-            <FlagBadge
-              active={!!instance.proxyEnabled}
-              activeLabel={instance.proxyConnected === false ? t("proxy.badge.failed", { defaultValue: "Proxy falhou" }) : t("proxy.badge.active")}
-              inactiveLabel={t("proxy.badge.inactive", { defaultValue: "Proxy desativado" })}
-              activeClassName={instance.proxyConnected === false ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" : "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"}
-              inactiveClassName="bg-muted text-muted-foreground hover:bg-muted/80"
-              activeIcon={instance.proxyConnected === false ? <ShieldAlert className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3 w-3" />}
-              inactiveIcon={<ShieldCheck className="h-3 w-3" />}
-            />
-            <FlagBadge
-              active={!!instance.webhookEnabled}
-              activeLabel={t("webhook.status.active", { defaultValue: "Webhook ativo" })}
-              inactiveLabel={t("webhook.status.inactive", { defaultValue: "Webhook desativado" })}
-              activeClassName="bg-sky-500/10 text-sky-500 hover:bg-sky-500/20"
-              inactiveClassName="bg-muted text-muted-foreground hover:bg-muted/80"
-              activeIcon={<SquareMousePointer className="h-3 w-3" />}
-              inactiveIcon={<SquareMousePointer className="h-3 w-3" />}
-            />
+            <ProxyBadge enabled={!!instance.proxyEnabled} connected={instance.proxyConnected} />
+            <WebhookBadge enabled={!!instance.webhookEnabled} />
             {(() => {
               const isMobile = instance.instanceType === "mobile" || !!instance.mobileTransport;
               const isPrimary = isMobile && !!instance.number;
