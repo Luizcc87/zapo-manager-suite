@@ -4,7 +4,7 @@ export const DEFAULT_MOBILE_DEVICE = {
   osVersion: '16',
   osBuildNumber: 'BP1A.250505.001',
   // ponytail: updated at startup by fetchAndroidWaVersion; hardcoded as safe fallback
-  appVersion: '2.24.4.76',
+  appVersion: '2.26.23.73',
 };
 
 let _appVersion = DEFAULT_MOBILE_DEVICE.appVersion;
