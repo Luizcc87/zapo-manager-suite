@@ -14,3 +14,10 @@ export const setAppVersion = (v: string) => { _appVersion = v; };
 
 /** Returns device config with the runtime-resolved appVersion. */
 export const getMobileDevice = () => ({ ...DEFAULT_MOBILE_DEVICE, appVersion: _appVersion });
+
+// iOS WA Business version for Baileys OTP registration (separate from Android TCP version).
+// App Store format is "24.x.x"; we store with "2." prefix to match WA UA format "2.24.x.x".
+// Hardcoded 2026-06-21; updated at startup by fetchIosWaVersion.
+let _iosVersion = '2.24.17.80';
+export const getCurrentIosVersion = () => _iosVersion;
+export const setIosVersion = (v: string) => { _iosVersion = v; };

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ZapoManager, testProxyConnectivity } from '../manager';
-import { getMobileDevice } from '../config/device';
+import { getMobileDevice, getCurrentIosVersion } from '../config/device';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
 import { DEFAULT_CONNECTION_CONFIG } from '@whiskeysockets/baileys/lib/Defaults/index.js';
@@ -13,11 +13,12 @@ import { DEFAULT_CONNECTION_CONFIG } from '@whiskeysockets/baileys/lib/Defaults/
 import { createHash } from 'crypto';
 const BaileysMobileDefaults = require('@whiskeysockets/baileys/lib/Defaults/index.js');
 const patchBaileysDefaults = () => {
-  const device = getMobileDevice();
-  const appVersion = device.appVersion;
-  const versionHash = createHash('md5').update(appVersion).digest('hex');
+  // Use iOS version (from App Store) — NOT Android version from Play Store.
+  // WA validates version↔OS consistency: Android version in iOS UA → blocked.
+  const iosVersion = getCurrentIosVersion();
+  const versionHash = createHash('md5').update(iosVersion).digest('hex');
   BaileysMobileDefaults.MOBILE_TOKEN = Buffer.from('0a1mLfGUIBVrMKF1RdvLI5lkRBvof6vn0fD2QRSM' + versionHash);
-  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${appVersion} iOS/15.3.1 Device/Apple-iPhone_7`;
+  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${iosVersion} iOS/15.3.1 Device/Apple-iPhone_7`;
 };
 import * as path from 'path';
 import * as fs from 'fs';
@@ -151,7 +152,7 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     const device = getMobileDevice();
     console.log(`[ZapoRouter] [RegisterCode] ── Início do registro primário ──`);
     console.log(`[ZapoRouter] [RegisterCode] Instância: ${instanceName} | Telefone: ${phoneNumber} | Método: ${method || 'sms'}`);
-    console.log(`[ZapoRouter] [RegisterCode] appVersion: ${device.appVersion}`);
+    console.log(`[ZapoRouter] [RegisterCode] appVersion iOS (Baileys): ${getCurrentIosVersion()} | Android (TCP): ${device.appVersion}`);
     console.log(`[ZapoRouter] [RegisterCode] User-Agent: ${BaileysMobileDefaults.MOBILE_USERAGENT}`);
     console.log(`[ZapoRouter] [RegisterCode] MOBILE_TOKEN (hex): ${BaileysMobileDefaults.MOBILE_TOKEN.toString('hex').slice(0, 16)}...`);
 

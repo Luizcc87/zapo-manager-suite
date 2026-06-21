@@ -13,7 +13,8 @@ import chatRouter from './routes/chat.routes';
 import configRouter from './routes/config.routes';
 import { ZapoManager } from './manager';
 import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
-import { setAppVersion, getCurrentAppVersion } from './config/device';
+import { fetchLatestIosWaVersion } from './config/fetchIosWaVersion';
+import { setAppVersion, getCurrentAppVersion, setIosVersion, getCurrentIosVersion } from './config/device';
 
 const execFileAsync = promisify(execFile);
 
@@ -318,6 +319,14 @@ async function bootstrap() {
       console.warn(`[Zapo-Manager] WA Business Android version: fetch falhou — usando fallback hardcoded: ${getCurrentAppVersion()}`);
     }
 
+    const latestIosVersion = await fetchLatestIosWaVersion();
+    if (latestIosVersion) {
+      setIosVersion(latestIosVersion);
+      console.log(`[Zapo-Manager] WA Business iOS version (App Store): ${latestIosVersion}`);
+    } else {
+      console.warn(`[Zapo-Manager] WA Business iOS version: fetch falhou — usando fallback hardcoded: ${getCurrentIosVersion()}`);
+    }
+
     // Atualiza versão WA Business diariamente às 03:00 (horário do servidor)
     const scheduleDailyVersionCheck = () => {
       const now = new Date();
@@ -326,12 +335,18 @@ async function bootstrap() {
       if (next <= now) next.setDate(next.getDate() + 1);
       const delay = next.getTime() - now.getTime();
       setTimeout(async () => {
-        const v = await fetchLatestAndroidWaVersion();
-        if (v) {
-          setAppVersion(v);
-          console.log(`[Zapo-Manager] WA Business Android version atualizada (Play Store): ${v}`);
+        const [vAndroid, vIos] = await Promise.all([fetchLatestAndroidWaVersion(), fetchLatestIosWaVersion()]);
+        if (vAndroid) {
+          setAppVersion(vAndroid);
+          console.log(`[Zapo-Manager] WA Business Android version atualizada (Play Store): ${vAndroid}`);
         } else {
           console.warn(`[Zapo-Manager] WA Business Android version: fetch diário falhou — mantendo: ${getCurrentAppVersion()}`);
+        }
+        if (vIos) {
+          setIosVersion(vIos);
+          console.log(`[Zapo-Manager] WA Business iOS version atualizada (App Store): ${vIos}`);
+        } else {
+          console.warn(`[Zapo-Manager] WA Business iOS version: fetch diário falhou — mantendo: ${getCurrentIosVersion()}`);
         }
         scheduleDailyVersionCheck();
       }, delay);
