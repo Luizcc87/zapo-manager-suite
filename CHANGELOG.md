@@ -6,6 +6,43 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-20
 
+### Fix: Chat não exibia mensagens recebidas nem enviadas pelo app (Mobile Transport / @lid JID)
+
+**Causa raiz:** Mobile Transport usa JIDs no formato `@lid` (Linked ID privado) em vez do JID de telefone `@s.whatsapp.net`. O frontend navega e filtra mensagens pelo JID de telefone (URL do chat e body do `findMessages`), causando mismatch silencioso — as mensagens eram recebidas pelo zapo-js mas armazenadas num bucket de chave diferente, nunca retornadas ao frontend.
+
+**Backend — `backend/src/manager.ts`**
+- Handler `client.on('message', ...)`: lê `event.key.remoteJidAlt` (JID alternativo que zapo-js inclui quando o primário é `@lid`) e normaliza `key.remoteJid → @s.whatsapp.net` antes de chamar `storeMessage` e emitir via socket/webhook. Payload do socket passa a usar o objeto `normalized` retornado por `storeMessage`, que inclui o campo `messageType`.
+- `storeMessage()`: detecta `messageType` excluindo campos de metadado (`messageContextInfo`, `$$unknownFieldCount`, `viewOnceMessageV2Extension`, `pinInChatMessage`) da iteração `Object.keys()`, evitando que a serialização proto ponha `messageContextInfo` primeiro e resulte em `messageType: 'unknown'`. Passa a retornar o objeto `normalized`.
+- Adicionado método estático `debugState(instanceName)` para inspeção em tempo real do mapa em memória (chats e contagem de mensagens por JID).
+
+**Backend — `backend/src/routes/chat.routes.ts`**
+- Endpoint de diagnóstico `GET /chat/debug/:instanceName` — retorna estado in-memory (chats, messages por JID, cliente ativo). Temporário; manter para debugging em produção.
+
+**Efeito colateral corrigido no frontend:** socket payload sem `messageType` causava que o merge `allMessages` (RQ + realtime) sobrescrevesse o objeto correto do React Query com o objeto bruto do socket (sem `messageType`), fazendo o switch do `MessageContent` cair no caso `default` e exibir "Unknown message type". Resolvido ao incluir `messageType` no payload do socket.
+
+### Fix: Persistência de mensagens e exibição em tempo real no chat
+
+**Backend — `backend/src/manager.ts`**
+- `storeMessage()`: persiste mensagem em `wa_messages` (upsert fire-and-forget) quando `SAVE_DATA_NEW_MESSAGE=true`.
+- `getMessageList()`: agora `async`; quando `SAVE_DATA_NEW_MESSAGE=true` busca do banco e faz merge com mapa in-memory (DB como cold store, memória sobrescreve em caso de conflito por ID).
+
+**Backend — `backend/prisma/schema.prisma` e migração**
+- Novo model `Message` mapeado para `wa_messages` com campos `instanceName`, `remoteJid`, `messageId`, `fromMe`, `messageType`, `message` (JSONB), `messageTimestamp`, `source`.
+- `backend/prisma/migrations/20260623000001_add_wa_messages/migration.sql`: migration idempotente (`CREATE TABLE IF NOT EXISTS`, `CREATE UNIQUE INDEX IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`).
+
+**Backend — `backend/src/routes/chat.routes.ts`**
+- `POST /chat/findMessages/:instanceName`: adicionado `await` em `ZapoManager.getMessageList()`.
+
+**Frontend — `frontend/src/pages/instance/Chat/messages.tsx`**
+- `useFindMessages` recebe `refetchInterval: 3000` — polling garante que mensagens recebidas apareçam mesmo sem evento de socket (fallback robusto).
+- Cleanup do useEffect usa callbacks nomeados (`onUpsert`, `onSend`, `onUpdate`) para `socket.offHandler()` em vez de `socket.off(event)` que removia TODOS os handlers do evento no socket compartilhado.
+
+**Frontend — `frontend/src/pages/instance/Chat/index.tsx`**
+- Removido `disconnectSocket()` do cleanup do useEffect — destruía o socket compartilhado ao navegar entre abas, fazendo `messages.tsx` perder a conexão de real-time.
+
+**Frontend — `frontend/src/services/websocket/socket.ts`**
+- Adicionado método `offHandler(event, callback)` à interface `WebSocketConnection` e implementação no `createSocketWrapper`, permitindo remoção seletiva de listener específico sem afetar outros handlers do mesmo evento.
+
 ### Correção de exibição de mensagens enviadas (fromMe) no chat
 
 **Backend**
