@@ -4,6 +4,15 @@ import { getMobileDevice } from '../config/device';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
 import { DEFAULT_CONNECTION_CONFIG } from '@whiskeysockets/baileys/lib/Defaults/index.js';
+
+// Patch runtime: Baileys v6 hardcodes MOBILE_USERAGENT ('2.23.14.82 iOS').
+// mobileRegisterFetch sempre sobrescreve o header com este valor — não tem override via config.
+// Atualizamos para a versão Android atual antes de cada uso.
+const BaileysMobileDefaults = require('@whiskeysockets/baileys/lib/Defaults/index.js');
+const patchBaileysUserAgent = () => {
+  const device = getMobileDevice();
+  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${device.appVersion} Android/${device.osVersion} Device/${device.manufacturer}-${device.device}`;
+};
 import * as path from 'path';
 import * as fs from 'fs';
 import { prisma } from '../lib/prisma';
@@ -131,7 +140,14 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
       return res.status(400).json({ error: 'instanceName and phoneNumber are required' });
     }
 
-    console.log(`[ZapoRouter] [RegisterCode] Solicitação de código para ${instanceName}: ${phoneNumber} via ${method || 'sms'}`);
+    // Patch User-Agent do Baileys para versão Android atual (Baileys v6 hardcoda iOS/2.23 no MOBILE_USERAGENT)
+    patchBaileysUserAgent();
+    const device = getMobileDevice();
+    console.log(`[ZapoRouter] [RegisterCode] ── Início do registro primário ──`);
+    console.log(`[ZapoRouter] [RegisterCode] Instância: ${instanceName} | Telefone: ${phoneNumber} | Método: ${method || 'sms'}`);
+    console.log(`[ZapoRouter] [RegisterCode] Device: ${device.manufacturer} ${device.device} Android/${device.osVersion}`);
+    console.log(`[ZapoRouter] [RegisterCode] appVersion: ${device.appVersion}`);
+    console.log(`[ZapoRouter] [RegisterCode] User-Agent: ${BaileysMobileDefaults.MOBILE_USERAGENT}`);
 
     // Garante que qualquer cliente ativo anterior seja desconectado
     await ZapoManager.disconnectClient(instanceName);
@@ -157,6 +173,9 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
 
     const { state } = await useMultiFileAuthState(tempAuthDir);
 
+    console.log(`[ZapoRouter] [RegisterCode] Auth state criado em: ${tempAuthDir}`);
+    console.log(`[ZapoRouter] [RegisterCode] Iniciando makeRegistrationSocket...`);
+
     // Inicializar socket de registro Baileys v6
     const sock = makeRegistrationSocket({
       ...DEFAULT_CONNECTION_CONFIG,
@@ -180,6 +199,8 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
       method: method || 'sms',
     });
 
+    console.log(`[ZapoRouter] [RegisterCode] Código solicitado com sucesso para ${parsed.full}`);
+
     // Salvar no cache com TTL
     setRegistrationCacheWithTTL(instanceName, {
       sock,
@@ -189,10 +210,13 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     // Persistir telefone no DB — sobrevive a restarts do servidor
     await prisma.$executeRaw`UPDATE "Instance" SET "registeredPhone" = ${parsed.full} WHERE "instanceName" = ${instanceName}`;
 
+    console.log(`[ZapoRouter] [RegisterCode] ── Registro iniciado com sucesso ──`);
     return res.status(200).json({ status: 'success' });
   } catch (err: any) {
     const errDetail = err instanceof Error ? err.message : JSON.stringify(err);
-    console.error(`[ZapoRouter] [RegisterCode] Erro ao solicitar código:`, err);
+    console.error(`[ZapoRouter] [RegisterCode] ── ERRO no registro ──`);
+    console.error(`[ZapoRouter] [RegisterCode] Tipo: ${err instanceof Error ? 'Error' : 'WA rejection (JSON)'}`);
+    console.error(`[ZapoRouter] [RegisterCode] Detalhe:`, errDetail);
     return res.status(500).json({ error: errDetail });
   }
 });
