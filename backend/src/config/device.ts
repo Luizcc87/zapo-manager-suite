@@ -1,8 +1,8 @@
 export const DEFAULT_MOBILE_DEVICE = {
-  manufacturer: 'Google',
-  device: 'Pixel 7',
-  osVersion: '13',
-  osBuildNumber: 'TQ3A.230805.001',
+  manufacturer: 'samsung',
+  device: 'SM-S911B',
+  osVersion: '14',
+  osBuildNumber: 'UP1A.231005.007',
   // ponytail: updated at startup by fetchAndroidWaVersion; hardcoded as safe fallback
   appVersion: '2.24.4.76',
 };
