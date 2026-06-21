@@ -318,6 +318,26 @@ async function bootstrap() {
       console.warn(`[Zapo-Manager] WA Business Android version: fetch falhou — usando fallback hardcoded: ${getCurrentAppVersion()}`);
     }
 
+    // Atualiza versão WA Business diariamente às 03:00 (horário do servidor)
+    const scheduleDailyVersionCheck = () => {
+      const now = new Date();
+      const next = new Date();
+      next.setHours(3, 0, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      const delay = next.getTime() - now.getTime();
+      setTimeout(async () => {
+        const v = await fetchLatestAndroidWaVersion();
+        if (v) {
+          setAppVersion(v);
+          console.log(`[Zapo-Manager] WA Business Android version atualizada (Play Store): ${v}`);
+        } else {
+          console.warn(`[Zapo-Manager] WA Business Android version: fetch diário falhou — mantendo: ${getCurrentAppVersion()}`);
+        }
+        scheduleDailyVersionCheck();
+      }, delay);
+    };
+    scheduleDailyVersionCheck();
+
     await autoRegisterServerIp();
 
     // FIX 1: Criar servidor e registrar setSocketEmitter ANTES de loadAll()
