@@ -4,6 +4,52 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-06-21
+
+### Fix: Versão WA Business Android desatualizada causando `old_version` no registro OTP
+
+**Causa raiz:** fallback hardcoded `appVersion: '2.24.4.76'` em `backend/src/config/device.ts` abaixo da versão mínima aceita pelo WhatsApp. O fetch de startup em `fetchAndroidWaVersion.ts` funciona quando o servidor alcança `play.google.com`, mas containers sem acesso caíam no fallback obsoleto.
+
+**Backend — `backend/src/config/device.ts`**
+- Atualizado `DEFAULT_MOBILE_DEVICE.appVersion`: `2.24.4.76` → `2.26.23.73` (versão atual Play Store em 2026-06-21)
+
+**Backend — `backend/src/main.ts`**
+- Adicionado `scheduleDailyVersionCheck()`: setTimeout recursivo que dispara diariamente às 03:00 (horário do servidor) para re-buscar versão atual do WA Business no Play Store via `fetchLatestAndroidWaVersion()`. Re-agenda após cada execução. Garante que containers de longa duração não dependam de restart para obter versão mínima atualizada. Log de sucesso/falha em cada execução.
+
+### Feat: Configuração de proxy na criação de instância (todos os modos)
+
+**Backend — `backend/src/routes/instance.routes.ts`**
+- Endpoint `POST /create`: aceita campo `proxy` no body (`host`, `port`, `protocol`, `enabled`, `username`, `password`). Testa conectividade via `testProxyConnectivity` (não bloqueia criação em falha), atualiza `ZapoManager.proxyStatusCache` e persiste `proxyConfig` no banco.
+
+**Frontend — `frontend/src/pages/Dashboard/NewInstance.tsx`**
+- Schema Zod estendido com campos proxy: `proxyEnabled`, `proxyProtocol`, `proxyHost`, `proxyPort`, `proxyUsername`, `proxyPassword`
+- Seção colapsível "Proxy" com select de protocolo (HTTP/HTTPS/SOCKS4/SOCKS5), host, porta, usuário, senha, switch enabled
+- Payload inclui `proxy` apenas quando seção aberta + host + porta preenchidos
+- Reset completo ao fechar dialog
+
+**Frontend — `frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx`**
+- Estado local de proxy (`proxyOpen`, `proxyEnabled`, `proxyProtocol`, `proxyHost`, `proxyPort`, `proxyUsername`, `proxyPassword`)
+- Seção colapsível idêntica ao NewInstance, passada ao `createInstance` via spread
+- Fix: `resetAll()` agora reseta `proxyEnabled` e `proxyProtocol` (anteriormente persistiam entre aberturas do dialog)
+
+### Feat: Badge de tipo de instância — 3 estados (Primário / Mobile / Web)
+
+**Frontend — `frontend/src/components/instance-card.tsx`**
+- Substituído badge binário Mobile/Web por IIFE com 3 estados:
+  - **Primário** (violeta + `KeyRound`): `mobileTransport=true` E `number` preenchido (registrado via OTP)
+  - **Mobile** (esmeralda + `Smartphone`): `mobileTransport=true` sem número (companion)
+  - **Web** (âmbar + `Globe`): conexão QR padrão
+
+### Refactor: Badges de Proxy e Webhook — ícone + label curto responsivo
+
+**Frontend — `frontend/src/components/instance-card.tsx`**
+- Substituído `FlagBadge` genérico por `ProxyBadge` e `WebhookBadge` especializados
+- `ProxyBadge`: `🛡 Proxy OK` (roxo) / `🛡 Proxy ERR` (vermelho) / `🛡 Proxy —` (cinza)
+- `WebhookBadge`: `🔗 Webhook ON` (azul) / `🔗 Webhook OFF` (cinza)
+- Responsivo: prefixo "Proxy "/"Webhook " oculto em `< sm` via `hidden sm:inline`; telas largas exibem label completo
+
+---
+
 ## [Unreleased] — 2026-06-20
 
 ### Fix: Chat não exibia mensagens recebidas nem enviadas pelo app (Mobile Transport / @lid JID)

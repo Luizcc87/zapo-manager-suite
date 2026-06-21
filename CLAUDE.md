@@ -113,19 +113,24 @@ O Zapo tem **auto-recovery nativo**: ao receber `failure_client_too_old` (HTTP 4
 
 ### 2. Versão WA Business Android (conexões mobile TCP)
 
-Formato: `2.24.x.x` — campo `appVersion` dentro de `deviceInfo` do `mobileTransport`.
+Formato: `2.26.x.x` — campo `appVersion` dentro de `deviceInfo` do `mobileTransport`.
 
-O Zapo **não tem auto-recovery** para este espaço de versão. `recoverFromClientTooOld` só corrige a versão Web — injetá-la numa conexão mobile não resolve.
+O Zapo **não tem auto-recovery** para este espaço de versão. `recoverFromClientTooOld` só corrige a versão Web — injetá-la numa conexão mobile não resolve. Versão velha causa `old_version` no registro OTP e `failure_client_too_old` em reconexões.
 
-**Solução implementada:**
+**Solução implementada (modelo PROATIVO — duas camadas):**
 - Fonte única de configuração: [`backend/src/config/device.ts`](backend/src/config/device.ts)
-- No startup, [`backend/src/config/fetchAndroidWaVersion.ts`](backend/src/config/fetchAndroidWaVersion.ts) busca a versão atual do WA Business no Google Play Store e chama `setAppVersion()` antes de `ZapoManager.loadAll()`
-- Se o fetch falhar (rede, mudança de HTML do Play Store), usa o valor hardcoded em `DEFAULT_MOBILE_DEVICE.appVersion` como fallback
+- **Startup:** [`backend/src/config/fetchAndroidWaVersion.ts`](backend/src/config/fetchAndroidWaVersion.ts) busca versão atual do WA Business no Google Play Store e chama `setAppVersion()` antes de `ZapoManager.loadAll()`
+- **Diário às 03:00:** `scheduleDailyVersionCheck()` em `main.ts` — setTimeout recursivo que re-agenda após cada execução. Garante que containers de longa duração não fiquem com versão obsoleta se WA rodar versão mínima enquanto servidor está up
+- Se o fetch falhar (rede, mudança de HTML do Play Store), mantém versão atual + log de aviso
+
+**Versão hardcoded atual:** `2.26.23.73` (atualizado 2026-06-21)
 
 **Para atualizar o fallback manualmente** (quando o Play Store mudar o HTML e o fetch parar de funcionar):
 1. Verificar a versão atual: https://play.google.com/store/apps/details?id=com.whatsapp.w4b
 2. Atualizar `appVersion` em [`backend/src/config/device.ts`](backend/src/config/device.ts)
 3. Se os patterns do fetcher quebrarem, atualizar `VERSION_PATTERNS` em [`backend/src/config/fetchAndroidWaVersion.ts`](backend/src/config/fetchAndroidWaVersion.ts)
+
+**IMPORTANTE:** `fetchLatestWaWebVersion` do `@whiskeysockets/baileys` NÃO é compatível com zapo-js para injeção de versão Web — zapo-js gerencia versão Web internamente e não expõe API de override.
 
 ---
 
