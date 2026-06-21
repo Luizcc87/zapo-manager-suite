@@ -264,6 +264,15 @@ export class ZapoManager {
 
   // ── In-memory chat/message accessors ────────────────────────────────────────
 
+  static debugState(instanceName: string) {
+    const chats = [...(chatList.get(instanceName)?.keys() ?? [])];
+    const msgsByJid: Record<string, number> = {};
+    for (const [jid, msgs] of chatMessages.get(instanceName)?.entries() ?? []) {
+      msgsByJid[jid] = msgs.length;
+    }
+    return { chats, messages: msgsByJid, connected: activeClients.has(instanceName) };
+  }
+
   // FIX 2: lê wa_chats do banco (sobrevive a restarts); overlay com Map em memória.
   // Retorna promessa — chamador na rota já era async.
   static async getChatList(instanceName: string): Promise<any[]> {
@@ -349,14 +358,20 @@ export class ZapoManager {
     this.storeMessage(instanceName, msgData);
   }
 
-  private static storeMessage(instanceName: string, msgData: any) {
-    const remoteJid: string = msgData.key?.remoteJid;
+  private static storeMessage(instanceName: string, msgData: any): any {
+    // Mobile Transport sends @lid JIDs; prefer the @s.whatsapp.net alt when available
+    // so messages are stored under the same JID the frontend uses for navigation.
+    const rawJid: string = msgData.key?.remoteJid;
+    const altJid: string | undefined = msgData.key?.remoteJidAlt;
+    const remoteJid: string = (altJid && !altJid.endsWith('@lid')) ? altJid : (rawJid ?? '');
     if (!remoteJid) return;
 
-    // Detect message type from proto structure
+    // Detect message type from proto structure — skip metadata-only fields that zapo-js
+    // may serialize before the actual content field (e.g. messageContextInfo).
+    const METADATA_FIELDS = new Set(['messageContextInfo', '$$unknownFieldCount', 'viewOnceMessageV2Extension', 'pinInChatMessage']);
     const msgObj = msgData.message ?? {};
     const unwrapped = this.unwrapMessage(msgObj);
-    const messageType = Object.keys(unwrapped)[0] ?? 'unknown';
+    const messageType = Object.keys(unwrapped).find(k => !METADATA_FIELDS.has(k)) ?? 'unknown';
 
     const normalized = {
       id: msgData.key?.id ?? `${Date.now()}`,
@@ -433,6 +448,8 @@ export class ZapoManager {
         console.error(`[ZapoManager] [${instanceName}] Erro ao persistir mensagem ${normalized.id}:`, err.message);
       });
     }
+
+    return normalized;
   }
 
   static async loadAll() {
@@ -684,14 +701,21 @@ export class ZapoManager {
       if (settings.readMessages && !event.key.fromMe) {
         await client.message.sendReceipt(event, { type: 'read' }).catch(() => {});
       }
+      // Normalize @lid → @s.whatsapp.net so storage + socket payloads use the same JID
+      // the frontend navigates by (phone number JID).
+      const rawJid = event.key?.remoteJid ?? '';
+      const altJid = event.key?.remoteJidAlt;
+      const normalizedJid = (altJid && !altJid.endsWith('@lid')) ? altJid : rawJid;
+      const normalizedKey = normalizedJid !== rawJid ? { ...event.key, remoteJid: normalizedJid } : event.key;
       const msgData = {
-        key: event.key,
+        key: normalizedKey,
         message: event.message,
         messageTimestamp: event.timestampSeconds,
         pushName: event.pushName
       };
-      ZapoManager.storeMessage(instanceName, msgData);
-      const webhookPayload = { instance: instanceName, data: msgData };
+      const normalized = ZapoManager.storeMessage(instanceName, msgData);
+      console.log(`[msg] fromMe=${event.key?.fromMe} jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id?.slice(-8)}`);
+      const webhookPayload = { instance: instanceName, data: normalized ?? msgData };
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', webhookPayload);
       _socketEmitter?.('messages.upsert', webhookPayload);
     });

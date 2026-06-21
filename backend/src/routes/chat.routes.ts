@@ -44,4 +44,10 @@ router.post('/findMessages/:instanceName', checkInstanceApiKey, async (req: Requ
   }
 });
 
+// GET /chat/debug/:instanceName  — diagnóstico temporário (remover após investigação)
+router.get('/debug/:instanceName', checkInstanceApiKey, (req: Request, res: Response) => {
+  const { instanceName } = req.params;
+  return res.json(ZapoManager.debugState(instanceName));
+});
+
 export default router;
