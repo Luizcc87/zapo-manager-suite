@@ -5,13 +5,19 @@ import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
 import { DEFAULT_CONNECTION_CONFIG } from '@whiskeysockets/baileys/lib/Defaults/index.js';
 
-// Patch runtime: Baileys v6 hardcodes MOBILE_USERAGENT ('2.23.14.82 iOS').
-// mobileRegisterFetch sempre sobrescreve o header com este valor — não tem override via config.
-// Atualizamos para a versão Android atual antes de cada uso.
+// Patch runtime: Baileys v6 hardcodes WA_VERSION='2.23.14.82' e computa MOBILE_TOKEN e MOBILE_USERAGENT
+// em módulo-load. mobileRegisterFetch sobrescreve User-Agent com MOBILE_USERAGENT, e o token de registro
+// é md5(MOBILE_TOKEN + nationalNumber). WA valida o token com a versão do User-Agent → mismatch = bad_token.
+// Solução: recomputar MOBILE_TOKEN e MOBILE_USERAGENT com a versão atual antes de cada makeRegistrationSocket.
+// Mantemos iOS (Baileys foi projetado para iOS; Android usa constantes de token diferentes).
+import { createHash } from 'crypto';
 const BaileysMobileDefaults = require('@whiskeysockets/baileys/lib/Defaults/index.js');
-const patchBaileysUserAgent = () => {
+const patchBaileysDefaults = () => {
   const device = getMobileDevice();
-  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${device.appVersion} Android/${device.osVersion} Device/${device.manufacturer}-${device.device}`;
+  const appVersion = device.appVersion;
+  const versionHash = createHash('md5').update(appVersion).digest('hex');
+  BaileysMobileDefaults.MOBILE_TOKEN = Buffer.from('0a1mLfGUIBVrMKF1RdvLI5lkRBvof6vn0fD2QRSM' + versionHash);
+  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${appVersion} iOS/15.3.1 Device/Apple-iPhone_7`;
 };
 import * as path from 'path';
 import * as fs from 'fs';
@@ -140,14 +146,14 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
       return res.status(400).json({ error: 'instanceName and phoneNumber are required' });
     }
 
-    // Patch User-Agent do Baileys para versão Android atual (Baileys v6 hardcoda iOS/2.23 no MOBILE_USERAGENT)
-    patchBaileysUserAgent();
+    // Patch Baileys: MOBILE_TOKEN e MOBILE_USERAGENT com versão atual (iOS — Baileys projetado para iOS)
+    patchBaileysDefaults();
     const device = getMobileDevice();
     console.log(`[ZapoRouter] [RegisterCode] ── Início do registro primário ──`);
     console.log(`[ZapoRouter] [RegisterCode] Instância: ${instanceName} | Telefone: ${phoneNumber} | Método: ${method || 'sms'}`);
-    console.log(`[ZapoRouter] [RegisterCode] Device: ${device.manufacturer} ${device.device} Android/${device.osVersion}`);
     console.log(`[ZapoRouter] [RegisterCode] appVersion: ${device.appVersion}`);
     console.log(`[ZapoRouter] [RegisterCode] User-Agent: ${BaileysMobileDefaults.MOBILE_USERAGENT}`);
+    console.log(`[ZapoRouter] [RegisterCode] MOBILE_TOKEN (hex): ${BaileysMobileDefaults.MOBILE_TOKEN.toString('hex').slice(0, 16)}...`);
 
     // Garante que qualquer cliente ativo anterior seja desconectado
     await ZapoManager.disconnectClient(instanceName);
