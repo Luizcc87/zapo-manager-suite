@@ -1,8 +1,8 @@
 export const DEFAULT_MOBILE_DEVICE = {
   manufacturer: 'samsung',
   device: 'SM-S911B',
-  osVersion: '14',
-  osBuildNumber: 'UP1A.231005.007',
+  osVersion: '16',
+  osBuildNumber: 'BP1A.250505.001',
   // ponytail: updated at startup by fetchAndroidWaVersion; hardcoded as safe fallback
   appVersion: '2.24.4.76',
 };
