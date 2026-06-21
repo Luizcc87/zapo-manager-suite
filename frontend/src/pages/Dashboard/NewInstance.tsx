@@ -1,4 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -29,25 +31,31 @@ const FormSchema = z.object({
   businessId: stringOrUndefined,
   integration: z.enum(["WHATSAPP-BUSINESS", "WHATSAPP-BAILEYS", "EVOLUTION"]),
   mobileTransport: z.boolean().default(false),
+  proxyEnabled: z.boolean().default(true),
+  proxyProtocol: z.string().default("http"),
+  proxyHost: z.string().optional(),
+  proxyPort: z.string().optional(),
+  proxyUsername: z.string().optional(),
+  proxyPassword: z.string().optional(),
 });
+
+const PROTOCOL_OPTIONS = [
+  { value: "http", label: "HTTP" },
+  { value: "https", label: "HTTPS" },
+  { value: "socks4", label: "SOCKS4" },
+  { value: "socks5", label: "SOCKS5" },
+];
 
 function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => void; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation();
   const { createInstance } = useManageInstance();
   const setOpen = onOpenChange;
+  const [proxyOpen, setProxyOpen] = useState(false);
+
   const options = [
-    {
-      value: "WHATSAPP-BAILEYS",
-      label: t("instance.form.integration.baileys"),
-    },
-    {
-      value: "WHATSAPP-BUSINESS",
-      label: t("instance.form.integration.whatsapp"),
-    },
-    {
-      value: "EVOLUTION",
-      label: t("instance.form.integration.evolution"),
-    },
+    { value: "WHATSAPP-BAILEYS", label: t("instance.form.integration.baileys") },
+    { value: "WHATSAPP-BUSINESS", label: t("instance.form.integration.whatsapp") },
+    { value: "EVOLUTION", label: t("instance.form.integration.evolution") },
   ];
 
   const form = useForm<z.infer<typeof FormSchema>>({
@@ -59,20 +67,39 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
       number: "",
       businessId: "",
       mobileTransport: false,
+      proxyEnabled: true,
+      proxyProtocol: "http",
+      proxyHost: "",
+      proxyPort: "",
+      proxyUsername: "",
+      proxyPassword: "",
     },
   });
 
   const integrationSelected = form.watch("integration");
+  const proxyHost = form.watch("proxyHost");
 
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
     try {
-      const instanceData: NewInstanceType & { mobileTransport?: boolean } = {
+      const proxy = proxyOpen && data.proxyHost && data.proxyPort
+        ? {
+            enabled: data.proxyEnabled,
+            protocol: data.proxyProtocol,
+            host: data.proxyHost,
+            port: data.proxyPort,
+            username: data.proxyUsername || "",
+            password: data.proxyPassword || "",
+          }
+        : undefined;
+
+      const instanceData: NewInstanceType & { mobileTransport?: boolean; proxy?: typeof proxy } = {
         instanceName: data.name,
         integration: data.integration,
         token: data.token === "" ? null : data.token,
         number: data.number === "" ? null : data.number,
         businessId: data.businessId === "" ? null : data.businessId,
         mobileTransport: data.mobileTransport,
+        ...(proxy && { proxy }),
       };
 
       await createInstance(instanceData);
@@ -81,7 +108,6 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
       setOpen(false);
       onReset();
       resetTable();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(`Error : ${error?.response?.data?.response?.message}`);
@@ -89,6 +115,7 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
   };
 
   const onReset = () => {
+    setProxyOpen(false);
     form.reset({
       name: "",
       integration: "WHATSAPP-BAILEYS",
@@ -96,6 +123,12 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
       number: "",
       businessId: "",
       mobileTransport: false,
+      proxyEnabled: true,
+      proxyProtocol: "http",
+      proxyHost: "",
+      proxyPort: "",
+      proxyUsername: "",
+      proxyPassword: "",
     });
   };
 
@@ -136,6 +169,59 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
                 <Input />
               </FormInput>
             )}
+
+            {/* ── Proxy ── */}
+            <div className="rounded-md border border-sidebar-border overflow-hidden">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/30 transition-colors"
+                onClick={() => setProxyOpen((v) => !v)}
+              >
+                <span className="flex items-center gap-2">
+                  {t("proxy.title", { defaultValue: "Proxy" })}
+                  {proxyOpen && proxyHost && (
+                    <span className="text-xs text-purple-500 font-mono">{proxyHost}</span>
+                  )}
+                </span>
+                {proxyOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </button>
+
+              {proxyOpen && (
+                <div className="grid gap-3 px-3 pb-3 pt-1 bg-sidebar/30">
+                  <div className="flex p-2 items-center justify-between rounded-md border border-sidebar-border bg-sidebar/30">
+                    <FormSwitch
+                      name="proxyEnabled"
+                      label={t("proxy.form.enabled.label", { defaultValue: "Ativo" })}
+                      className="w-full justify-between"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-1">
+                      <FormSelect
+                        name="proxyProtocol"
+                        label={t("proxy.form.protocol.label", { defaultValue: "Protocolo" })}
+                        options={PROTOCOL_OPTIONS}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <FormInput name="proxyHost" label={t("proxy.form.host.label", { defaultValue: "Host" })}>
+                        <Input placeholder="proxy.exemplo.com" />
+                      </FormInput>
+                    </div>
+                  </div>
+                  <FormInput name="proxyPort" label={t("proxy.form.port.label", { defaultValue: "Porta" })}>
+                    <Input placeholder="8080" />
+                  </FormInput>
+                  <FormInput name="proxyUsername" label={t("proxy.form.username.label", { defaultValue: "Usuário" })}>
+                    <Input />
+                  </FormInput>
+                  <FormInput name="proxyPassword" label={t("proxy.form.password.label", { defaultValue: "Senha" })}>
+                    <Input type="password" />
+                  </FormInput>
+                </div>
+              )}
+            </div>
+
             <DialogFooter>
               <Button type="submit">{t("instance.button.save")}</Button>
             </DialogFooter>

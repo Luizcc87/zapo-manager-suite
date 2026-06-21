@@ -1,7 +1,7 @@
 import { Badge } from "@evoapi/design-system/badge";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent } from "@evoapi/design-system/card";
-import { FlaskConical, Globe, ShieldCheck, ShieldAlert, Settings, SquareMousePointer, Smartphone, Trash2 } from "lucide-react";
+import { FlaskConical, Globe, ShieldCheck, ShieldAlert, Settings, SquareMousePointer, Smartphone, Trash2, KeyRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -122,15 +122,32 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
               activeIcon={<SquareMousePointer className="h-3 w-3" />}
               inactiveIcon={<SquareMousePointer className="h-3 w-3" />}
             />
-            <FlagBadge
-              active={(instance.instanceType ?? (instance.mobileTransport ? "mobile" : "web")) === "mobile"}
-              activeLabel={t("instance.type.mobile", { defaultValue: "Mobile" })}
-              inactiveLabel={t("instance.type.web", { defaultValue: "Web" })}
-              activeClassName="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-              inactiveClassName="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-              activeIcon={<Smartphone className="h-3 w-3" />}
-              inactiveIcon={<Globe className="h-3 w-3" />}
-            />
+            {(() => {
+              const isMobile = instance.instanceType === "mobile" || !!instance.mobileTransport;
+              const isPrimary = isMobile && !!instance.number;
+              if (isPrimary) {
+                return (
+                  <Badge className="bg-violet-500/10 text-violet-500 hover:bg-violet-500/20">
+                    <span className="mr-1 inline-flex items-center"><KeyRound className="h-3 w-3" /></span>
+                    {t("instance.type.primary", { defaultValue: "Primário" })}
+                  </Badge>
+                );
+              }
+              if (isMobile) {
+                return (
+                  <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">
+                    <span className="mr-1 inline-flex items-center"><Smartphone className="h-3 w-3" /></span>
+                    {t("instance.type.mobile", { defaultValue: "Mobile" })}
+                  </Badge>
+                );
+              }
+              return (
+                <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20">
+                  <span className="mr-1 inline-flex items-center"><Globe className="h-3 w-3" /></span>
+                  {t("instance.type.web", { defaultValue: "Web" })}
+                </Badge>
+              );
+            })()}
           </div>
           {instance.ownerJid && (
             <div className="flex items-center justify-between">

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Loader2, Phone, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Loader2, Phone, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -73,6 +73,15 @@ export function PrimaryRegistrationDialog({
   const [loading, setLoading] = useState(false);
   const [instanceName, setInstanceName] = useState("");
 
+  // Proxy state
+  const [proxyOpen, setProxyOpen] = useState(false);
+  const [proxyEnabled, setProxyEnabled] = useState(true);
+  const [proxyProtocol, setProxyProtocol] = useState("http");
+  const [proxyHost, setProxyHost] = useState("");
+  const [proxyPort, setProxyPort] = useState("");
+  const [proxyUsername, setProxyUsername] = useState("");
+  const [proxyPassword, setProxyPassword] = useState("");
+
   const formMethods = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: { instanceName: defaultInstanceName || "", phoneNumber: "", method: "sms" },
@@ -98,6 +107,13 @@ export function PrimaryRegistrationDialog({
     otpMethods.reset();
     setStep("warning");
     setInstanceName("");
+    setProxyOpen(false);
+    setProxyEnabled(true);
+    setProxyProtocol("http");
+    setProxyHost("");
+    setProxyPort("");
+    setProxyUsername("");
+    setProxyPassword("");
   };
 
   const handleClose = (next: boolean) => {
@@ -109,6 +125,11 @@ export function PrimaryRegistrationDialog({
   const handleRequestCode = async (data: FormData) => {
     setLoading(true);
     try {
+      const proxy = proxyOpen && proxyHost && proxyPort
+        ? { enabled: proxyEnabled, protocol: proxyProtocol, host: proxyHost, port: proxyPort, username: proxyUsername, password: proxyPassword }
+        : undefined;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await createInstance({
         instanceName: data.instanceName,
         integration: "WHATSAPP-BAILEYS",
@@ -116,7 +137,7 @@ export function PrimaryRegistrationDialog({
         number: null,
         businessId: null,
         mobileTransport: true,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(proxy && { proxy }),
       } as any);
 
       let phone = data.phoneNumber.trim();
@@ -135,13 +156,13 @@ export function PrimaryRegistrationDialog({
         }),
       );
       setStep("otp");
-    } catch (err) {
+    } catch (err: any) {
       const msg =
-        err instanceof Error
-          ? err.message
-          : t("primaryRegistration.toast.errorRequest", {
-              defaultValue: "Erro ao solicitar código. Verifique os dados.",
-            });
+        err?.response?.data?.error ||
+        (err instanceof Error ? err.message : null) ||
+        t("primaryRegistration.toast.errorRequest", {
+          defaultValue: "Erro ao solicitar código. Verifique os dados.",
+        });
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -159,13 +180,13 @@ export function PrimaryRegistrationDialog({
       );
       resetTable();
       handleClose(false);
-    } catch (err) {
+    } catch (err: any) {
       const msg =
-        err instanceof Error
-          ? err.message
-          : t("primaryRegistration.toast.errorConfirm", {
-              defaultValue: "Código inválido ou expirado. Tente novamente.",
-            });
+        err?.response?.data?.error ||
+        (err instanceof Error ? err.message : null) ||
+        t("primaryRegistration.toast.errorConfirm", {
+          defaultValue: "Código inválido ou expirado. Tente novamente.",
+        });
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -325,6 +346,61 @@ export function PrimaryRegistrationDialog({
                     </label>
                   ))}
                 </div>
+              </div>
+
+              {/* ── Proxy ── */}
+              <div className="rounded-md border border-sidebar-border overflow-hidden">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/30 transition-colors"
+                  onClick={() => setProxyOpen((v) => !v)}
+                >
+                  <span className="flex items-center gap-2">
+                    {t("proxy.title", { defaultValue: "Proxy" })}
+                    {proxyOpen && proxyHost && (
+                      <span className="text-xs text-purple-500 font-mono">{proxyHost}</span>
+                    )}
+                  </span>
+                  {proxyOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                </button>
+                {proxyOpen && (
+                  <div className="grid gap-3 px-3 pb-3 pt-1 bg-sidebar/30">
+                    <div className="flex items-center justify-between rounded-md border border-sidebar-border bg-sidebar/30 p-2">
+                      <Label className="text-sm">{t("proxy.form.enabled.label", { defaultValue: "Ativo" })}</Label>
+                      <input type="checkbox" checked={proxyEnabled} onChange={(e) => setProxyEnabled(e.target.checked)} className="h-4 w-4 accent-primary" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-1 space-y-1">
+                        <Label className="text-xs">{t("proxy.form.protocol.label", { defaultValue: "Protocolo" })}</Label>
+                        <select
+                          value={proxyProtocol}
+                          onChange={(e) => setProxyProtocol(e.target.value)}
+                          className="w-full rounded-md border border-sidebar-border bg-background px-2 py-1.5 text-sm"
+                        >
+                          {["http", "https", "socks4", "socks5"].map((p) => (
+                            <option key={p} value={p}>{p.toUpperCase()}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">{t("proxy.form.host.label", { defaultValue: "Host" })}</Label>
+                        <Input placeholder="proxy.exemplo.com" value={proxyHost} onChange={(e) => setProxyHost(e.target.value)} disabled={loading} />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("proxy.form.port.label", { defaultValue: "Porta" })}</Label>
+                      <Input placeholder="8080" value={proxyPort} onChange={(e) => setProxyPort(e.target.value)} disabled={loading} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("proxy.form.username.label", { defaultValue: "Usuário" })}</Label>
+                      <Input value={proxyUsername} onChange={(e) => setProxyUsername(e.target.value)} disabled={loading} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t("proxy.form.password.label", { defaultValue: "Senha" })}</Label>
+                      <Input type="password" value={proxyPassword} onChange={(e) => setProxyPassword(e.target.value)} disabled={loading} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="flex gap-2 sm:gap-0">

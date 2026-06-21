@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { ZapoManager } from '../manager';
+import { ZapoManager, testProxyConnectivity } from '../manager';
 import { getMobileDevice } from '../config/device';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
@@ -75,13 +75,31 @@ function parsePhoneNumber(fullPhone: string) {
 // 1. Criar Instância
 router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
-    const { instanceName, mobileTransport, deviceInfo, token } = req.body;
+    const { instanceName, mobileTransport, deviceInfo, token, proxy } = req.body;
     if (!instanceName) {
       return res.status(400).json({ error: 'instanceName is required' });
     }
 
     const instance = await ZapoManager.createClient(instanceName, mobileTransport || false, deviceInfo, token);
-    
+
+    // Salva proxy se fornecido — testa conectividade mas não bloqueia criação em caso de falha
+    if (proxy?.host && proxy?.port) {
+      const proxyData = {
+        enabled: proxy.enabled ?? true,
+        host: proxy.host,
+        port: String(proxy.port),
+        protocol: proxy.protocol || 'http',
+        username: proxy.username || '',
+        password: proxy.password || '',
+        country: proxy.country || '',
+        session: proxy.session || '',
+      };
+      const test = await testProxyConnectivity(proxyData).catch(() => ({ connected: false, error: 'check failed', details: undefined }));
+      ZapoManager.proxyStatusCache.set(instanceName, { connected: test.connected, error: test.error, details: (test as any).details });
+      await prisma.instance.update({ where: { instanceName }, data: { proxyConfig: proxyData } });
+      console.log(`[ZapoRouter] [Create] Proxy salvo para ${instanceName}: connected=${test.connected}`);
+    }
+
     // Inicia a conexão de forma assíncrona (gerar QR ou reconectar)
     if (!instance.mobileTransport) {
       ZapoManager.connectClient(instanceName).catch(err => {
@@ -173,8 +191,9 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
 
     return res.status(200).json({ status: 'success' });
   } catch (err: any) {
-    console.error(`[ZapoRouter] [RegisterCode] Erro ao solicitar código:`, err.message);
-    return res.status(500).json({ error: err.message });
+    const errDetail = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error(`[ZapoRouter] [RegisterCode] Erro ao solicitar código:`, err);
+    return res.status(500).json({ error: errDetail });
   }
 });
 
@@ -272,12 +291,14 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
     await ZapoManager.disconnectClient(instanceName);
 
     // 6. Atualizar status no banco de dados para "connected"
+    // ownerJid obrigatório: connectClient checa !!ownerJid para ativar mobileTransport TCP
     await prisma.instance.update({
       where: { instanceName },
-      data: { 
+      data: {
         status: 'connected',
         mobileTransport: true,
-        deviceInfo: mappedCreds.deviceInfo
+        deviceInfo: mappedCreds.deviceInfo,
+        ownerJid: mappedCreds.meJid || null,
       }
     });
 
@@ -297,8 +318,9 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
 
     return res.status(200).json({ status: 'success' });
   } catch (err: any) {
-    console.error(`[ZapoRouter] [ConfirmCode] Erro ao confirmar código:`, err.message);
-    return res.status(500).json({ error: err.message });
+    const errDetail = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error(`[ZapoRouter] [ConfirmCode] Erro ao confirmar código:`, err);
+    return res.status(500).json({ error: errDetail });
   }
 });
 
