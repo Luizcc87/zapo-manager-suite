@@ -151,7 +151,7 @@ describe('Chat Corrections Test Suite', () => {
       ];
       // Stub ZapoManager.getMessageList
       const originalGetMessageList = ZapoManager.getMessageList;
-      ZapoManager.getMessageList = (instance, remoteJid) => {
+      ZapoManager.getMessageList = async (instance, remoteJid) => {
         assert.strictEqual(instance, mockInstanceName);
         assert.strictEqual(remoteJid, '123@s.whatsapp.net');
         return mockMsgs;
