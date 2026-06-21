@@ -18,7 +18,7 @@ const patchBaileysDefaults = () => {
   const iosVersion = getCurrentIosVersion();
   const versionHash = createHash('md5').update(iosVersion).digest('hex');
   BaileysMobileDefaults.MOBILE_TOKEN = Buffer.from('0a1mLfGUIBVrMKF1RdvLI5lkRBvof6vn0fD2QRSM' + versionHash);
-  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${iosVersion} iOS/15.3.1 Device/Apple-iPhone_7`;
+  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${iosVersion} iOS/17.5.1 Device/Apple-iPhone_15`;
 };
 import * as path from 'path';
 import * as fs from 'fs';
