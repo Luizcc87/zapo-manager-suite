@@ -48,6 +48,9 @@ COPY --from=backend-builder /app/node_modules/@prisma/client ./node_modules/@pri
 # Copiar o frontend estático compilado para a pasta dist/public do backend
 COPY --from=frontend-builder /app/dist ./dist/public/
 
+# Copiar spec OpenAPI para o path esperado pelo main.js (../../docs/ relativo a dist/)
+COPY docs/openapi.yaml /docs/openapi.yaml
+
 # Remover ferramentas de compilação após o build para reduzir o tamanho da imagem
 RUN apk del make g++ gcc python3
 
