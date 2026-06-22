@@ -9,7 +9,7 @@ info:
     **Try it out:** Configure o Server URL para sua VPS e clique em Authorize para inserir o GLOBAL_API_KEY.
 
     ### Formato de número
-    Use DDI + DDD + número sem `+` e sem espaços: `5511999999999`.
+    Use DDI + DDD + número sem `+` e sem espaços: `{{number}}`.
     Números brasileiros **não** precisam do 9 extra no DDD: `555599703107` (correto), não `5555999703107`.
     Para grupos use o ID do grupo: `120363XXXXXXXX@g.us`.
 
@@ -67,7 +67,7 @@ components:
           properties:
             remoteJid:
               type: string
-              example: 5511999999999@s.whatsapp.net
+              example: "{{number}}@s.whatsapp.net"
             fromMe:
               type: boolean
             id:
@@ -366,7 +366,7 @@ paths:
           application/json:
             example:
               instanceName: Teste-mobile
-              phoneNumber: "5511999999999"
+              phoneNumber: "{{number}}"
               method: sms
             schema:
               type: object
@@ -378,7 +378,7 @@ paths:
                 phoneNumber:
                   type: string
                   description: Número com DDI, sem +, sem espaços, sem 9 extra
-                  example: "5511999999999"
+                  example: "{{number}}"
                 method:
                   type: string
                   enum: [sms, voice]
@@ -477,7 +477,7 @@ paths:
         content:
           application/json:
             example:
-              number: "5511999999999"
+              number: "{{number}}"
               text: "Olá, teste!"
               delay: 1200
             schema:
@@ -487,7 +487,7 @@ paths:
                 number:
                   type: string
                   description: Número destino com DDI (sem + e sem 9 extra em BR)
-                  example: "5511999999999"
+                  example: "{{number}}"
                 text:
                   type: string
                   example: Olá! Mensagem de teste.
@@ -521,7 +521,7 @@ paths:
         content:
           application/json:
             example:
-              number: "5511999999999"
+              number: "{{number}}"
               mediatype: image
               media: https://exemplo.com/imagem.jpg
               caption: "Legenda da imagem"
@@ -531,7 +531,7 @@ paths:
               properties:
                 number:
                   type: string
-                  example: "5511999999999"
+                  example: "{{number}}"
                 mediatype:
                   type: string
                   enum: [image, video, document, audio]
@@ -570,7 +570,7 @@ paths:
         content:
           application/json:
             example:
-              number: "5511999999999"
+              number: "{{number}}"
               audio: https://exemplo.com/audio.mp3
             schema:
               type: object
@@ -578,7 +578,7 @@ paths:
               properties:
                 number:
                   type: string
-                  example: "5511999999999"
+                  example: "{{number}}"
                 audio:
                   type: string
                   description: URL pública ou base64 do áudio (mp3, ogg, wav)
@@ -605,7 +605,7 @@ paths:
         content:
           application/json:
             example:
-              number: "5511999999999"
+              number: "{{number}}"
               sticker: https://exemplo.com/sticker.webp
             schema:
               type: object
@@ -613,7 +613,7 @@ paths:
               properties:
                 number:
                   type: string
-                  example: "5511999999999"
+                  example: "{{number}}"
                 sticker:
                   type: string
                   description: URL pública ou base64 (webp ou imagem convertida automaticamente)
@@ -644,7 +644,7 @@ paths:
         content:
           application/json:
             example:
-              number: "5511999999999"
+              number: "{{number}}"
               title: Escolha uma opção
               description: Selecione abaixo
               buttons:
@@ -660,7 +660,7 @@ paths:
               properties:
                 number:
                   type: string
-                  example: "5511999999999"
+                  example: "{{number}}"
                 title:
                   type: string
                   example: Escolha uma opção
@@ -704,7 +704,7 @@ paths:
         content:
           application/json:
             example:
-              number: "5511999999999"
+              number: "{{number}}"
               title: Menu de opções
               description: Escolha uma opção abaixo
               buttonText: Ver opções
@@ -723,7 +723,7 @@ paths:
               properties:
                 number:
                   type: string
-                  example: "5511999999999"
+                  example: "{{number}}"
                 title:
                   type: string
                 description:
@@ -772,7 +772,7 @@ paths:
         content:
           application/json:
             example:
-              number: "5511999999999"
+              number: "{{number}}"
               cards:
                 - header:
                     type: image
@@ -788,7 +788,7 @@ paths:
               properties:
                 number:
                   type: string
-                  example: "5511999999999"
+                  example: "{{number}}"
                 cards:
                   type: array
                   items:
@@ -1014,7 +1014,7 @@ paths:
           application/json:
             example:
               where:
-                jid: "5511999999999@s.whatsapp.net"
+                jid: "{{number}}@s.whatsapp.net"
             schema:
               type: object
               properties:
@@ -1047,7 +1047,7 @@ paths:
           application/json:
             example:
               where:
-                jid: "5511999999999@s.whatsapp.net"
+                jid: "{{number}}@s.whatsapp.net"
               take: 50
               skip: 0
             schema:
