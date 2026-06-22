@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import { z } from "zod";
 
 import { Button } from "@evoapi/design-system/button";
-import { Form, FormControl, FormField, FormInput, FormItem, FormLabel, FormSwitch } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormInput, FormItem, FormLabel, FormSwitch } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@evoapi/design-system/switch";
 
@@ -33,34 +33,28 @@ type FormSchemaType = z.infer<typeof FormSchema>;
 
 const GO_EVENTS = ["ALL", "MESSAGE", "SEND_MESSAGE", "READ_RECEIPT", "PRESENCE", "HISTORY_SYNC", "CHAT_PRESENCE", "CALL", "CONNECTION", "QRCODE", "LABEL", "CONTACT", "GROUP", "NEWSLETTER"];
 
-const API_EVENTS = [
-  "APPLICATION_STARTUP",
-  "QRCODE_UPDATED",
-  "MESSAGES_SET",
-  "MESSAGES_UPSERT",
-  "MESSAGES_UPDATE",
-  "MESSAGES_DELETE",
-  "SEND_MESSAGE",
-  "CONTACTS_SET",
-  "CONTACTS_UPSERT",
-  "CONTACTS_UPDATE",
-  "PRESENCE_UPDATE",
-  "CHATS_SET",
-  "CHATS_UPSERT",
-  "CHATS_UPDATE",
-  "CHATS_DELETE",
-  "GROUPS_UPSERT",
-  "GROUP_UPDATE",
-  "GROUP_PARTICIPANTS_UPDATE",
-  "CONNECTION_UPDATE",
-  "REMOVE_INSTANCE",
-  "LOGOUT_INSTANCE",
-  "LABELS_EDIT",
-  "LABELS_ASSOCIATION",
-  "CALL",
-  "TYPEBOT_START",
-  "TYPEBOT_CHANGE_STATUS",
+// Eventos reais emitidos pelo zapo-js (lowercase.dot — correspondem exatamente ao que manager.ts envia)
+const ZAPO_EVENTS = [
+  "call",
+  "chats.update",
+  "connection.update",
+  "groups.update",
+  "history.sync",
+  "messages.update",
+  "messages.upsert",
+  "presence.update",
 ];
+
+const ZAPO_EVENT_META: Record<string, { title: string; description: string }> = {
+  "call":              { title: "Chamada Recebida",           description: "Sinalização de chamada de voz ou vídeo recebida (call)" },
+  "chats.update":      { title: "Atualização de Conversa",    description: "Estado de digitação, gravação ou pausa em uma conversa (chats.update)" },
+  "connection.update": { title: "Atualização de Conexão",     description: "Sessão conectada, desconectada ou em processo de pareamento (connection.update)" },
+  "groups.update":     { title: "Atualização de Grupo",       description: "Criação de grupo, alteração de nome, participantes ou configurações (groups.update)" },
+  "history.sync":      { title: "Sincronização de Histórico", description: "Chunk de histórico de mensagens recebido durante sincronização inicial (history.sync)" },
+  "messages.update":   { title: "Atualização de Mensagem",    description: "Confirmação de entrega ou leitura de mensagens (messages.update)" },
+  "messages.upsert":   { title: "Nova Mensagem",              description: "Mensagem recebida ou enviada, incluindo reações e votos em enquetes (messages.upsert)" },
+  "presence.update":   { title: "Presença do Contato",        description: "Disponibilidade ou horário do último acesso de um contato (presence.update)" },
+};
 
 function Webhook() {
   const { t } = useTranslation();
@@ -123,7 +117,7 @@ function Webhook() {
     }
   };
 
-  const events = isGo ? GO_EVENTS : API_EVENTS;
+  const events = isGo ? GO_EVENTS : ZAPO_EVENTS;
 
   const handleSelectAll = () => {
     form.setValue("events", events);
@@ -165,21 +159,32 @@ function Webhook() {
                       <div className="flex flex-col gap-2 space-y-1 divide-y">
                         {events
                           .sort((a, b) => a.localeCompare(b))
-                          .map((event) => (
-                            <div key={event} className="flex items-center justify-between gap-3 pt-3">
-                              <FormLabel className={cn("break-all", field.value.includes(event) ? "text-foreground" : "text-muted-foreground")}>{event}</FormLabel>
-                              <Switch
-                                checked={field.value.includes(event)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    field.onChange([...field.value, event]);
-                                  } else {
-                                    field.onChange(field.value.filter((e) => e !== event));
-                                  }
-                                }}
-                              />
-                            </div>
-                          ))}
+                          .map((event) => {
+                            const meta = ZAPO_EVENT_META[event];
+                            const active = field.value.includes(event);
+                            return (
+                              <div key={event} className="flex items-center justify-between gap-3 pt-3">
+                                <div className="flex flex-col gap-0.5">
+                                  <FormLabel className={cn(active ? "text-foreground" : "text-muted-foreground")}>
+                                    {meta?.title ?? event}
+                                  </FormLabel>
+                                  {meta?.description && (
+                                    <FormDescription className="text-xs">{meta.description}</FormDescription>
+                                  )}
+                                </div>
+                                <Switch
+                                  checked={active}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      field.onChange([...field.value, event]);
+                                    } else {
+                                      field.onChange(field.value.filter((e) => e !== event));
+                                    }
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
                       </div>
                     </FormControl>
                   </FormItem>

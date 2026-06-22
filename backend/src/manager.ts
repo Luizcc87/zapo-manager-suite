@@ -926,7 +926,9 @@ export class ZapoManager {
     const cfg = (instance?.webhookConfig as any) ?? {};
 
     if (!cfg.enabled || !cfg.url) return;
-    if (cfg.events?.length > 0 && !cfg.events.includes(event)) return;
+    // Normaliza para suportar tanto 'connection.update' quanto 'CONNECTION_UPDATE' armazenados
+    const norm = (e: string) => e.toLowerCase().replace(/_/g, '.');
+    if (cfg.events?.length > 0 && !cfg.events.some((e: string) => norm(e) === norm(event))) return;
 
     console.log(`[ZapoWebhook] [${instanceName}] → ${event}`);
 
