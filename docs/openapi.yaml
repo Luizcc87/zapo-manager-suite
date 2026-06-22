@@ -224,6 +224,9 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              instanceName: minha-instancia
+              mobileTransport: false
             schema:
               type: object
               required: [instanceName]
@@ -361,6 +364,10 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              instanceName: Teste-mobile
+              phoneNumber: "5511999999999"
+              method: sms
             schema:
               type: object
               required: [instanceName, phoneNumber]
@@ -401,6 +408,9 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              instanceName: Teste-mobile
+              code: "123456"
             schema:
               type: object
               required: [instanceName, code]
@@ -466,6 +476,10 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              number: "5511999999999"
+              text: "Olá, teste!"
+              delay: 1200
             schema:
               type: object
               required: [number, text]
@@ -506,6 +520,11 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              number: "5511999999999"
+              mediatype: image
+              media: https://exemplo.com/imagem.jpg
+              caption: "Legenda da imagem"
             schema:
               type: object
               required: [number, mediatype, media]
@@ -550,6 +569,9 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              number: "5511999999999"
+              audio: https://exemplo.com/audio.mp3
             schema:
               type: object
               required: [number, audio]
@@ -582,6 +604,9 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              number: "5511999999999"
+              sticker: https://exemplo.com/sticker.webp
             schema:
               type: object
               required: [number, sticker]
@@ -618,6 +643,17 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              number: "5511999999999"
+              title: Escolha uma opção
+              description: Selecione abaixo
+              buttons:
+                - buttonId: "1"
+                  buttonText:
+                    displayText: Opção 1
+                - buttonId: "2"
+                  buttonText:
+                    displayText: Opção 2
             schema:
               type: object
               required: [number, title, buttons]
@@ -667,6 +703,20 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              number: "5511999999999"
+              title: Menu de opções
+              description: Escolha uma opção abaixo
+              buttonText: Ver opções
+              sections:
+                - title: Serviços
+                  rows:
+                    - rowId: s1
+                      title: Suporte
+                      description: Falar com suporte
+                    - rowId: s2
+                      title: Vendas
+                      description: Falar com vendas
             schema:
               type: object
               required: [number, title, buttonText, sections]
@@ -721,6 +771,17 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              number: "5511999999999"
+              cards:
+                - header:
+                    type: image
+                    image: https://exemplo.com/img.jpg
+                  body:
+                    text: Card 1
+                  buttons:
+                    - name: quick_reply
+                      buttonParamsJson: '{"display_text":"Saiba mais","id":"card1"}'
             schema:
               type: object
               required: [number, cards]
@@ -782,8 +843,6 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/WebhookConfig'
             example:
               enabled: true
               url: https://meu-sistema.com/webhook
@@ -832,6 +891,13 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              rejectCall: false
+              msgCall: "Não posso atender agora."
+              groupsIgnore: false
+              alwaysOnline: true
+              readMessages: false
+              readStatus: false
             schema:
               $ref: '#/components/schemas/InstanceSettings'
       responses:
@@ -870,6 +936,13 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              enabled: true
+              host: p.webshare.io
+              port: 80
+              protocol: http
+              username: usuario
+              password: senha
             schema:
               $ref: '#/components/schemas/ProxyConfig'
       responses:
@@ -939,6 +1012,9 @@ paths:
         required: false
         content:
           application/json:
+            example:
+              where:
+                jid: "5511999999999@s.whatsapp.net"
             schema:
               type: object
               properties:
@@ -969,6 +1045,11 @@ paths:
         required: false
         content:
           application/json:
+            example:
+              where:
+                jid: "5511999999999@s.whatsapp.net"
+              take: 50
+              skip: 0
             schema:
               type: object
               properties:
