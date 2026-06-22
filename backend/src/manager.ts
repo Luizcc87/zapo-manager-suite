@@ -641,32 +641,9 @@ export class ZapoManager {
           // Não bloquear o evento de conexão
           setImmediate(async () => {
             try {
-              const meJid = client.getCredentials()?.meJid;
-              if (!meJid) return;
-
-              // Buscar foto de perfil
-              let profilePicUrl = '';
-              try {
-                const pic = await client.profile.getProfilePicture(meJid);
-                profilePicUrl = pic?.url ?? '';
-              } catch (_) { /* privacidade: foto não acessível */ }
-
-              // Buscar pushName — verificar onde está disponível:
-              const creds = client.getCredentials() as any;
-              const profileName = creds?.pushName ?? creds?.me?.name ?? '';
-
-              await prisma.instance.update({
-                where: { instanceName },
-                data: { profilePicUrl, profileName, ownerJid: meJid }
-              });
-
-              // Emitir atualização ao frontend via socket
-              _socketEmitter?.('connection.update', {
-                instance: instanceName,
-                data: { status: 'connected', profilePicUrl, profileName, ownerJid: meJid }
-              });
+              await ZapoManager.syncProfile(instanceName);
             } catch (err: any) {
-              console.warn(`[ZapoManager] [${instanceName}] Falha ao buscar perfil:`, err.message);
+              console.warn(`[ZapoManager] [${instanceName}] Falha ao buscar perfil na conexão:`, err.message);
             }
           });
         } else {
@@ -804,6 +781,63 @@ export class ZapoManager {
     }
     await releaseLock(instanceName, CONTAINER_ID);
     await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
+  }
+
+  static async syncProfile(instanceName: string): Promise<{ profilePicUrl: string; profileName: string; ownerJid: string } | null> {
+    const active = activeClients.get(instanceName);
+    if (!active) {
+      console.warn(`[ZapoManager] [${instanceName}] Tentativa de sincronizar perfil mas a instância não está ativa.`);
+      return null;
+    }
+    try {
+      const meJid = active.client.getCredentials()?.meJid;
+      if (!meJid) {
+        console.warn(`[ZapoManager] [${instanceName}] JID do dispositivo conectado não encontrado nas credenciais.`);
+        return null;
+      }
+
+      // Buscar foto de perfil
+      let profilePicUrl = '';
+      try {
+        const pic = await active.client.profile.getProfilePicture(meJid);
+        profilePicUrl = pic?.url ?? '';
+      } catch (e: any) {
+        console.log(`[ZapoManager] [${instanceName}] Não foi possível obter foto de perfil: ${e.message}`);
+      }
+
+      // Buscar pushName — meDisplayName é o campo correto em WaAuthCredentials (me.name não existe)
+      const creds = active.client.getCredentials() as any;
+      const profileName = creds?.pushName ?? creds?.meDisplayName ?? '';
+
+      console.log(`[ZapoManager] [${instanceName}] Perfil sincronizado com sucesso: JID=${meJid}, Name="${profileName}", PicURL="${profilePicUrl}"`);
+
+      // Só sobrescreve campos não-vazios — evita apagar valores existentes quando fetch falha (privacidade/400)
+      await prisma.instance.update({
+        where: { instanceName },
+        data: {
+          ownerJid: meJid,
+          ...(profileName && { profileName }),
+          ...(profilePicUrl && { profilePicUrl }),
+        }
+      });
+
+      // Lê o estado atual para emitir valores reais (pode ter mantido os anteriores)
+      const current = await prisma.instance.findUnique({
+        where: { instanceName },
+        select: { profileName: true, profilePicUrl: true }
+      });
+
+      // Emitir atualização ao frontend via socket
+      _socketEmitter?.('connection.update', {
+        instance: instanceName,
+        data: { status: 'connected', profilePicUrl: current?.profilePicUrl ?? profilePicUrl, profileName: current?.profileName ?? profileName, ownerJid: meJid }
+      });
+
+      return { profilePicUrl: current?.profilePicUrl ?? profilePicUrl, profileName: current?.profileName ?? profileName, ownerJid: meJid };
+    } catch (err: any) {
+      console.error(`[ZapoManager] [${instanceName}] Erro ao sincronizar perfil:`, err.message);
+      throw err;
+    }
   }
 
   static async deleteClient(instanceName: string) {

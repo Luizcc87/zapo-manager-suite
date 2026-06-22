@@ -433,6 +433,21 @@ router.get('/connectionState/:instanceName', checkInstanceApiKey, async (req: Re
   }
 });
 
+// 3.1. Sincronizar Perfil Manualmente
+router.post('/syncProfile/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    console.log(`[ZapoRouter] [SyncProfile] Solicitando sincronização manual de perfil para: ${instanceName}`);
+    const result = await ZapoManager.syncProfile(instanceName);
+    if (!result) {
+      return res.status(400).json({ error: 'Instance not active or credentials missing.' });
+    }
+    return res.status(200).json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // 4. Listar todas as Instâncias
 router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
@@ -445,6 +460,30 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
       : undefined;
     const dbInstances = await prisma.instance.findMany({ where });
     console.log(`[ZapoRouter] GET /fetchInstances - found ${dbInstances.length} instances:`, dbInstances.map(i => i.instanceName));
+
+    // Otimização: groupBy para contagem de chats e mensagens por instância (evita N+1 queries)
+    const countWhere = instanceId
+      ? { instanceName: { in: dbInstances.map(i => i.instanceName) } }
+      : instanceName
+      ? { instanceName: instanceName as string }
+      : undefined;
+
+    const [chatCounts, msgCounts] = await Promise.all([
+      prisma.chatEntry.groupBy({
+        by: ['instanceName'],
+        where: countWhere,
+        _count: { id: true }
+      }),
+      prisma.message.groupBy({
+        by: ['instanceName'],
+        where: countWhere,
+        _count: { id: true }
+      })
+    ]);
+
+    const chatMap = Object.fromEntries(chatCounts.map(r => [r.instanceName, r._count.id]));
+    const msgMap = Object.fromEntries(msgCounts.map(r => [r.instanceName, r._count.id]));
+
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
       const isMockConnected = inst.status === 'connected';
@@ -459,6 +498,9 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
       } else if (isMockConnected && inst.registeredPhone) {
         ownerJid = `${inst.registeredPhone.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
       }
+
+      // Fallback dinâmico para preencher registeredPhone de instâncias antigas migradas
+      const fallbackNumber = inst.registeredPhone || (ownerJid ? ownerJid.split('@')[0].split(':')[0] : '');
 
       return {
         id: inst.id,
@@ -475,7 +517,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         profileName: inst.profileName || inst.instanceName,
         profilePicUrl: inst.profilePicUrl || '',
         integration: 'WHATSAPP-BAILEYS',
-        number: isMockConnected ? (inst.registeredPhone || '') : '',
+        number: isMockConnected ? fallbackNumber : '',
         businessId: '',
         token: inst.apiKey,
         clientName: 'evolution',
@@ -495,9 +537,9 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
           ? (ZapoManager.proxyStatusCache.get(inst.instanceName)?.details || ZapoManager.proxyStatusCache.get(inst.instanceName)?.error || null)
           : null,
         _count: {
-          Message: 0,
-          Contact: 0,
-          Chat: 0
+          Message: msgMap[inst.instanceName] ?? 0,
+          Contact: 0, // Nota: Sem model no Prisma local mapeado para contatos
+          Chat: chatMap[inst.instanceName] ?? 0
         }
       };
     });

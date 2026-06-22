@@ -15,7 +15,7 @@ export type HeaderAction = {
 };
 
 interface BaseHeaderProps {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   searchValue?: string;
   onSearchChange?: (value: string) => void;

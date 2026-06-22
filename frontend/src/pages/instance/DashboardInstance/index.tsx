@@ -4,7 +4,23 @@ import { Avatar, AvatarImage } from "@evoapi/design-system/avatar";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@evoapi/design-system/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CircleUser, Globe, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, Smartphone, ShieldAlert, UsersRound } from "lucide-react";
+import { CircleUser, Copy, Globe, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, Smartphone, ShieldAlert, UsersRound } from "lucide-react";
+import { copyToClipboard } from "@/utils/copy-to-clipboard";
+
+const InstanceName = ({ name }: { name: string }) => (
+  <div className="flex items-center gap-3 truncate rounded-sm bg-primary/20 px-2 py-1">
+    <pre className="block truncate text-xs font-mono">{name}</pre>
+    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(name)}>
+      <Copy size="15" />
+    </Button>
+  </div>
+);
+
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-label="WhatsApp">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+);
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import QRCode from "react-qr-code";
@@ -38,7 +54,7 @@ function DashboardInstance() {
   const isGo = getProvider() === "go";
   const { theme } = useTheme();
 
-  const { connect, logout, restart } = useManageInstance();
+  const { connect, logout, restart, syncProfile } = useManageInstance();
   const { instance, reloadInstance } = useInstance();
 
   useEffect(() => {
@@ -69,6 +85,16 @@ function DashboardInstance() {
 
   const handleReload = async () => {
     await reloadInstance();
+  };
+
+  const handleSyncProfile = async (instanceName: string) => {
+    try {
+      if (!token) return;
+      await syncProfile({ instanceName, token });
+      await reloadInstance();
+    } catch (error) {
+      console.error("Error syncing profile:", error);
+    }
   };
 
   const handleRestart = async (instanceName: string) => {
@@ -134,8 +160,10 @@ function DashboardInstance() {
   return (
     <div className="flex flex-col">
       <BaseHeader
-        title={instance.name}
-        subtitle={instance.profileName || t("instance.dashboard.subtitle", { defaultValue: "Gerencie sua instância" })}
+        title={instance.profileName
+          ? <span className="flex items-center gap-2">{instance.profileName}<WhatsAppIcon className="h-5 w-5 flex-shrink-0 text-[#25D366]" /></span>
+          : instance.name}
+        subtitle={instance.profileName ? instance.name : t("instance.dashboard.subtitle", { defaultValue: "Gerencie sua instância" })}
         secondaryActions={[
           {
             label: t("button.refresh", { defaultValue: "Atualizar" }),
@@ -149,6 +177,11 @@ function DashboardInstance() {
           },
           ...(connected
             ? [
+                {
+                  label: t("instance.dashboard.button.syncProfile", { defaultValue: "Sincronizar Perfil" }),
+                  icon: <RefreshCw className="h-4 w-4" />,
+                  onClick: () => handleSyncProfile(instance.name),
+                },
                 {
                   label: t("instance.dashboard.button.disconnect", { defaultValue: "Desconectar" }),
                   icon: <LogOut className="h-4 w-4" />,
@@ -181,7 +214,10 @@ function DashboardInstance() {
                   </Avatar>
                 )}
                 <div>
-                  <CardTitle className="break-all">{instance.profileName || instance.name}</CardTitle>
+                  <CardTitle className="flex items-center gap-2 break-all">
+                    {instance.profileName || instance.name}
+                    {instance.profileName && <WhatsAppIcon className="h-4 w-4 flex-shrink-0 text-[#25D366]" />}
+                  </CardTitle>
                   {instance.ownerJid && (
                     <p className="mt-1 break-all text-xs text-muted-foreground">{formatOwnerJid(instance.ownerJid)}</p>
                   )}
@@ -191,7 +227,12 @@ function DashboardInstance() {
             </div>
           </CardHeader>
           <CardContent className="flex flex-col items-start space-y-4">
-            <div className="w-full">
+            <div className="w-full space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">{t("instance.dashboard.instanceName", { defaultValue: "Nome da instância" })}</p>
+              <InstanceName name={instance.name} />
+            </div>
+            <div className="w-full space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">{t("instance.dashboard.token", { defaultValue: "Token da instância" })}</p>
               <InstanceToken token={instance.token} />
             </div>
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -209,6 +250,49 @@ function DashboardInstance() {
                 <p className="mt-1 break-all text-sm font-semibold">{versionValue}</p>
               </div>
             </div>
+
+            {instanceType === "mobile" && instance.deviceInfo && (
+              <div className="w-full rounded-lg border border-sidebar-border bg-sidebar-accent/5 p-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  {t("instance.dashboard.deviceInfo.title", { defaultValue: "Dispositivo Emulado" })}
+                </h4>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+                  <div className="rounded-md border border-sidebar-border/60 bg-sidebar p-2.5">
+                    <span className="text-[10px] uppercase font-medium text-muted-foreground block">
+                      {t("instance.dashboard.deviceInfo.manufacturer", { defaultValue: "Fabricante" })}
+                    </span>
+                    <span className="font-semibold text-foreground mt-0.5 block capitalize">
+                      {(instance.deviceInfo as any).manufacturer || "—"}
+                    </span>
+                  </div>
+                  <div className="rounded-md border border-sidebar-border/60 bg-sidebar p-2.5">
+                    <span className="text-[10px] uppercase font-medium text-muted-foreground block">
+                      {t("instance.dashboard.deviceInfo.model", { defaultValue: "Modelo" })}
+                    </span>
+                    <span className="font-semibold text-foreground mt-0.5 block font-mono">
+                      {(instance.deviceInfo as any).device || "—"}
+                    </span>
+                  </div>
+                  <div className="rounded-md border border-sidebar-border/60 bg-sidebar p-2.5">
+                    <span className="text-[10px] uppercase font-medium text-muted-foreground block">
+                      {t("instance.dashboard.deviceInfo.os", { defaultValue: "Sistema Operacional" })}
+                    </span>
+                    <span className="font-semibold text-foreground mt-0.5 block font-mono">
+                      Android {(instance.deviceInfo as any).osVersion || "16"}
+                    </span>
+                  </div>
+                  <div className="rounded-md border border-sidebar-border/60 bg-sidebar p-2.5">
+                    <span className="text-[10px] uppercase font-medium text-muted-foreground block">
+                      {t("instance.dashboard.deviceInfo.build", { defaultValue: "Build do Sistema" })}
+                    </span>
+                    <span className="font-semibold text-foreground mt-0.5 block font-mono truncate" title={String((instance.deviceInfo as any).osBuildNumber || "")}>
+                      {(instance.deviceInfo as any).osBuildNumber || "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {instance.proxyEnabled && instance.proxyConnected === false && (
               <Alert variant="destructive" className="w-full flex items-start gap-3">

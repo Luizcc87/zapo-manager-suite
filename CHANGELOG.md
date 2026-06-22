@@ -4,6 +4,48 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-06-22
+
+### Feat: Sincronização manual de perfil, contadores dinâmicos e painel de dispositivo
+
+#### Backend — `backend/src/manager.ts`
+
+- **`ZapoManager.syncProfile(instanceName)`** — novo método estático que centraliza toda a lógica de sincronização de perfil (foto + nome). Substitui código duplicado que existia em `setImmediate` no evento `connection` e agora também serve o endpoint de sincronização manual.
+  - Lê `pushName` via `creds.pushName ?? creds.meDisplayName` (campo correto da interface `WaAuthCredentials` do zapo-js — `creds.me.name` não existe).
+  - **Update condicional:** só sobrescreve `profileName` e `profilePicUrl` no banco se o valor obtido for não-vazio — evita apagar dados existentes quando `getProfilePicture` retorna 400 (privacidade) ou `pushName` vem vazio.
+  - Após update, relê o estado atual do DB para emitir via socket os valores reais persistidos (pode ser valor anterior preservado).
+  - Log descritivo no terminal: JID, Name, PicURL obtidos.
+
+#### Backend — `backend/src/routes/instance.routes.ts`
+
+- **`POST /instance/syncProfile/:instanceName`** — endpoint protegido por `checkInstanceApiKey` para forçar sincronização de perfil sob demanda via frontend. Delega para `ZapoManager.syncProfile()` e retorna `{ profilePicUrl, profileName, ownerJid }`. Retorna 400 se instância não estiver ativa.
+- **`GET /fetchInstances` — otimização N+1 → `groupBy`:** substitui `_count: { Message: 0, Chat: 0 }` hardcoded por contagens reais do banco. Executa duas queries `groupBy` em paralelo (`Promise.all`) antes do `.map()`, construindo lookup maps `chatMap` e `msgMap`. `Contact` permanece 0 (sem model correspondente no Prisma local — documentado inline com comentário).
+- **Backfill de número:** se `registeredPhone` for nulo, o campo `number` da listagem é derivado dinamicamente do `ownerJid`.
+
+#### Frontend — `frontend/src/lib/queries/instance/manageInstance.tsx`
+
+- Adicionada mutation `syncProfile` via `useManageMutation`, que chama `POST /instance/syncProfile/:instanceName` e invalida `["instance", "fetchInstance"]` e `["instance", "fetchInstances"]` ao concluir, forçando reload automático na UI.
+
+#### Frontend — `frontend/src/pages/instance/DashboardInstance/index.tsx`
+
+- **Botão "Sincronizar Perfil":** adicionado em `secondaryActions` do `BaseHeader`, visível apenas quando `connectionStatus === "open"`.
+- **Painel "Dispositivo Emulado":** card colapsível exibido quando `instanceType === "mobile"` e `instance.deviceInfo` presente. Grid 4 colunas (Fabricante, Modelo, Sistema Operacional, Build do Sistema). Fallback `"—"` quando campo vazio.
+- **Ícone WhatsApp ao lado do `profileName`:** `WhatsAppIcon` (SVG inline, verde `#25D366`) exibido no `CardTitle` e no `BaseHeader title` quando `instance.profileName` está preenchido — indica visualmente que o nome veio do WhatsApp conectado.
+- **`InstanceName` acima do token:** exibe `instance.name` (identificador técnico) com label localizado "Nome da instância" e botão de cópia, antes do `InstanceToken`. Permite copiar o nome para uso em integrações de API sem precisar lembrar ou buscar em outro lugar.
+- **Label no token:** adicionado label "Token da instância" acima do `InstanceToken` para consistência visual com o `InstanceName`.
+- Importa `Copy` do lucide-react e `copyToClipboard` de `@/utils/copy-to-clipboard`.
+
+#### Frontend — `frontend/src/components/instance-card.tsx`
+
+- **Ícone WhatsApp no `<h3>`:** `WhatsAppIcon` (SVG inline, `h-3.5 w-3.5`, verde `#25D366`) exibido ao lado do `displayName` quando `instance.profileName` está preenchido.
+- Fallbacks de `manufacturer` e `device` no card corrigidos: `|| "Samsung"` e `|| "SM-S911B"` substituídos por `|| "—"` — evitava exibir valores falsos quando campos estavam vazios.
+
+#### Frontend — `frontend/src/components/base-header.tsx`
+
+- Prop `title` alterada de `string` para `ReactNode` — permite passar JSX com ícone embutido sem quebrar usos existentes que passam strings.
+
+---
+
 ## [Unreleased] — 2026-06-21
 
 ### Fix: Versão WA Business Android desatualizada causando `old_version` no registro OTP

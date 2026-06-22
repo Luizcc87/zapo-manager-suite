@@ -54,6 +54,17 @@ const updateSettings = async ({ instanceName, token, data }: UpdateSettingsParam
   return response.data;
 };
 
+interface SyncProfileParams {
+  instanceName: string;
+  token: string;
+}
+const syncProfile = async ({ instanceName, token }: SyncProfileParams) => {
+  const response = await api.post(`/instance/syncProfile/${instanceName}`, {}, {
+    headers: { apikey: token },
+  });
+  return response.data;
+};
+
 export function useManageInstance() {
   const queryClient = useQueryClient();
   const provider = getProvider();
@@ -89,6 +100,12 @@ export function useManageInstance() {
   const createInstanceMutation = useManageMutation(go ? go.createInstance : createInstance, {
     invalidateKeys: [["instance", "fetchInstances"]],
   });
+  const syncProfileMutation = useManageMutation(syncProfile, {
+    invalidateKeys: [
+      ["instance", "fetchInstance"],
+      ["instance", "fetchInstances"],
+    ],
+  });
 
   return {
     connect: connectMutation,
@@ -97,5 +114,6 @@ export function useManageInstance() {
     logout: logoutMutation,
     restart: restartMutation,
     createInstance: createInstanceMutation,
+    syncProfile: syncProfileMutation,
   };
 }
