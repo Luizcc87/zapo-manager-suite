@@ -6,6 +6,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-22
 
+### Testes: cobertura de webhook com receiver local, retry em HTTP 500 e suíte real opt-in
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): `sendWebhook()` agora considera `response.ok`, lança erro em HTTP 4xx/5xx e aplica timeout explícito com `AbortSignal.timeout(10_000)`, permitindo retry em falhas de destino que antes passavam silenciosamente.
+
+**Testes**
+- [backend/src/tests/zapo-webhook-delivery.test.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/tests/zapo-webhook-delivery.test.ts): nova suíte sem WhatsApp real com receiver HTTP local, validação de `connection.update`, `messages.upsert` e retry em respostas 500.
+- [tests/zapo-webhook-delivery.real.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo-webhook-delivery.real.spec.ts): nova suíte opt-in para WhatsApp real, usando instância conectada e receiver local para validar entrega de webhook após envio real de mensagem.
+
 ### Docs: Atualização da documentação sobre o método BMAD v6.9.0
 
 **Docs**

@@ -871,11 +871,15 @@ export class ZapoManager {
     const MAX_ATTEMPTS = 3;
     const attempt = async (n: number): Promise<void> => {
       try {
-        await fetch(cfg.url, {
+        const response = await fetch(cfg.url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': instanceName },
-          body: JSON.stringify({ event, instance: instanceName, payload })
+          body: JSON.stringify({ event, instance: instanceName, payload }),
+          signal: AbortSignal.timeout(10_000),
         });
+        if (!response.ok) {
+          throw new Error(`webhook http ${response.status}`);
+        }
       } catch (err: any) {
         if (n < MAX_ATTEMPTS) {
           const delayMs = 1000 * Math.pow(2, n - 1); // 1s, 2s, 4s
@@ -890,4 +894,3 @@ export class ZapoManager {
     await attempt(1);
   }
 }
-
