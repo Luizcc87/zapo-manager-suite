@@ -1,0 +1,997 @@
+openapi: 3.0.3
+info:
+  title: Zapo Manager API
+  version: 1.0.0
+  description: |
+    API REST para gerenciar instâncias WhatsApp via zapo-js.
+    Autenticação via header `apikey` (GLOBAL_API_KEY ou chave da instância).
+
+    **Try it out:** Configure o Server URL para sua VPS e clique em Authorize para inserir o GLOBAL_API_KEY.
+
+    ### Formato de número
+    Use DDI + DDD + número sem `+` e sem espaços: `5511999999999`.
+    Números brasileiros **não** precisam do 9 extra no DDD: `555599703107` (correto), não `5555999703107`.
+    Para grupos use o ID do grupo: `120363XXXXXXXX@g.us`.
+
+servers:
+  - url: http://localhost:8080
+    description: Local dev
+  - url: https://zapo.dominio.com
+    description: VPS produção (substituir pelo domínio real)
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: apikey
+      description: GLOBAL_API_KEY (aceito em todos os endpoints) ou instanceToken (endpoints da instância)
+
+  parameters:
+    instanceName:
+      in: path
+      name: instanceName
+      required: true
+      schema:
+        type: string
+      example: Teste-mobile
+      description: Nome único da instância
+
+  schemas:
+    InstanceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          example: cmqmqwgg40000ioosgapeg2tu
+        instanceName:
+          type: string
+          example: Teste-mobile
+        status:
+          type: string
+          enum: [connected, connecting, disconnected]
+        instanceType:
+          type: string
+          enum: [mobile, web]
+        webhookEnabled:
+          type: boolean
+        softwareVersion:
+          type: string
+          example: 2.26.23.73
+
+    MessageSent:
+      type: object
+      properties:
+        key:
+          type: object
+          properties:
+            remoteJid:
+              type: string
+              example: 5511999999999@s.whatsapp.net
+            fromMe:
+              type: boolean
+            id:
+              type: string
+              example: AAAABBBBCCCCDDDD
+        messageTimestamp:
+          type: integer
+          example: 1782000000
+        status:
+          type: string
+          example: PENDING
+
+    WebhookConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          default: false
+        url:
+          type: string
+          format: uri
+          example: https://meu-sistema.com/webhook
+        events:
+          type: array
+          description: |
+            Eventos a receber. Lista vazia = todos os eventos.
+            Valores: connection.update, messages.upsert, messages.update,
+            presence.update, chats.update, groups.update, call
+          items:
+            type: string
+          example: [connection.update, messages.upsert]
+        webhookBase64:
+          type: boolean
+          description: Enviar mídia como base64 no payload
+          default: false
+        webhookByEvents:
+          type: boolean
+          default: false
+
+    InstanceSettings:
+      type: object
+      properties:
+        rejectCall:
+          type: boolean
+          default: false
+        msgCall:
+          type: string
+          description: Mensagem enviada ao rejeitar chamada
+        groupsIgnore:
+          type: boolean
+          default: false
+        alwaysOnline:
+          type: boolean
+          default: false
+        readMessages:
+          type: boolean
+          default: false
+        readStatus:
+          type: boolean
+          default: false
+
+    ProxyConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          default: false
+        host:
+          type: string
+          example: p.webshare.io
+        port:
+          type: integer
+          example: 80
+        protocol:
+          type: string
+          enum: [http, https, socks5]
+          default: http
+        username:
+          type: string
+        password:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: API key ausente ou inválida
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Unauthorized: Invalid Global API Key"
+    NotFound:
+      description: Instância não encontrada
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Instance not found
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Instâncias
+    description: Ciclo de vida das instâncias WhatsApp
+  - name: Mensagens
+    description: Envio de mensagens e mídia
+  - name: Configuração
+    description: Webhook, proxy e settings por instância
+  - name: Chat
+    description: Busca de chats e mensagens
+  - name: Registro
+    description: Registro primário via SMS/OTP (mobile transport)
+
+paths:
+  /instance/fetchInstances:
+    get:
+      tags: [Instâncias]
+      summary: Listar instâncias
+      description: Retorna todas as instâncias cadastradas. Filtros opcionais por instanceId ou instanceName.
+      parameters:
+        - in: query
+          name: instanceId
+          schema:
+            type: string
+          description: ID interno da instância (CUID)
+        - in: query
+          name: instanceName
+          schema:
+            type: string
+          description: Nome da instância
+      responses:
+        '200':
+          description: Lista de instâncias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstanceSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /instance/create:
+    post:
+      tags: [Instâncias]
+      summary: Criar instância
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instanceName]
+              properties:
+                instanceName:
+                  type: string
+                  example: minha-instancia
+                token:
+                  type: string
+                  description: API key customizada (gerada automaticamente se omitida)
+                mobileTransport:
+                  type: boolean
+                  description: Usar transporte mobile TCP (requer registro SMS/OTP)
+                  default: false
+                webhookConfig:
+                  $ref: '#/components/schemas/WebhookConfig'
+                proxyConfig:
+                  $ref: '#/components/schemas/ProxyConfig'
+      responses:
+        '200':
+          description: Instância criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceSummary'
+        '400':
+          description: instanceName já existe ou dados inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /instance/connect/{instanceName}:
+    get:
+      tags: [Instâncias]
+      summary: Conectar instância
+      description: |
+        Inicia a conexão com o WhatsApp.
+        - **Web**: QR code entregue via webhook `connection.update` com `status: "connecting"` e campo `qr`.
+        - **Mobile**: reconecta via TCP após registro SMS/OTP.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Conexão iniciada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: connecting
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /instance/connectionState/{instanceName}:
+    get:
+      tags: [Instâncias]
+      summary: Estado da conexão
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Estado atual
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  instance:
+                    type: object
+                    properties:
+                      instanceName:
+                        type: string
+                      state:
+                        type: string
+                        enum: [open, connecting, close]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /instance/syncProfile/{instanceName}:
+    post:
+      tags: [Instâncias]
+      summary: Sincronizar perfil
+      description: Busca nome e foto de perfil da instância conectada e salva no banco.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Perfil sincronizado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /instance/logout/{instanceName}:
+    delete:
+      tags: [Instâncias]
+      summary: Desconectar (logout)
+      description: Desconecta a instância sem excluí-la. Pode ser reconectada depois.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Desconectado com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /instance/delete/{instanceName}:
+    delete:
+      tags: [Instâncias]
+      summary: Excluir instância
+      description: Remove permanentemente a instância e todos os seus dados.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Excluída com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /instance/register/requestCode:
+    post:
+      tags: [Registro]
+      summary: Solicitar código SMS
+      description: Envia código de verificação por SMS para registrar número no WhatsApp Business via mobile transport.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instanceName, phoneNumber]
+              properties:
+                instanceName:
+                  type: string
+                  example: Teste-mobile
+                phoneNumber:
+                  type: string
+                  description: Número com DDI, sem +, sem espaços, sem 9 extra
+                  example: "5511999999999"
+                method:
+                  type: string
+                  enum: [sms, voice]
+                  default: sms
+      responses:
+        '200':
+          description: Código enviado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: code_sent
+        '400':
+          description: Número inválido ou instância não está em estado mobile
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /instance/register/confirmCode:
+    post:
+      tags: [Registro]
+      summary: Confirmar código SMS
+      description: Confirma o código recebido e finaliza o registro da instância mobile.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instanceName, code]
+              properties:
+                instanceName:
+                  type: string
+                  example: Teste-mobile
+                code:
+                  type: string
+                  description: Código de 6 dígitos recebido por SMS
+                  example: "123456"
+      responses:
+        '200':
+          description: Registrado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: registered
+        '400':
+          description: Código inválido ou expirado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /message/status/{instanceName}/{messageId}:
+    get:
+      tags: [Mensagens]
+      summary: Status de mensagem
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: string
+          example: AAAABBBBCCCCDDDD
+      responses:
+        '200':
+          description: Status da mensagem
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [PENDING, SERVER_ACK, DELIVERY_ACK, READ, PLAYED, FAILED]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /message/sendText/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar texto
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, text]
+              properties:
+                number:
+                  type: string
+                  description: Número destino com DDI (sem + e sem 9 extra em BR)
+                  example: "5511999999999"
+                text:
+                  type: string
+                  example: Olá! Mensagem de teste.
+                delay:
+                  type: integer
+                  description: Delay em ms antes de enviar (simula digitação)
+                  example: 1200
+                quoted:
+                  type: object
+                  description: Chave da mensagem a ser respondida (key.id, key.remoteJid)
+      responses:
+        '200':
+          description: Mensagem enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /message/sendMedia/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar mídia (imagem, vídeo, documento, áudio)
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, mediatype, media]
+              properties:
+                number:
+                  type: string
+                  example: "5511999999999"
+                mediatype:
+                  type: string
+                  enum: [image, video, document, audio]
+                media:
+                  type: string
+                  description: URL pública ou base64 do arquivo
+                  example: https://exemplo.com/imagem.jpg
+                caption:
+                  type: string
+                  example: Legenda da imagem
+                fileName:
+                  type: string
+                  description: Nome do arquivo para documents
+                  example: relatorio.pdf
+      responses:
+        '200':
+          description: Mídia enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /message/sendWhatsAppAudio/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar áudio como mensagem de voz (PTT)
+      description: Converte e envia áudio no formato Push-to-Talk do WhatsApp.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, audio]
+              properties:
+                number:
+                  type: string
+                  example: "5511999999999"
+                audio:
+                  type: string
+                  description: URL pública ou base64 do áudio (mp3, ogg, wav)
+      responses:
+        '200':
+          description: Áudio enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /message/sendSticker/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar sticker
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, sticker]
+              properties:
+                number:
+                  type: string
+                  example: "5511999999999"
+                sticker:
+                  type: string
+                  description: URL pública ou base64 (webp ou imagem convertida automaticamente)
+      responses:
+        '200':
+          description: Sticker enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /message/sendButtons/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar mensagem com botões
+      description: |
+        Envia mensagem interativa com botões de resposta rápida.
+        A resposta do usuário chega via webhook `messages.upsert` com `messageType: "buttonsResponseMessage"`.
+        Internamente enviada como `viewOnceMessage` para compatibilidade com WA recente.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, title, buttons]
+              properties:
+                number:
+                  type: string
+                  example: "5511999999999"
+                title:
+                  type: string
+                  example: Escolha uma opção
+                description:
+                  type: string
+                buttons:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      buttonId:
+                        type: string
+                      buttonText:
+                        type: object
+                        properties:
+                          displayText:
+                            type: string
+      responses:
+        '200':
+          description: Botões enviados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /message/sendList/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar lista interativa
+      description: |
+        Envia lista de opções com seções e linhas selecionáveis.
+        A resposta do usuário chega via webhook `messages.upsert` com `messageType: "listResponseMessage"`.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, title, buttonText, sections]
+              properties:
+                number:
+                  type: string
+                  example: "5511999999999"
+                title:
+                  type: string
+                description:
+                  type: string
+                buttonText:
+                  type: string
+                  example: Ver opções
+                sections:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            rowId:
+                              type: string
+                            title:
+                              type: string
+                            description:
+                              type: string
+      responses:
+        '200':
+          description: Lista enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /message/sendCarousel/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar carrossel de cards
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, cards]
+              properties:
+                number:
+                  type: string
+                  example: "5511999999999"
+                cards:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      header:
+                        type: object
+                      body:
+                        type: object
+                      buttons:
+                        type: array
+      responses:
+        '200':
+          description: Carrossel enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /webhook/find/{instanceName}:
+    get:
+      tags: [Configuração]
+      summary: Buscar config de webhook
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Config atual
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /webhook/set/{instanceName}:
+    post:
+      tags: [Configuração]
+      summary: Configurar webhook
+      description: |
+        Persiste configuração de webhook no banco.
+        Reinicialização do servidor não requer reconfiguração — a config é carregada do banco no startup.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookConfig'
+            example:
+              enabled: true
+              url: https://meu-sistema.com/webhook
+              events:
+                - connection.update
+                - messages.upsert
+              webhookBase64: false
+              webhookByEvents: false
+      responses:
+        '200':
+          description: Config salva
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /settings/find/{instanceName}:
+    get:
+      tags: [Configuração]
+      summary: Buscar settings da instância
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Settings atuais
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /settings/set/{instanceName}:
+    post:
+      tags: [Configuração]
+      summary: Atualizar settings da instância
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceSettings'
+      responses:
+        '200':
+          description: Settings atualizados
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /proxy/find/{instanceName}:
+    get:
+      tags: [Configuração]
+      summary: Buscar config de proxy
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Config de proxy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProxyConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /proxy/set/{instanceName}:
+    post:
+      tags: [Configuração]
+      summary: Configurar proxy
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProxyConfig'
+      responses:
+        '200':
+          description: Proxy configurado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /proxy/status/{instanceName}:
+    get:
+      tags: [Configuração]
+      summary: Testar conectividade do proxy
+      description: Faz uma requisição de teste através do proxy configurado e retorna IP externo e latência.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Resultado do teste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  ip:
+                    type: string
+                    example: 92.112.170.205
+                  latencyMs:
+                    type: integer
+                    example: 1101
+                  error:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /proxy/replace/{instanceName}:
+    post:
+      tags: [Configuração]
+      summary: Substituir IP do proxy rotativo
+      description: |
+        Chama o endpoint do provedor para trocar o IP do proxy desta instância.
+        Requer `PROXY_REPLACE_API_URL` e `PROXY_REPLACE_API_KEY` no `.env` do backend.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: IP substituído com sucesso
+        '400':
+          description: PROXY_REPLACE_API_URL não configurado
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /chat/findChats/{instanceName}:
+    post:
+      tags: [Chat]
+      summary: Buscar chats
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                where:
+                  type: object
+                  description: 'Filtros Prisma (ex: { jid: "5511@s.whatsapp.net" })'
+      responses:
+        '200':
+          description: Lista de chats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /chat/findMessages/{instanceName}:
+    post:
+      tags: [Chat]
+      summary: Buscar mensagens
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                where:
+                  type: object
+                  description: 'Filtros Prisma (ex: { jid: "5511@s.whatsapp.net" })'
+                take:
+                  type: integer
+                  description: Número máximo de mensagens
+                  example: 50
+                skip:
+                  type: integer
+                  example: 0
+      responses:
+        '200':
+          description: Lista de mensagens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'

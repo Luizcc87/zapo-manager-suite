@@ -3,10 +3,12 @@ import cors from 'cors';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as net from 'net';
+import { readFileSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { Server as HttpServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
+import { apiReference } from '@scalar/express-api-reference';
 import instanceRouter from './routes/instance.routes';
 import messageRouter from './routes/message.routes';
 import chatRouter from './routes/chat.routes';
@@ -69,6 +71,10 @@ app.use('/instance', instanceRouter);
 app.use('/message', messageRouter);
 app.use('/chat', chatRouter);
 app.use('/', configRouter);
+
+// API docs interativa (Scalar)
+const openapiSpec = readFileSync(path.join(__dirname, '../../docs/openapi.yaml'), 'utf8');
+app.use('/api-docs', apiReference({ spec: { content: openapiSpec } }));
 
 // Mock de licença da Evolution API v2 para evitar bloqueios na UI
 app.get('/license/status', (req, res) => {
