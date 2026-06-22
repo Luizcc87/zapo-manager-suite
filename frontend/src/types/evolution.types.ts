@@ -25,7 +25,7 @@ export type Instance = {
   id: string;
   name: string;
   connectionStatus: string;
-  instanceType?: "web" | "mobile";
+  instanceType?: "web" | "mobile" | "primary";
   mobileTransport?: boolean;
   webhookEnabled?: boolean;
   softwareVersion?: string;

@@ -147,6 +147,14 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
       return res.status(400).json({ error: 'instanceName and phoneNumber are required' });
     }
 
+    const dbInstance = await prisma.instance.findUnique({ where: { instanceName } });
+    if (!dbInstance) {
+      return res.status(404).json({ error: 'Instance not found' });
+    }
+    if (!dbInstance.mobileTransport) {
+      return res.status(400).json({ error: 'Instance is not configured for mobile transport' });
+    }
+
     // Patch Baileys: MOBILE_TOKEN e MOBILE_USERAGENT com versão atual (iOS — Baileys projetado para iOS)
     patchBaileysDefaults();
     const device = getMobileDevice();
@@ -506,7 +514,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         id: inst.id,
         name: inst.instanceName,
         connectionStatus: state,
-        instanceType: inst.mobileTransport ? 'mobile' : 'web',
+        instanceType: inst.mobileTransport ? (inst.registeredPhone ? 'primary' : 'mobile') : 'web',
         mobileTransport: inst.mobileTransport,
         webhookEnabled: !!(inst.webhookConfig as any)?.enabled,
         softwareVersion: inst.mobileTransport

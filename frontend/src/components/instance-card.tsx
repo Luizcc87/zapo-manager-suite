@@ -127,8 +127,8 @@ export function InstanceCard({ instance, isDeleting, onDelete }: InstanceCardPro
             <ProxyBadge enabled={!!instance.proxyEnabled} connected={instance.proxyConnected} />
             <WebhookBadge enabled={!!instance.webhookEnabled} />
             {(() => {
-              const isMobile = instance.instanceType === "mobile" || !!instance.mobileTransport;
-              const isPrimary = isMobile && !!instance.number;
+              const isPrimary = instance.instanceType === "primary";
+              const isMobile = isPrimary || instance.instanceType === "mobile" || !!instance.mobileTransport;
               if (isPrimary) {
                 return (
                   <Badge className="bg-violet-500/10 text-violet-500 hover:bg-violet-500/20">

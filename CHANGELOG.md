@@ -6,6 +6,18 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-22
 
+### Feat: Suíte de testes E2E do Registro Primário e validações preventivas no backend
+
+**Backend**
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): Adicionadas validações no início de `POST /instance/register/requestCode` para validar a existência da instância (retorna `404`) e verificar se está configurada para transporte móvel (retorna `400`).
+
+**Testes**
+- [tests/zapo-primary-registration.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo-primary-registration.spec.ts): Nova suíte de testes E2E com Playwright contendo testes CI-safe de contratos e erros (Suite A) e testes integrados para fluxo de SMS/OTP real (Suite B) que utilizam variáveis de ambiente (`TEST_PRIMARY_PHONE`, `TEST_OTP_CODE`) e possuem cleanup automático de instâncias.
+
+**Docs**
+- [docs/TESTING.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/TESTING.md): Criado guia completo de testes contendo comandos rápidos de execução, listagem das variáveis de ambiente aceitas, suítes existentes e a explicação detalhada de como executar o fluxo do Registro Primário em múltiplos passos para obter e validar o SMS OTP.
+- [CLAUDE.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/CLAUDE.md): Atualizada a seção "Testes E2E" com comandos rápidos de execução de testes e referenciando o novo guia.
+
 ### Testes: cobertura de webhook com receiver local, retry em HTTP 500 e suíte real opt-in
 
 **Backend**

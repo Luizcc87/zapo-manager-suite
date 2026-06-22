@@ -153,7 +153,7 @@ function DashboardInstance() {
   if (!instance) return <LoadingSpinner />;
 
   const connected = instance.connectionStatus === "open";
-  const instanceType = instance.instanceType ?? (instance.mobileTransport ? "mobile" : "web");
+  const instanceType = (instance.instanceType === "primary" ? "mobile" : instance.instanceType) ?? (instance.mobileTransport ? "mobile" : "web");
   const versionLabel = instanceType === "mobile" ? t("instance.dashboard.version.mobile", { defaultValue: "Versão do app mobile" }) : t("instance.dashboard.version.web", { defaultValue: "Versão do WhatsApp Web" });
   const versionValue = instance.softwareVersion || t("instance.dashboard.version.unavailable", { defaultValue: "Não disponível" });
 

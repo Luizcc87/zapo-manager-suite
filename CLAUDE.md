@@ -38,8 +38,15 @@ npm run type-check   # tsc --noEmit
 npm run format       # Prettier (write)
 npm run format:check # Prettier (check)
 ```
+## Testes E2E
 
-Não há testes (script `test` é no-op).
+O projeto possui uma suíte de testes de integração e E2E implementada com Playwright (`@playwright/test`). Consulte [docs/TESTING.md](docs/TESTING.md) para o guia completo.
+
+- **Localização dos testes:** `tests/*.spec.ts`
+- **Comando principal:** `npx playwright test` (CI-safe, roda serialmente)
+- **Convenção de nomenclatura:** `tests/zapo-*.spec.ts`
+- **Registro Primário (SMS OTP):** `npx playwright test tests/zapo-primary-registration.spec.ts`
+- **Requisitos Especiais:** Alguns testes exigem variáveis de ambiente (`TEST_PRIMARY_PHONE`, `TEST_OTP_CODE`, `TEST_CONNECTED_INSTANCE`) para interagir com o WhatsApp real. Pula-se automaticamente caso ausentes.
 
 ## Architecture
 
