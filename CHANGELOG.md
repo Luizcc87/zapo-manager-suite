@@ -6,6 +6,27 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-22
 
+### Feat: Implementação das opções rejectCall e readStatus do Dashboard
+
+**Backend — `backend/src/manager.ts`**
+- **`client.on('message', ...)`**: Adicionado suporte a `settings.readStatus`. Quando ativo, novas publicações no chat especial `status@broadcast` que não sejam de autoria própria recebem automaticamente um recibo de leitura (`read`) via `client.message.sendReceipt`.
+- **`client.on('call', ...)`**: Adicionado suporte a `settings.rejectCall`. Quando ativado e um evento de chamada recebida do tipo `'offer'` é detectado, constrói uma stanza customizada `<call><reject/></call>` e envia via `client.lowlevel.sendNode` para recusar a chamada de rede. Se `settings.msgCall` estiver configurado, também envia automaticamente a mensagem de texto configurada para o chamador.
+
+---
+
+### Feat: Sincronização completa do histórico ao escanear QR Code
+
+**Backend — `backend/src/manager.ts`**
+- **`buildStore()`**: assinatura estendida com `opts: { syncFullHistory?: boolean }`. Quando `syncFullHistory=true`, os providers `messages` e `threads` são ativados (`'pg'`) no zapo-js store, garantindo que os blobs de histórico enviados pelo dispositivo primário sejam persistidos no backend PostgreSQL/SQLite em vez de descartados silenciosamente.
+- **`connectClient()` — `clientOptions.history`**: adicionado `requireFullSync: settings.syncFullHistory ?? false`. Este campo instrui o protocolo WhatsApp a solicitar o histórico **completo** (`FULL`) e não apenas `RECENT` ao parear. Sem esse campo, o flag na UI era ignorado a nível de protocolo.
+- **`client.on('history_sync_chunk', ...)`**: novo listener registrado apenas quando `syncFullHistory=true`. O evento contém metadados (`messagesCount`, `conversationsCount`, `progress`, `chunkOrder`, `syncType`). Os dados reais são persistidos internamente pelo zapo-js via `writeBehind`; o listener loga o progresso no terminal e emite o evento `'history.sync'` via webhook e socket, permitindo que a UI exiba um indicador de sincronização.
+
+> **Nota arquitetural:** `WaHistorySyncChunkEvent` expõe apenas metadados. As mensagens históricas são gravadas no store interno do zapo-js (PostgreSQL `wa_*` tables gerenciadas pelo `@zapo-js/store-postgres`), não diretamente nas tabelas Prisma `wa_messages`. Para que mensagens novas *e* históricas apareçam no chat do Manager, configure `SAVE_DATA_NEW_MESSAGE=true`.
+
+**Commits:** pendente
+
+---
+
 ### Fix: OTP registration proxy forwarding and Android device fingerprint consistency
 
 **Backend**
@@ -445,5 +466,6 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 | Item | Detalhe |
 |---|---|
-| `prisma generate` | Regenerar client após adição de `registeredPhone` — parar dev server antes |
-| Push origin | 12 commits à frente de `origin/master` |
+| Push origin | Múltiplos commits à frente de `origin/master` — realizar push após validação local |
+| History sync UI | `history.sync` socket event disponível; frontend ainda não exibe indicador de progresso |
+| Histórico no chat | Mensagens históricas ficam no store interno do zapo-js, não nas tabelas Prisma — integração futura necessária para exibir no Manager chat |

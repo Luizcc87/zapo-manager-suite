@@ -1,6 +1,6 @@
 ---
 name: feedback-windows-prisma-dll
-description: "Prisma DLL EPERM no Windows ao rodar npm run dev — causa, fix imediato e fix permanente"
+description: "Prisma DLL EPERM no Windows + predev — causa, fix e contexto de quando NÃO usar predev (atualizado 2026-06-22)"
 metadata: 
   node_type: memory
   type: feedback
@@ -33,17 +33,29 @@ Após `killPort` loop, matar todos os processos node.exe exceto o próprio dev.m
 
 ---
 
-## Problema recorrente: `predev` some do package.json
+## Atenção: `predev` foi REMOVIDO intencionalmente do package.json
 
-**Causa:** Agente Gemini/outro processo sobrescreve `backend/package.json` sem o campo `predev`. O `predev: "prisma generate"` é intencional e crítico.
+**Status atual:** `backend/package.json` NÃO tem `predev: "prisma generate"`.
 
-**Fix:** Sempre que editar ou revisar diff de `backend/package.json`, verificar se `predev` está presente:
-```json
-"scripts": {
-  "predev": "prisma generate",
-  "build": "tsc",
-  ...
-}
+**Motivo da remoção:** O hook `predev` causava EPERM no Windows (DLL travado pelo Vite em paralelo). Foi removido como fix permanente.
+
+**Como regenerar o Prisma client manualmente** (necessário após mudanças de schema):
+```powershell
+# 1. Parar o dev server
+# 2. Matar todos os processos node
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+# 3. Gerar o client
+cd backend && npx prisma generate
+# 4. Reiniciar o dev server
+npm run dev
 ```
 
-**Why:** Sem `predev`, o Prisma Client não é regenerado antes do `tsx watch`, causando erros de tipo ou runtime quando o schema muda.
+**How to apply:** Ao modificar `backend/prisma/schema.prisma`, sempre regenerar o Prisma client manualmente antes de reiniciar o servidor. Não adicionar `predev` de volta sem coordenar com o usuário.
+
+---
+
+## Problema recorrente: agente sobrescreve package.json sem verificar
+
+Agentes de IA às vezes sobrescrevem `backend/package.json` durante implementações.
+
+**How to apply:** Sempre que editar ou revisar diff de `backend/package.json`, verificar que o script `predev` NÃO foi reintroduzido (remoção foi intencional). Verificar que scripts essenciais (`build`, `dev`, `prisma:generate`) estão presentes.

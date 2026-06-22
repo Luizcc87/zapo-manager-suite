@@ -68,7 +68,10 @@ async function releaseLock(instanceName: string, containerId: string): Promise<v
 
 const CONTAINER_ID = process.env.HOSTNAME || Math.random().toString(36).substring(7);
 
-async function buildStore(instanceName: string): Promise<{ store: any; pgStore: any; redisClient: any; poller: any }> {
+async function buildStore(
+  instanceName: string,
+  opts: { syncFullHistory?: boolean } = {}
+): Promise<{ store: any; pgStore: any; redisClient: any; poller: any }> {
   let pgStore: any = null;
   let redisClient: any = null;
   let poller: any = null;
@@ -91,6 +94,9 @@ async function buildStore(instanceName: string): Promise<{ store: any; pgStore: 
 
   const saveMessages = process.env.SAVE_DATA_NEW_MESSAGE === 'true';
   const saveContacts = process.env.SAVE_DATA_CONTACTS === 'true';
+  // syncFullHistory forces messages + threads providers so the zapo-js write-behind
+  // persists historical blobs in the store backend (PostgreSQL/SQLite) instead of discarding them.
+  const persistHistory = opts.syncFullHistory ?? (process.env.SAVE_DATA_HISTORIC === 'true');
 
   let providersConfig: any = {
     auth: pgStore ? 'pg' : 'sqlite',
@@ -101,8 +107,9 @@ async function buildStore(instanceName: string): Promise<{ store: any; pgStore: 
     senderKey: pgStore ? 'pg' : 'sqlite',
     appState: pgStore ? 'pg' : 'sqlite',
     privacyToken: pgStore ? 'pg' : 'sqlite',
-    messages: saveMessages && pgStore ? 'pg' : 'none',
-    threads: 'none',
+    messages: (saveMessages || persistHistory) && pgStore ? 'pg' : 'none',
+    // threads: enabled when syncFullHistory so chat list is persisted in zapo store
+    threads: persistHistory && pgStore ? 'pg' : 'none',
     contacts: saveContacts && pgStore ? 'pg' : 'none'
   };
 
@@ -539,7 +546,7 @@ export class ZapoManager {
       ? { ...rawProxy, session: instanceName }
       : rawProxy;
     const logger = new ConsoleLogger('info');
-    const { store, pgStore, redisClient, poller } = await buildStore(instanceName);
+    const { store, pgStore, redisClient, poller } = await buildStore(instanceName, { syncFullHistory: settings.syncFullHistory ?? false });
     const proxy = buildProxy(proxyConfig);
     if (proxy && instance.mobileTransport) {
       // mobileTransport uses TCP (port 5222) directly and doesn't use WebSockets.
@@ -560,7 +567,10 @@ export class ZapoManager {
       history: {
         enabled: process.env.SAVE_DATA_HISTORIC === 'true'
           || settings.syncFullHistory
-          || false
+          || false,
+        // requireFullSync: instructs the WhatsApp primary device to push the
+        // full conversation history (not just RECENT) when enabled in settings.
+        requireFullSync: settings.syncFullHistory ?? false,
       },
       deviceBrowser: process.env.SESSION_DEVICE_BROWSER || 'chrome',
       ...(process.env.SESSION_DEVICE_OS && { deviceOsDisplayName: process.env.SESSION_DEVICE_OS }),
@@ -678,6 +688,9 @@ export class ZapoManager {
       if (settings.readMessages && !event.key.fromMe) {
         await client.message.sendReceipt(event, { type: 'read' }).catch(() => {});
       }
+      if (settings.readStatus && event.key.remoteJid === 'status@broadcast' && !event.key.fromMe) {
+        await client.message.sendReceipt(event, { type: 'read' }).catch(() => {});
+      }
       // Normalize @lid → @s.whatsapp.net so storage + socket payloads use the same JID
       // the frontend navigates by (phone number JID).
       const rawJid = event.key?.remoteJid ?? '';
@@ -732,8 +745,34 @@ export class ZapoManager {
       ZapoManager.sendWebhook(instanceName, 'chats.update', { instance: instanceName, data: event });
     });
 
-    client.on('call', (event) => {
+    client.on('call', async (event) => {
       ZapoManager.sendWebhook(instanceName, 'call', { instance: instanceName, data: event });
+
+      if (settings.rejectCall && event.type === 'offer') {
+        const toJid = event.callerPnJid ?? event.callCreatorJid;
+        if (toJid) {
+          await client.lowlevel.sendNode({
+            tag: 'call',
+            attrs: { to: toJid, id: Date.now().toString(16) },
+            content: [{
+              tag: 'reject',
+              attrs: {
+                'call-id': event.callId ?? '',
+                'call-creator': event.callCreatorJid ?? '',
+                'count': '0',
+              },
+            }],
+          }).catch((err) => {
+            console.error(`[ZapoManager] [${instanceName}] Falha ao rejeitar chamada:`, err.message);
+          });
+
+          if (settings.msgCall) {
+            await client.message.send(toJid, settings.msgCall).catch((err) => {
+              console.error(`[ZapoManager] [${instanceName}] Falha ao enviar mensagem de rejeição de chamada:`, err.message);
+            });
+          }
+        }
+      }
     });
 
     // ── Groups ────────────────────────────────────────────────────────────────
@@ -741,6 +780,30 @@ export class ZapoManager {
     client.on('group', (event) => {
       ZapoManager.sendWebhook(instanceName, 'groups.update', { instance: instanceName, data: event });
     });
+
+    // ── History Sync ──────────────────────────────────────────────────────────
+    // Fired once per chunk of history data pushed by the primary device.
+    // The event contains ONLY metadata (counts + progress) — the actual messages
+    // and threads are persisted internally by zapo-js via its write-behind store.
+    // We use this event for terminal logging and to emit real-time progress to
+    // the frontend via socket so the UI can display a sync indicator.
+
+    if (settings.syncFullHistory) {
+      client.on('history_sync_chunk', (event) => {
+        const { syncType, messagesCount, conversationsCount, progress, chunkOrder } = event;
+        console.log(
+          `[ZapoManager] [${instanceName}] [HistorySync] chunk=${chunkOrder ?? '?'} ` +
+          `progress=${progress != null ? progress + '%' : '?'} ` +
+          `msgs=${messagesCount} convs=${conversationsCount} syncType=${syncType}`
+        );
+        const payload = {
+          instance: instanceName,
+          data: { syncType, messagesCount, conversationsCount, progress, chunkOrder }
+        };
+        ZapoManager.sendWebhook(instanceName, 'history.sync', payload);
+        _socketEmitter?.('history.sync', payload);
+      });
+    }
 
     try {
       await client.connect();
