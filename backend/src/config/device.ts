@@ -1,7 +1,7 @@
 export const DEFAULT_MOBILE_DEVICE = {
   manufacturer: 'samsung',
   device: 'SM-S911B',
-  osVersion: '16',
+  osVersion: '15',
   osBuildNumber: 'BP1A.250505.001',
   // ponytail: updated at startup by fetchAndroidWaVersion; hardcoded as safe fallback
   appVersion: '2.26.23.73',
@@ -21,3 +21,12 @@ export const getMobileDevice = () => ({ ...DEFAULT_MOBILE_DEVICE, appVersion: _a
 let _iosVersion = '2.24.17.80';
 export const getCurrentIosVersion = () => _iosVersion;
 export const setIosVersion = (v: string) => { _iosVersion = v; };
+
+export const buildIosMobileUserAgent = (iosVersion: string) =>
+  `WhatsApp/${iosVersion} iOS/17.5.1 Device/Apple-iPhone_15`;
+
+export const buildIosMobileToken = (iosVersion: string) => {
+  const { createHash } = require('crypto');
+  const versionHash = createHash('md5').update(iosVersion).digest('hex');
+  return Buffer.from('0a1mLfGUIBVrMKF1RdvLI5lkRBvof6vn0fD2QRSM' + versionHash);
+};

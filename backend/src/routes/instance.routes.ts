@@ -1,24 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { ZapoManager, testProxyConnectivity } from '../manager';
-import { getMobileDevice, getCurrentIosVersion } from '../config/device';
+import { getMobileDevice, getCurrentIosVersion, buildIosMobileToken, buildIosMobileUserAgent } from '../config/device';
+import { buildRegistrationFetchOptions } from '../config/proxyUtils';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
 import { DEFAULT_CONNECTION_CONFIG } from '@whiskeysockets/baileys/lib/Defaults/index.js';
 
-// Patch runtime: Baileys v6 hardcodes WA_VERSION='2.23.14.82' e computa MOBILE_TOKEN e MOBILE_USERAGENT
-// em módulo-load. mobileRegisterFetch sobrescreve User-Agent com MOBILE_USERAGENT, e o token de registro
-// é md5(MOBILE_TOKEN + nationalNumber). WA valida o token com a versão do User-Agent → mismatch = bad_token.
-// Solução: recomputar MOBILE_TOKEN e MOBILE_USERAGENT com a versão atual antes de cada makeRegistrationSocket.
-// Mantemos iOS (Baileys foi projetado para iOS; Android usa constantes de token diferentes).
-import { createHash } from 'crypto';
 const BaileysMobileDefaults = require('@whiskeysockets/baileys/lib/Defaults/index.js');
 const patchBaileysDefaults = () => {
   // Use iOS version (from App Store) — NOT Android version from Play Store.
   // WA validates version↔OS consistency: Android version in iOS UA → blocked.
   const iosVersion = getCurrentIosVersion();
-  const versionHash = createHash('md5').update(iosVersion).digest('hex');
-  BaileysMobileDefaults.MOBILE_TOKEN = Buffer.from('0a1mLfGUIBVrMKF1RdvLI5lkRBvof6vn0fD2QRSM' + versionHash);
-  BaileysMobileDefaults.MOBILE_USERAGENT = `WhatsApp/${iosVersion} iOS/17.5.1 Device/Apple-iPhone_15`;
+  BaileysMobileDefaults.MOBILE_TOKEN = buildIosMobileToken(iosVersion);
+  BaileysMobileDefaults.MOBILE_USERAGENT = buildIosMobileUserAgent(iosVersion);
 };
 import * as path from 'path';
 import * as fs from 'fs';
@@ -191,12 +185,15 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     console.log(`[ZapoRouter] [RegisterCode] Auth state criado em: ${tempAuthDir}`);
     console.log(`[ZapoRouter] [RegisterCode] Iniciando makeRegistrationSocket...`);
 
+    const registrationFetchOptions = buildRegistrationFetchOptions(instanceName, dbInstance.proxyConfig);
+
     // Inicializar socket de registro Baileys v6
     const sock = makeRegistrationSocket({
       ...DEFAULT_CONNECTION_CONFIG,
       auth: state,
       mobile: true,
       logger: require('pino')({ level: 'silent' }), // Silencia o logger do baileys
+      options: registrationFetchOptions,
     });
 
     // Parsar o número para extrair o código do país e o número nacional

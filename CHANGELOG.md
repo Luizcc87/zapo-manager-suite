@@ -6,6 +6,16 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-22
 
+### Fix: OTP registration proxy forwarding and Android device fingerprint consistency
+
+**Backend**
+- [backend/src/config/device.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/config/device.ts): Ajustado `DEFAULT_MOBILE_DEVICE.osVersion` para `15`, mantendo coerência com `osBuildNumber`, e extraídos helpers puros para construir o `User-Agent` e o `MOBILE_TOKEN` do Baileys com a versão iOS.
+- [backend/src/config/proxyUtils.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/config/proxyUtils.ts): Novo helper puro para montar `options` com `httpsAgent`/`httpAgent` do fluxo OTP a partir de `proxyConfig`.
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): `POST /register/requestCode` agora injeta `options` no `makeRegistrationSocket`, reutilizando o proxy da instância no `mobileRegisterFetch`.
+
+**Testes**
+- [backend/src/tests/device-proxy-otp.test.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/tests/device-proxy-otp.test.ts): Nova suíte unitária cobrindo fingerprint Android, independência entre versões Android/iOS, helpers do Baileys e construção dos agentes de proxy HTTP/SOCKS.
+
 ### Feat: Suíte de testes E2E do Registro Primário e validações preventivas no backend
 
 **Backend**
