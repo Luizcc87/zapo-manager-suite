@@ -1,44 +1,44 @@
 installation:
-  version: 6.8.0
+  version: 6.9.0
   installDate: 2026-06-20T04:30:46.206Z
-  lastUpdated: 2026-06-20T04:30:46.206Z
+  lastUpdated: 2026-06-22T11:47:08.052Z
 modules:
   - name: core
-    version: 6.8.0
+    version: 6.9.0
     installDate: 2026-06-20T04:30:44.397Z
-    lastUpdated: 2026-06-20T04:30:46.196Z
+    lastUpdated: 2026-06-22T11:47:08.041Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmm
-    version: 6.8.0
+    version: 6.9.0
     installDate: 2026-06-20T04:30:44.354Z
-    lastUpdated: 2026-06-20T04:30:46.197Z
+    lastUpdated: 2026-06-22T11:47:08.042Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: tea
     version: v1.19.0
     installDate: 2026-06-20T04:30:45.119Z
-    lastUpdated: 2026-06-20T04:30:46.200Z
+    lastUpdated: 2026-06-22T11:47:08.044Z
     source: external
     npmPackage: bmad-method-test-architecture-enterprise
     repoUrl: https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise
     channel: stable
     sha: 8734d51f24071ddbcb3617390b5fcddb4128ef77
   - name: bmb
-    version: v2.0.0
+    version: v2.1.0
     installDate: 2026-06-20T04:30:45.279Z
-    lastUpdated: 2026-06-20T04:30:46.202Z
+    lastUpdated: 2026-06-22T11:47:08.047Z
     source: external
     npmPackage: bmad-builder
     repoUrl: https://github.com/bmad-code-org/bmad-builder
     channel: stable
-    sha: 41569013c018c100aeabdeb802855e3459e8b9d6
+    sha: d54981a8ba3b990148256455ccf4e6c1cb4918f0
   - name: cis
     version: v0.2.1
     installDate: 2026-06-20T04:30:45.327Z
-    lastUpdated: 2026-06-20T04:30:46.204Z
+    lastUpdated: 2026-06-22T11:47:08.049Z
     source: external
     npmPackage: bmad-creative-intelligence-suite
     repoUrl: https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite
@@ -47,7 +47,7 @@ modules:
   - name: wds
     version: v0.4.3
     installDate: 2026-06-20T04:30:46.065Z
-    lastUpdated: 2026-06-20T04:30:46.206Z
+    lastUpdated: 2026-06-22T11:47:08.052Z
     source: external
     npmPackage: bmad-wds
     repoUrl: https://github.com/bmad-code-org/bmad-method-wds-expansion

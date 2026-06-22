@@ -6,6 +6,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-22
 
+### Docs: Atualização da documentação sobre o método BMAD v6.9.0
+
+**Docs**
+- [docs/BMAD_METHOD.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/BMAD_METHOD.md): Nova documentação detalhando a metodologia BMAD, a transição para `uv run` como executor padrão de Python, o novo fluxo de arquitetura baseado em `ARCHITECTURE-SPINE.md`, a nova primitiva de memória compartilhada `memlog.py` e o novo skill `bmad-forge-idea`.
+- [AGENTS.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/AGENTS.md): Adicionada a seção "Metodologia BMAD (BMAD Method v6.9.0)" para orientar desenvolvedores e agentes sobre as novas diretrizes.
+- [CLAUDE.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/CLAUDE.md): Adicionada a seção "Metodologia BMAD" para guiar agentes sobre o uso obrigatório de `uv run` e da espinha dorsal.
+
 ### Feat: Sincronização manual de perfil, contadores dinâmicos e painel de dispositivo
 
 #### Backend — `backend/src/manager.ts`

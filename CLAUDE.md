@@ -227,7 +227,13 @@ Sem essas variáveis, o usuário configura via tela de login.
 
 **Proxy — fluxo de auto-registro:** se `PROXY_API_KEY` e `PROXY_IP_AUTH_URL` estiverem definidos, o backend detecta o IP público do servidor via `api.ipify.org` e o registra no provedor a cada startup. Útil em Docker Swarm onde o IP do nó pode mudar.
 
-**Proxy — sticky session:** campos `country` e `session` no formulário de proxy por-instância. Se `session` estiver vazio, o backend usa automaticamente o nome da instância como ID de sessão (evita rotação de IP mid-session pelo WhatsApp).
+## Metodologia BMAD
+
+Este repositório utiliza a metodologia **BMAD (v6.9.0)**. Regras para o agente:
+- **Scripts Python:** Sempre utilize `uv run <script>` em vez de `python3` para rodar scripts Python do BMAD (ex: merge scripts, linting, etc.).
+- **Arquitetura:** A fonte única de verdade é `ARCHITECTURE-SPINE.md`.
+- **Memória Compartilhada:** Primitiva `_bmad/scripts/memlog.py` registra o histórico cognitivo e progresso.
+- Documentação completa em [docs/BMAD_METHOD.md](docs/BMAD_METHOD.md).
 
 ## Memória Persistente
 

@@ -49,7 +49,7 @@ project_type = "digital_product"
 design_artifacts = "{project-root}/design-artifacts"
 design_system_mode = "none"
 methodology_version = "wds-v6"
-product_languages = ["en"]
+product_languages = "[\"en\"]"
 design_experience = "intermediate"
 
 [agents.bmad-agent-analyst]
