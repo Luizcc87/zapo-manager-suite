@@ -163,26 +163,28 @@ function Webhook() {
                             const meta = ZAPO_EVENT_META[event];
                             const active = field.value.includes(event);
                             return (
-                              <div key={event} className="flex items-center justify-between gap-3 pt-3">
-                                <div className="flex flex-col gap-0.5">
-                                  <FormLabel className={cn(active ? "text-foreground" : "text-muted-foreground")}>
+                              <FormItem key={event} className="flex items-center justify-between gap-3 pt-3">
+                                <div className="flex flex-1 flex-col gap-1">
+                                  <FormLabel className={cn("break-all cursor-pointer", active ? "text-foreground" : "text-muted-foreground")}>
                                     {meta?.title ?? event}
                                   </FormLabel>
                                   {meta?.description && (
                                     <FormDescription className="text-xs">{meta.description}</FormDescription>
                                   )}
                                 </div>
-                                <Switch
-                                  checked={active}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      field.onChange([...field.value, event]);
-                                    } else {
-                                      field.onChange(field.value.filter((e) => e !== event));
-                                    }
-                                  }}
-                                />
-                              </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={active}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        field.onChange([...field.value, event]);
+                                      } else {
+                                        field.onChange(field.value.filter((e) => e !== event));
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                              </FormItem>
                             );
                           })}
                       </div>

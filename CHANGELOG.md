@@ -6,6 +6,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-22
 
+### Feat: Alinhamento de Eventos e Design do Webhook
+
+**Frontend — `frontend/src/pages/instance/Webhook/index.tsx`**
+- Restrita a lista de eventos configuráveis (`API_EVENTS`) para conter apenas os 8 eventos ativamente suportados e disparados pelo Zapo-JS.
+- Redesenhada a exibição de cada evento individual de Webhook para seguir o mesmo padrão visual e proporções do switch de "Webhook por Eventos" (usando `FormItem` com flexbox, `FormLabel` com tamanho `text-sm` e peso regular/médio para o título amigável, e `FormDescription className="text-xs"` para exibir a descrição detalhada e o nome técnico do evento).
+
 ### Feat: Implementação das opções rejectCall e readStatus do Dashboard
 
 **Backend — `backend/src/manager.ts`**
