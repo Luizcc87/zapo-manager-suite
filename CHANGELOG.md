@@ -15,6 +15,9 @@ Registro cronológico reverso de implementações e alterações relevantes.
 **Dev Tools**
 - [scripts/dev.mjs](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/scripts/dev.mjs): Corrigido script de inicialização local para excluir o PID do processo pai (`process.ppid`) da rotina de limpeza de processos node no Windows, evitando que o comando `npm run dev` aborte logo na inicialização.
 
+**Frontend**
+- [frontend/src/pages/instance/Chat/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/instance/Chat/index.tsx): Adicionado banner descritivo no topo da barra lateral de chats exibindo o nome e o status de conexão atual da instância (Conectado/Conectando/Desconectado) com um indicador visual colorido.
+
 ---
 
 ## [Unreleased] — 2026-06-22

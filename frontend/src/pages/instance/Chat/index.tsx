@@ -164,6 +164,27 @@ function Chat() {
         )}
       >
         <div className="space-y-3 border-b p-4">
+          {instance && (
+            <div className="flex items-center justify-between text-xs border bg-background/30 rounded-md px-2.5 py-1.5">
+              <span className="font-medium text-foreground/80 truncate max-w-[120px]">
+                {instance.name}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={cn(
+                  "h-2 w-2 rounded-full",
+                  instance.connectionStatus === "connected" ? "bg-green-500" :
+                  instance.connectionStatus === "connecting" ? "bg-yellow-500 animate-pulse" :
+                  "bg-red-500"
+                )} />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {instance.connectionStatus === "connected" ? t("instance.status.connected", "Conectado") :
+                   instance.connectionStatus === "connecting" ? t("instance.status.connecting", "Conectando") :
+                   t("instance.status.disconnected", "Desconectado")}
+                </span>
+              </div>
+            </div>
+          )}
+
           <Button onClick={() => setModalOpen(true)} className="w-full gap-1.5 h-9" size="sm">
             <MessageCircle className="h-4 w-4" />
             {t("newConversation.button")}
