@@ -139,12 +139,14 @@ router.post('/sendWhatsAppAudio/:instanceName', checkStrictInstanceApiKey, async
     const buffer = Buffer.from(audioBase64, 'base64');
     tempPath = saveTempFile(buffer, 'audio.ogg');
 
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=audio (ptt), to=${jid}`);
     const sentMsg = await active.client.message.send(jid, {
       type: 'audio',
       media: tempPath,
       mimetype: 'audio/ogg; codecs=opus',
       ptt: true,
     });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=audio (ptt), to=${jid}, id=${sentMsg.id}`);
 
     const msgData = {
       key: {
@@ -209,7 +211,9 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
     if (linkPreviewRequested) {
       console.log(`[MessageRoutes] sendText linkPreview requested for ${instanceName}`);
     }
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=text, to=${jid}, content=${typeof content === 'string' ? content : JSON.stringify(content)}`);
     const sentMsg = await active.client.message.send(jid, content, options);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=text, to=${jid}, id=${sentMsg.id}`);
 
     const msgData = {
       key: {
@@ -297,7 +301,9 @@ router.post('/sendMedia/:instanceName', checkStrictInstanceApiKey, upload.single
       sendPayload.fileName = req.file ? req.file.originalname : (mediaUrl ? mediaUrl.split('/').pop()?.split('?')[0] || 'document.bin' : 'document.bin');
     }
 
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=${mediaType}, to=${jid}, caption=${caption}, hasFile=${!!req.file}, hasUrl=${!!mediaUrl}`);
     const sentMsg = await active.client.message.send(jid, sendPayload);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=${mediaType}, to=${jid}, id=${sentMsg.id}`);
 
     const returnedMsg: any = {};
     if (mediaType === 'image') returnedMsg.imageMessage = { caption };
@@ -371,11 +377,13 @@ router.post('/sendSticker/:instanceName', checkStrictInstanceApiKey, upload.sing
       return res.status(400).json({ error: 'File upload or mediaUrl is required' });
     }
 
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=sticker, to=${jid}, hasFile=${!!req.file}, hasUrl=${!!req.body.mediaUrl}`);
     const sentMsg = await active.client.message.send(jid, {
       type: 'sticker',
       media: mediaInput,
       mimetype: 'image/webp'
     });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=sticker, to=${jid}, id=${sentMsg.id}`);
 
     const msgData = {
       key: {
@@ -475,6 +483,7 @@ router.post('/sendButtons/:instanceName', checkStrictInstanceApiKey, async (req:
       }
     }
 
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=buttons, to=${jid}, title=${title}, buttonsCount=${nativeFlowButtons.length}`);
     const sentMsg = await active.client.message.send(jid, {
       viewOnceMessage: {
         message: {
@@ -490,6 +499,7 @@ router.post('/sendButtons/:instanceName', checkStrictInstanceApiKey, async (req:
         }
       }
     });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=buttons, to=${jid}, id=${sentMsg.id}`);
 
     const msgData = {
       key: {
@@ -566,6 +576,7 @@ router.post('/sendList/:instanceName', checkStrictInstanceApiKey, async (req: Re
       })) : []
     };
 
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=list, to=${jid}, title=${title}, sectionsCount=${sections?.length}`);
     const sentMsg = await active.client.message.send(jid, {
       viewOnceMessage: {
         message: {
@@ -586,6 +597,7 @@ router.post('/sendList/:instanceName', checkStrictInstanceApiKey, async (req: Re
         }
       }
     });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=list, to=${jid}, id=${sentMsg.id}`);
 
     const msgData = {
       key: {
@@ -693,6 +705,7 @@ router.post('/sendCarousel/:instanceName', checkStrictInstanceApiKey, async (req
       }
     }
 
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=carousel, to=${jid}, cardsCount=${cards?.length}`);
     const sentMsg = await active.client.message.send(jid, {
       viewOnceMessage: {
         message: {
@@ -706,6 +719,7 @@ router.post('/sendCarousel/:instanceName', checkStrictInstanceApiKey, async (req
         }
       }
     });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=carousel, to=${jid}, id=${sentMsg.id}`);
 
     const msgData = {
       key: {

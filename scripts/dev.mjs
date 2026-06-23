@@ -97,7 +97,7 @@ for (let p = 8080; p <= 8089; p++) await killPort(p);
 await new Promise(resolve => {
   const killer = spawn('powershell', [
     '-Command',
-    `Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | Stop-Process -Force`
+    `Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} -and $_.Id -ne ${process.ppid} } | Stop-Process -Force`
   ], { stdio: 'ignore', shell: false });
   killer.on('exit', resolve);
   killer.on('error', resolve);

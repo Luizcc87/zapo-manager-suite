@@ -79,14 +79,27 @@ async function buildStore(
 
   const dbUrl = process.env.DATABASE_URL || '';
   if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
+    console.log(`[ZapoManager] [${instanceName}] [buildStore] Inicializando persistência no PostgreSQL...`);
+    const pool = new Pool({ connectionString: dbUrl });
+
+    // Test database connection
+    try {
+      const dbCheckClient = await pool.connect();
+      console.log(`[ZapoManager] [${instanceName}] [buildStore] ✅ Conexão com o PostgreSQL estabelecida com sucesso.`);
+      dbCheckClient.release();
+    } catch (err: any) {
+      console.error(`[ZapoManager] [${instanceName}] [buildStore] ❌ Falha de conexão com o PostgreSQL:`, err.message);
+    }
+
     pgStore = createPostgresStore({
-      pool: new Pool({ connectionString: dbUrl }),
+      pool,
       tablePrefix: 'wa_'
     });
     poller = pgStore.startCleanup(instanceName);
     storeBackend = pgStore;
   } else {
     const sqlitePath = path.join(process.cwd(), '.auth', `${instanceName}.sqlite`);
+    console.log(`[ZapoManager] [${instanceName}] [buildStore] DATABASE_URL não definida. Inicializando persistência local em SQLite: ${sqlitePath}`);
     const dir = path.dirname(sqlitePath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     storeBackend = createSqliteStore({ path: sqlitePath });
@@ -96,7 +109,7 @@ async function buildStore(
   const saveContacts = process.env.SAVE_DATA_CONTACTS === 'true';
   // syncFullHistory forces messages + threads providers so the zapo-js write-behind
   // persists historical blobs in the store backend (PostgreSQL/SQLite) instead of discarding them.
-  const persistHistory = opts.syncFullHistory ?? (process.env.SAVE_DATA_HISTORIC === 'true');
+  const persistHistory = opts.syncFullHistory || (process.env.SAVE_DATA_HISTORIC === 'true');
 
   let providersConfig: any = {
     auth: pgStore ? 'pg' : 'sqlite',
@@ -114,14 +127,27 @@ async function buildStore(
   };
 
   if (process.env.REDIS_URL && pgStore) {
+    console.log(`[ZapoManager] [${instanceName}] [buildStore] Inicializando persistência no Redis: ${process.env.REDIS_URL}`);
     redisClient = new Redis(process.env.REDIS_URL);
+
+    redisClient.on('connect', () => {
+      console.log(`[ZapoManager] [${instanceName}] [buildStore] ✅ Conexão com o Redis estabelecida com sucesso.`);
+    });
+    redisClient.on('error', (err: any) => {
+      console.error(`[ZapoManager] [${instanceName}] [buildStore] ❌ Erro de conexão com o Redis:`, err.message);
+    });
+
     const redisStore = createRedisStore({
       redis: redisClient,
       keyPrefix: `wa:${instanceName.replace(/[^a-zA-Z0-9_]/g, '_')}:`
     });
     storeBackend = { pg: pgStore, redis: redisStore };
     providersConfig = { ...providersConfig, auth: 'redis', signal: 'redis' };
+  } else if (process.env.REDIS_URL) {
+    console.warn(`[ZapoManager] [${instanceName}] [buildStore] REDIS_URL fornecido mas PostgreSQL (pgStore) não está ativo. Redis ignorado.`);
   }
+
+  console.log(`[ZapoManager] [${instanceName}] [buildStore] Provedores de persistência configurados:`, JSON.stringify(providersConfig, null, 2));
 
   const store = createStore({
     backends: pgStore ? storeBackend : { sqlite: storeBackend },
@@ -704,13 +730,15 @@ export class ZapoManager {
         pushName: event.pushName
       };
       const normalized = ZapoManager.storeMessage(instanceName, msgData);
-      console.log(`[msg] fromMe=${event.key?.fromMe} jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id?.slice(-8)}`);
+      const direction = event.key?.fromMe ? 'OUTBOUND/SENT' : 'INBOUND/RECEIVED';
+      console.log(`[ZapoManager] [${instanceName}] [MESSAGE EVENT] [${direction}] jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id} pushName=${event.pushName || 'N/A'} content=${JSON.stringify(event.message)}`);
       const webhookPayload = { instance: instanceName, data: normalized ?? msgData };
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', webhookPayload);
       _socketEmitter?.('messages.upsert', webhookPayload);
     });
 
     client.on('message_addon', (event) => {
+      console.log(`[ZapoManager] [${instanceName}] [MESSAGE ADDON EVENT] type=addon, fromMe=${event.key?.fromMe} jid=${event.key?.remoteJid} id=${event.key?.id} addonType=${(event as any).type || 'unknown'} content=${JSON.stringify(event)}`);
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', {
         instance: instanceName,
         data: { type: 'addon', addon: event }
@@ -720,6 +748,7 @@ export class ZapoManager {
     // ── Receipts (zapo-js native — WaIncomingReceiptEvent) ───────────────────
 
     client.on('receipt', (event) => {
+      console.log(`[ZapoManager] [${instanceName}] [MESSAGE STATUS/RECEIPT] chatJid=${event.chatJid} status=${event.status} messageIds=${JSON.stringify(event.messageIds)}`);
       for (const messageId of event.messageIds) {
         const previous = activeData.messageStatus?.get(messageId) ?? {};
         activeData.messageStatus?.set(messageId, {
