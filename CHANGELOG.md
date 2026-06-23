@@ -4,7 +4,30 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-06-23
+
+### Feat: Logs verbosos de mensagens e recibos
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): Adicionados logs detalhados nos listeners de eventos do `WaClient` para diferenciar a direção das mensagens (`[MESSAGE EVENT] [INBOUND/RECEIVED]` vs `[MESSAGE EVENT] [OUTBOUND/SENT]`).
+- Adicionados logs em tempo real para recebimento de reações e edições de mensagens (`[MESSAGE ADDON EVENT]`) e confirmações de recebimento/leitura (`[MESSAGE STATUS/RECEIPT]`).
+
+**Dev Tools**
+- [scripts/dev.mjs](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/scripts/dev.mjs): Corrigido script de inicialização local para excluir o PID do processo pai (`process.ppid`) da rotina de limpeza de processos node no Windows, evitando que o comando `npm run dev` aborte logo na inicialização.
+
+---
+
 ## [Unreleased] — 2026-06-22
+
+### Sync workflow formalization for upstream triage
+
+**Docs / Memory**
+- `docs/SYNC-UPSTREAM.md`: added copy-paste examples for `zapo`, `baileys`, `evolution`, `auto`, and `--evolution-api` usage, plus output-to-file examples.
+- `AGENTS.md`: documented the formal triage workflow, supported modes, and the sync memory index entry.
+- `CLAUDE.md`: documented the three upstream validation tracks and the standard sync workflow.
+- `memory/project_sync_workflows.md`: formalized the upstream triage rules and mode-specific touchpoints.
+
+**Commits:** `e36c2b4`
 
 ### Feat: Aba Contatos + Iniciar Conversa
 

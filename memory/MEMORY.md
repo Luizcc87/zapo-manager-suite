@@ -8,6 +8,7 @@
 - [Gerenciamento de versões WA](project_wa_version_management.md) — Web/Android/iOS separados; fetchers; tabela de erros OTP
 - [Fix @lid JID Mobile Transport](project_chat_lid_fix.md) — Mobile Transport usa @lid; normalizar via remoteJidAlt
 - [Sincronização de Histórico](project_history_sync.md) — requireFullSync, history_sync_chunk listener, limitação arquitetural
+- [Sync Workflows](project_sync_workflows.md) — modos de triagem para `zapo-js`, `Baileys` e `evolution-manager-v2`
 - [Configurações de Comportamento](project_behavior_settings.md) — rejectCall, readStatus, alwaysOnline, groupsIgnore, readMessages
 - [Testes Playwright + Scalar API](project_testing_and_api.md) — suítes de teste, variáveis opt-in, openapi.yaml
 
