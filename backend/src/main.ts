@@ -12,6 +12,7 @@ import { apiReference } from '@scalar/express-api-reference';
 import instanceRouter from './routes/instance.routes';
 import messageRouter from './routes/message.routes';
 import chatRouter from './routes/chat.routes';
+import contactRouter from './routes/contact.routes';
 import configRouter from './routes/config.routes';
 import { ZapoManager } from './manager';
 import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
@@ -70,6 +71,7 @@ app.use((req, res, next) => {
 app.use('/instance', instanceRouter);
 app.use('/message', messageRouter);
 app.use('/chat', chatRouter);
+app.use('/contact', contactRouter);
 app.use('/', configRouter);
 
 // API docs interativa (Scalar)

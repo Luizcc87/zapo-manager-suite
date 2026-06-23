@@ -1,4 +1,11 @@
 {
+  "newConversation": {
+    "button": "Nueva Conversación",
+    "title": "Iniciar nueva conversación",
+    "placeholder": "Ej: 5511999998888",
+    "invalidPhone": "Número inválido. Use formato internacional (código de país + número).",
+    "confirm": "Iniciar"
+  },
   "primaryRegistration": {
     "button": "Registrar como Principal",
     "warning": {
@@ -194,6 +201,8 @@
   },
   "sidebar": {
     "dashboard": "Visión General",
+    "chat": "Chat",
+    "contacts": "Contactos",
     "configurations": "Configuraciones",
     "settings": "Comportamiento",
     "proxy": "Proxy",

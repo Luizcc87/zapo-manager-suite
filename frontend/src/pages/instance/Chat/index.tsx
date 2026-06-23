@@ -14,6 +14,7 @@ import { useInstance } from "@/contexts/InstanceContext";
 import { useFindChats } from "@/lib/queries/chat/findChats";
 import { getToken, TOKEN_ID } from "@/lib/queries/token";
 import { cn } from "@/lib/utils";
+import { NewConversationDialog } from "@/components/NewConversationDialog";
 
 import { connectSocket } from "@/services/websocket/socket";
 
@@ -39,6 +40,7 @@ function Chat() {
   const [realtimeChats, setRealtimeChats] = useState<ChatType[]>([]);
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<ChatKind>("contacts");
+  const [modalOpen, setModalOpen] = useState(false);
 
   const { data: chats } = useFindChats({ instanceName: instance?.name });
 
@@ -162,6 +164,11 @@ function Chat() {
         )}
       >
         <div className="space-y-3 border-b p-4">
+          <Button onClick={() => setModalOpen(true)} className="w-full gap-1.5 h-9" size="sm">
+            <MessageCircle className="h-4 w-4" />
+            {t("newConversation.button")}
+          </Button>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -290,6 +297,11 @@ function Chat() {
           </div>
         )}
       </main>
+      <NewConversationDialog
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        instanceId={instanceId ?? instance?.id ?? ""}
+      />
     </div>
   );
 }

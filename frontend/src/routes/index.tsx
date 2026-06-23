@@ -22,6 +22,7 @@ import { Rabbitmq } from "@/pages/instance/Rabbitmq";
 import { Settings } from "@/pages/instance/Settings";
 import { Sqs } from "@/pages/instance/Sqs";
 import { Typebot } from "@/pages/instance/Typebot";
+import { Contacts } from "@/pages/instance/Contacts";
 import { Webhook } from "@/pages/instance/Webhook";
 import { Websocket } from "@/pages/instance/Websocket";
 import LicenseCallback from "@/pages/Login/LicenseCallback";
@@ -61,6 +62,16 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <InstanceLayout>
           <DashboardInstance />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/contacts",
+    element: (
+      <ProtectedRoute feature="contacts">
+        <InstanceLayout>
+          <Contacts />
         </InstanceLayout>
       </ProtectedRoute>
     ),

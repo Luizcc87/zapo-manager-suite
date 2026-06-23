@@ -7,6 +7,7 @@ import {
   IterationCcw,
   LayoutDashboard,
   MessageCircle,
+  Users,
   Zap,
 } from "lucide-react";
 import { useMemo } from "react";
@@ -131,6 +132,7 @@ function InstanceSidebar() {
     () => [
       { id: "dashboard", title: t("sidebar.dashboard"), icon: LayoutDashboard, path: "dashboard" },
       { id: "chat", title: t("sidebar.chat"), icon: MessageCircle, path: "chat" },
+      { id: "contacts", title: t("sidebar.contacts"), icon: Users, path: "contacts" },
       {
         title: t("sidebar.configurations"),
         icon: Cog,

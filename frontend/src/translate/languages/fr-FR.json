@@ -1,4 +1,11 @@
 {
+  "newConversation": {
+    "button": "Nouvelle Conversation",
+    "title": "Démarrer une nouvelle conversation",
+    "placeholder": "Ex: 5511999998888",
+    "invalidPhone": "Numéro invalide. Utilisez le format international (code pays + numéro).",
+    "confirm": "Démarrer"
+  },
   "primaryRegistration": {
     "button": "Enregistrer comme Principal",
     "warning": {
@@ -193,6 +200,8 @@
   },
   "sidebar": {
     "dashboard": "Vue d'ensemble",
+    "chat": "Chat",
+    "contacts": "Contacts",
     "configurations": "Configurations",
     "settings": "Comportement",
     "proxy": "Proxy",

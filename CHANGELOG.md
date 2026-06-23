@@ -6,6 +6,52 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-22
 
+### Feat: Aba Contatos + Iniciar Conversa
+
+**Backend — `backend/src/routes/contact.routes.ts` (novo)**
+- `GET /contact/find/:instanceName` protegido por `checkInstanceApiKey`.
+- Dual-store: PostgreSQL via `prisma.$queryRawUnsafe` na tabela `wa_contacts`; SQLite via `better-sqlite3` em `.auth/{instanceName}.sqlite`.
+- try/catch retorna `[]` silenciosamente se tabela não existe (requer `SAVE_DATA_CONTACTS=true`).
+- Normalização de campos com múltiplos fallbacks (`id || jid`, `name || notify || verifiedName`).
+- Proteção contra path traversal: regex `[A-Za-z0-9_-]+` + `path.resolve` confinamento ao diretório `.auth/`.
+
+**Backend — `backend/src/main.ts`**
+- Registrado roteador `/contact`.
+
+**Frontend — `frontend/src/lib/provider/features.ts`**
+- Adicionado `contacts: { api: true, go: false, zapo: true }`.
+
+**Frontend — `frontend/src/components/sidebar.tsx`**
+- Item "Contatos" com ícone `Users` na sidebar de instância, respeitando feature flag.
+
+**Frontend — `frontend/src/routes/index.tsx`**
+- Rota `/manager/instance/:instanceId/contacts` com `ProtectedRoute feature="contacts"`.
+
+**Frontend — `frontend/src/lib/queries/contact/` (novo)**
+- `types.ts`: tipos `Contact` e `FindContactsResponse`.
+- `findContacts.ts`: hook `useFindContacts` com React Query.
+
+**Frontend — `frontend/src/pages/instance/Contacts/index.tsx` (novo)**
+- Lista com avatar, nome, número; busca local em tempo real.
+- Botão "Conversar" navega para rota existente `/chat/:remoteJid` — sem chamada de API adicional.
+- Estado vazio com instrução sobre `SAVE_DATA_CONTACTS`.
+- Integrado botão e diálogo compartilhado "Nova Conversa".
+
+**Frontend — `frontend/src/components/NewConversationDialog.tsx` (novo)**
+- Componente de diálogo compartilhado para iniciar conversas com números fora da agenda.
+- Validação no frontend: sanitiza o número limpando caracteres não-dígitos, garante comprimento entre 10 e 15 dígitos e valida que não inicia com "0".
+- Redireciona diretamente para a rota do chat com o JID formatado.
+
+**Frontend — `frontend/src/pages/instance/Chat/index.tsx`**
+- Adicionado botão "Nova Conversa" no topo da listagem de chats ativos, disparando o diálogo compartilhado.
+
+**i18n — 4 arquivos de tradução**
+- `sidebar.contacts` adicionado em pt-BR, en-US, es-ES, fr-FR.
+- `sidebar.chat` corrigido em pt-BR, es-ES, fr-FR (chave faltante).
+- Chaves de tradução da estrutura `newConversation` adicionadas em todos os idiomas.
+
+---
+
 ### Feat: Alinhamento de Eventos e Design do Webhook
 
 **Frontend — `frontend/src/pages/instance/Webhook/index.tsx`**

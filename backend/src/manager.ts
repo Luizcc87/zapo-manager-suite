@@ -110,7 +110,7 @@ async function buildStore(
     messages: (saveMessages || persistHistory) && pgStore ? 'pg' : 'none',
     // threads: enabled when syncFullHistory so chat list is persisted in zapo store
     threads: persistHistory && pgStore ? 'pg' : 'none',
-    contacts: saveContacts && pgStore ? 'pg' : 'none'
+    contacts: saveContacts ? (pgStore ? 'pg' : 'sqlite') : 'none'
   };
 
   if (process.env.REDIS_URL && pgStore) {

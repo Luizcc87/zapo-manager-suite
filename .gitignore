@@ -17,3 +17,5 @@ _bmad/*.user.toml
 test-results/
 playwright-report/
 blob-report/
+webhook-tester
+
