@@ -286,7 +286,15 @@ const MessageContent = ({ message }: { message: Message }) => {
       );
 
     case "stickerMessage":
-      return <img src={message.message.mediaUrl} alt="Sticker" className="max-w-32 max-h-32 object-contain" />;
+      const stickerSrc = message.message.mediaUrl || message.message.stickerMessage?.url || (message.message.base64 ? (message.message.base64.startsWith("data:") ? message.message.base64 : `data:image/webp;base64,${message.message.base64}`) : null);
+      return stickerSrc ? (
+        <img src={stickerSrc} alt="Sticker" className="max-w-32 max-h-32 object-contain" />
+      ) : (
+        <div className="flex items-center gap-1.5 p-2 bg-muted rounded text-xs text-muted-foreground">
+          <span>💟</span>
+          <span>Sticker</span>
+        </div>
+      );
 
     case "reactionMessage":
       const reactionText = message.message.reactionMessage?.text || "";

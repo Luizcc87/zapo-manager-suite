@@ -221,9 +221,13 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
         fromMe: true,
         id: sentMsg.id,
       },
-      message: (sentMsg as any).message ?? (typeof text === 'object' && text !== null ? text : {
+      message: typeof text === 'object' && text !== null ? {
+        extendedTextMessage: {
+          text: text.text,
+        }
+      } : {
         conversation: text,
-      }),
+      },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
@@ -392,7 +396,10 @@ router.post('/sendSticker/:instanceName', checkStrictInstanceApiKey, upload.sing
         id: sentMsg.id,
       },
       message: {
-        stickerMessage: {}
+        stickerMessage: {
+          url: req.body.mediaUrl || undefined
+        },
+        mediaUrl: req.body.mediaUrl || undefined
       },
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
@@ -407,7 +414,10 @@ router.post('/sendSticker/:instanceName', checkStrictInstanceApiKey, upload.sing
         id: sentMsg.id
       },
       message: {
-        stickerMessage: {}
+        stickerMessage: {
+          url: req.body.mediaUrl || undefined
+        },
+        mediaUrl: req.body.mediaUrl || undefined
       },
       messageTimestamp: Math.floor(Date.now() / 1000),
       status: 'PENDING'
