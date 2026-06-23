@@ -29,6 +29,15 @@ O frontend (`frontend/`) e o backend (`backend/`) são mantidos dentro do mesmo 
     ```
     Ver fluxo completo (branch de teste, resolução de conflitos) em `docs/SYNC-UPSTREAM.md`.
 
+4.  **Triagem Formal de Releases:**
+    Para evitar retrabalho ao consumir upstreams diferentes, use o workflow e o script `scripts/zapo-release-triage.mjs` como padrão de triagem antes de implementar qualquer mudança:
+    - `--mode zapo` para releases de `vinikjkkj/zapo`
+    - `--mode baileys` para releases de `WhiskeySockets/Baileys`
+    - `--mode evolution` para sync do `evolution-foundation/evolution-manager-v2`
+    - `--mode auto` quando a URL permitir inferência automática do upstream
+    - `--evolution-api` quando for necessário validar o contrato da API local e o `docs/openapi.yaml`
+    O relatório deve sair com triagem, checklist de implementação, checklist de testes, atualização sugerida do `CHANGELOG.md`, review por modo e próximos passos.
+
 ---
 
 ## 🔒 Concorrência e Segurança de Sessão (Swarm Safety)
@@ -177,6 +186,7 @@ A pasta `memory/` contém arquivos de memória do Claude Code que persistem cont
 | `memory/user_profile.md` | Perfil do dev: nível técnico, preferências de resposta |
 | `memory/project_zapo_manager.md` | Contexto do projeto: stack, remotes, arquitetura |
 | `memory/project_primary_registration.md` | Status do fluxo SMS/OTP e pendências |
+| `memory/project_sync_workflows.md` | Regras de triagem de sync para `zapo-js`, `Baileys` e `evolution-manager-v2` |
 | `memory/feedback_workflow.md` | Como o dev gosta de trabalhar (aprovar plano, revisar diff, master direto) |
 | `memory/reference_key_files.md` | Mapa dos arquivos-chave do projeto |
 

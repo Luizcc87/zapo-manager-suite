@@ -11,6 +11,19 @@ Estrutura do monorepo:
 - `backend/` — servidor Node.js com Prisma (zapo-js)
 - `docs/` — documentação operacional
 
+### Upstreams e trilhos de validação
+
+- `vinikjkkj/zapo` → upstream do backend `zapo-js`
+- `WhiskeySockets/Baileys` → upstream do fluxo de registro primário SMS/OTP
+- `evolution-foundation/evolution-manager-v2` → upstream do frontend via subtree
+
+Use `scripts/zapo-release-triage.mjs` como workflow padrão antes de implementar mudanças vindas desses upstreams:
+- `--mode zapo`
+- `--mode baileys`
+- `--mode evolution`
+- `--mode auto` para inferência por URL
+- `--evolution-api` para validar o contrato local com `docs/openapi.yaml`
+
 ### Git remotes
 
 | Remote | URL | Propósito |
@@ -24,6 +37,18 @@ git clone https://github.com/Luizcc87/zapo-manager-suite.git
 ```
 
 Para sincronizar `frontend/` com o upstream, ver [docs/SYNC-UPSTREAM.md](docs/SYNC-UPSTREAM.md).
+
+## Sync Workflow
+
+O fluxo padrão de sync deve sair com:
+- triagem da release
+- checklist de implementação
+- checklist de testes
+- sugestão de atualização de `CHANGELOG.md`
+- review por modo
+- próximos passos com comandos prontos
+
+Para releases do `evolution-manager-v2`, validar também a cobertura de `docs/openapi.yaml` contra as rotas locais expostas pelo backend.
 
 ## Commands
 
@@ -250,6 +275,7 @@ A pasta `memory/` contém contexto persistente entre sessões do Claude Code:
 - `memory/feedback_workflow.md` — preferências de trabalho do dev
 - `memory/project_*.md` — status de features e decisões do projeto
 - `memory/reference_key_files.md` — mapa dos arquivos importantes
+- `memory/project_sync_workflows.md` — resumo dos modos e regras de triagem de sync
 
 Ler antes de implementar. Não editar manualmente. Ver detalhes em `AGENTS.md` → seção Memória Persistente.
 

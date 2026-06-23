@@ -142,6 +142,46 @@ O script não altera código. Ele só padroniza:
 - testes sugeridos
 - docs a atualizar
 
+### Exemplos de uso
+
+Use `--mode auto` quando a URL já identifica o upstream. Se quiser forçar o trilho, passe o modo explicitamente.
+
+#### Zapo
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url https://github.com/vinikjkkj/zapo/releases/tag/v1.2.0 --tag v1.2.0 --mode auto --evolution-api
+```
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url https://github.com/vinikjkkj/zapo/releases/tag/v1.2.0 --tag v1.2.0 --mode zapo
+```
+
+#### Baileys
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url https://github.com/WhiskeySockets/Baileys/releases/tag/v6.6.0 --tag v6.6.0 --mode auto
+```
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url https://github.com/WhiskeySockets/Baileys/releases/tag/v6.6.0 --tag v6.6.0 --mode baileys
+```
+
+#### Evolution Manager v2
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url https://github.com/evolution-foundation/evolution-manager-v2/releases/tag/v1.0.0 --tag v1.0.0 --mode auto --evolution-api
+```
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url https://github.com/evolution-foundation/evolution-manager-v2/releases/tag/v1.0.0 --tag v1.0.0 --mode evolution --evolution-api
+```
+
+#### Saída em arquivo
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url <url> --tag <tag> --mode auto --evolution-api --output tmp/zapo-release-triage.md
+```
+
 ### Triagem rápida de release
 
 Quando sair uma nova tag no upstream, use este checklist antes de tocar no backend:
