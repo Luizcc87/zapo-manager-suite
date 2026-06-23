@@ -406,12 +406,20 @@ export class ZapoManager {
     const unwrapped = this.unwrapMessage(msgObj);
     const messageType = Object.keys(unwrapped).find(k => !METADATA_FIELDS.has(k)) ?? 'unknown';
 
+    // Safely sanitize the unwrapped message to strip any non-serializable properties (e.g. class methods, functions)
+    let sanitizedMessage = {};
+    try {
+      sanitizedMessage = JSON.parse(JSON.stringify(unwrapped));
+    } catch (e) {
+      sanitizedMessage = unwrapped;
+    }
+
     const normalized = {
       id: msgData.key?.id ?? `${Date.now()}`,
       key: msgData.key,
       pushName: msgData.pushName ?? '',
       messageType,
-      message: unwrapped,
+      message: sanitizedMessage,
       messageTimestamp: String(msgData.messageTimestamp ?? Math.floor(Date.now() / 1000)),
       instanceId: instanceName,
       source: 'baileys',

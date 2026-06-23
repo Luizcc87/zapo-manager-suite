@@ -12,6 +12,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): Adicionados logs detalhados nos listeners de eventos do `WaClient` para diferenciar a direção das mensagens (`[MESSAGE EVENT] [INBOUND/RECEIVED]` vs `[MESSAGE EVENT] [OUTBOUND/SENT]`).
 - Adicionados logs em tempo real para recebimento de reações e edições de mensagens (`[MESSAGE ADDON EVENT]`) e confirmações de recebimento/leitura (`[MESSAGE STATUS/RECEIPT]`).
 - Adicionado suporte à variável de ambiente `AUTO_RECONNECT_PAIRED=true` no método `loadAll` para forçar a auto-conexão imediata na inicialização do servidor de qualquer instância que já tenha sido pareada no passado (com credenciais salvas identificadas via `ownerJid` preenchido).
+- Corrigida falha de persistência no PostgreSQL/Prisma sanitizando o payload de mensagens recebidas (`JSON.parse(JSON.stringify(unwrapped))`) para remover funções e protótipos incompatíveis que causavam o erro de serialização `toInt`.
 
 **Dev Tools**
 - [scripts/dev.mjs](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/scripts/dev.mjs): Corrigido script de inicialização local para excluir o PID do processo pai (`process.ppid`) da rotina de limpeza de processos node no Windows, evitando que o comando `npm run dev` aborte logo na inicialização.
@@ -19,6 +20,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 **Frontend**
 - [frontend/src/pages/instance/Chat/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/instance/Chat/index.tsx): Adicionado banner descritivo no topo da barra lateral de chats exibindo o nome e o status de conexão atual da instância (Conectado/Conectando/Desconectado) com um indicador visual colorido.
+- [frontend/src/pages/instance/Chat/messages.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/instance/Chat/messages.tsx): Adicionado suporte visual para renderizar o tipo de mensagem `reactionMessage`, exibindo o emoji correspondente no histórico do chat.
 
 ---
 

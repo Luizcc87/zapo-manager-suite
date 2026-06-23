@@ -152,6 +152,7 @@ const getMessageText = (messageObj: any): string => {
 // Component to render different message types based on messageType
 const MessageContent = ({ message }: { message: Message }) => {
   const messageType = message.messageType as string;
+  const { t } = useTranslation();
 
   switch (messageType) {
     case "conversation":
@@ -286,6 +287,15 @@ const MessageContent = ({ message }: { message: Message }) => {
 
     case "stickerMessage":
       return <img src={message.message.mediaUrl} alt="Sticker" className="max-w-32 max-h-32 object-contain" />;
+
+    case "reactionMessage":
+      const reactionText = message.message.reactionMessage?.text || "";
+      return (
+        <span className="italic text-muted-foreground/90 flex items-center gap-1">
+          <span>{t("chat.message.reacted", { defaultValue: "Reagiu com:" })}</span>
+          <span className="not-italic text-base font-normal">{reactionText}</span>
+        </span>
+      );
 
     default:
       // Fallback for unknown message types
