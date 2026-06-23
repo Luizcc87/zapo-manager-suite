@@ -487,8 +487,18 @@ export class ZapoManager {
 
   static async loadAll() {
     console.log(`[ZapoManager] Inicializando com CONTAINER_ID: ${CONTAINER_ID}`);
+    const autoReconnectPaired = process.env.AUTO_RECONNECT_PAIRED === 'true';
+    const whereClause: any = autoReconnectPaired
+      ? {
+          OR: [
+            { status: { in: ['connected', 'connecting'] } },
+            { ownerJid: { not: '' } }
+          ]
+        }
+      : { status: { in: ['connected', 'connecting'] } };
+
     const instances = await prisma.instance.findMany({
-      where: { status: { in: ['connected', 'connecting'] } }
+      where: whereClause
     });
     console.log(`[ZapoManager] Encontradas ${instances.length} instâncias para iniciar automaticamente.`);
 

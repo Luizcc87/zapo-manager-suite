@@ -11,6 +11,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 **Backend**
 - [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): Adicionados logs detalhados nos listeners de eventos do `WaClient` para diferenciar a direção das mensagens (`[MESSAGE EVENT] [INBOUND/RECEIVED]` vs `[MESSAGE EVENT] [OUTBOUND/SENT]`).
 - Adicionados logs em tempo real para recebimento de reações e edições de mensagens (`[MESSAGE ADDON EVENT]`) e confirmações de recebimento/leitura (`[MESSAGE STATUS/RECEIPT]`).
+- Adicionado suporte à variável de ambiente `AUTO_RECONNECT_PAIRED=true` no método `loadAll` para forçar a auto-conexão imediata na inicialização do servidor de qualquer instância que já tenha sido pareada no passado (com credenciais salvas identificadas via `ownerJid` preenchido).
 
 **Dev Tools**
 - [scripts/dev.mjs](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/scripts/dev.mjs): Corrigido script de inicialização local para excluir o PID do processo pai (`process.ppid`) da rotina de limpeza de processos node no Windows, evitando que o comando `npm run dev` aborte logo na inicialização.
