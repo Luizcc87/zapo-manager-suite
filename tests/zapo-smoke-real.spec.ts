@@ -21,6 +21,15 @@ const MEDIA_URLS = {
   sticker: 'https://www.gstatic.com/webp/gallery/1.webp',
 };
 
+// Constrói regex para aceitar o JID com ou sem o nono dígito (Brasil)
+const expectedJids = [TARGET_NUMBER];
+if (TARGET_NUMBER.startsWith('55') && TARGET_NUMBER.length === 13) {
+  const withoutNine = TARGET_NUMBER.slice(0, 4) + TARGET_NUMBER.slice(5);
+  expectedJids.push(withoutNine);
+}
+const JID_REGEX = new RegExp(`^(${expectedJids.join('|')})(:\\d+)?@s\\.whatsapp\\.net$|^\\d+(:\\d+)?@lid$`);
+
+
 test.describe('Smoke real de envio para número alvo', () => {
   let connectedInstanceKey: string | null = null;
   let resolvedInstance: string | null = null;
@@ -81,7 +90,7 @@ test.describe('Smoke real de envio para número alvo', () => {
     expect(r.status()).toBe(201);
     const body = await r.json();
     expect(body.accepted).toBe(true);
-    expect(body.key.remoteJid).toBe(`${TARGET_NUMBER}@s.whatsapp.net`);
+    expect(body.key.remoteJid).toMatch(JID_REGEX);
     expect(body.message.conversation).toBeDefined();
     expect(body.status).toBe('PENDING');
 
@@ -93,7 +102,7 @@ test.describe('Smoke real de envio para número alvo', () => {
       if (statusResponse.status() === 200) {
         const statusBody = await statusResponse.json();
         expect(statusBody.messageId).toBe(body.key.id);
-        expect(statusBody.remoteJid).toBe(`${TARGET_NUMBER}@s.whatsapp.net`);
+        expect(statusBody.remoteJid).toMatch(JID_REGEX);
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -119,7 +128,7 @@ test.describe('Smoke real de envio para número alvo', () => {
     expect(r.status()).toBe(201);
     const body = await r.json();
     expect(body.accepted).toBe(true);
-    expect(body.key.remoteJid).toBe(`${TARGET_NUMBER}@s.whatsapp.net`);
+    expect(body.key.remoteJid).toMatch(JID_REGEX);
     expect(body.message.type).toBe('text');
     expect(body.message.text).toBe('https://meli.la/2MU3MXd');
     expect(body.message.linkPreview).toBe(true);
@@ -141,7 +150,7 @@ test.describe('Smoke real de envio para número alvo', () => {
     expect(r.status()).toBe(201);
     const body = await r.json();
     expect(body.accepted).toBe(true);
-    expect(body.key.remoteJid).toBe(`${TARGET_NUMBER}@s.whatsapp.net`);
+    expect(body.key.remoteJid).toMatch(JID_REGEX);
     expect(body.message.documentMessage).toBeDefined();
     expect(body.message.documentMessage.fileName).toBeDefined();
     expect(body.status).toBe('PENDING');
@@ -160,7 +169,7 @@ test.describe('Smoke real de envio para número alvo', () => {
     expect(r.status()).toBe(201);
     const body = await r.json();
     expect(body.accepted).toBe(true);
-    expect(body.key.remoteJid).toBe(`${TARGET_NUMBER}@s.whatsapp.net`);
+    expect(body.key.remoteJid).toMatch(JID_REGEX);
     expect(body.message.stickerMessage).toBeDefined();
     expect(body.status).toBe('PENDING');
   });

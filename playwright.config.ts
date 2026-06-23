@@ -1,4 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as path from 'path';
+
+// Carrega as variáveis de ambiente do .env da raiz usando o dotenv do backend
+try {
+  const dotenvPath = path.resolve(__dirname, 'backend/node_modules/dotenv');
+  const dotenv = require(dotenvPath);
+  dotenv.config({ path: path.resolve(__dirname, '.env') });
+} catch (e) {
+  console.warn('[Playwright Config] Não foi possível carregar o .env da raiz:', e);
+}
 
 export default defineConfig({
   testDir: './tests',

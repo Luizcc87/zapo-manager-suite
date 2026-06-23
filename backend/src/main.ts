@@ -3,7 +3,7 @@ import cors from 'cors';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as net from 'net';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { Server as HttpServer } from 'http';
@@ -28,7 +28,16 @@ function getZapoWebVersion(): string {
   } catch { return 'unknown'; }
 }
 
-dotenv.config();
+// Centraliza a leitura do arquivo .env buscando na pasta atual (backend) ou subindo para a raiz
+const localEnv = path.resolve(process.cwd(), '.env');
+const parentEnv = path.resolve(process.cwd(), '../.env');
+if (existsSync(localEnv)) {
+  dotenv.config({ path: localEnv });
+} else if (existsSync(parentEnv)) {
+  dotenv.config({ path: parentEnv });
+} else {
+  dotenv.config();
+}
 
 const app = express();
 const PORT = process.env.PORT || 8080;

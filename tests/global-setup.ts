@@ -16,9 +16,30 @@
  */
 
 import * as path from 'path';
+import * as net from 'net';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379/0';
 const BASE_URL  = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8080';
+
+function checkPort(host: string, port: number, timeout = 1000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(timeout);
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.connect(port, host);
+  });
+}
 
 export default async function globalSetup(): Promise<void> {
   console.log('\n╔══════════════════════════════════════════════════╗');
@@ -28,7 +49,19 @@ export default async function globalSetup(): Promise<void> {
   console.log(`  Redis URL   : ${REDIS_URL}`);
   console.log(`  Global Key  : ${process.env.GLOBAL_API_KEY || 'global_key'}`);
 
-  await clearRedisLocks();
+  let isServerRunning = false;
+  try {
+    const url = new URL(BASE_URL);
+    isServerRunning = await checkPort(url.hostname || '127.0.0.1', parseInt(url.port || '80', 10));
+  } catch (e) {
+    // URL inválida ou outro erro
+  }
+
+  if (isServerRunning) {
+    console.log('  [Setup] ℹ️  Servidor backend já está em execução. Mantendo locks ativos.');
+  } else {
+    await clearRedisLocks();
+  }
 
   console.log('══════════════════════════════════════════════════\n');
 }

@@ -15,6 +15,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 **Dev Tools**
 - [scripts/dev.mjs](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/scripts/dev.mjs): Corrigido script de inicialização local para excluir o PID do processo pai (`process.ppid`) da rotina de limpeza de processos node no Windows, evitando que o comando `npm run dev` aborte logo na inicialização.
+- Centralização da configuração no arquivo `.env` da raiz do monorepo, removendo o arquivo duplicado `backend/.env`. O código de bootstrap do backend ([backend/src/main.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/main.ts)) agora resolve o arquivo `.env` subindo na hierarquia de diretórios caso o arquivo local não exista, e a CLI do Prisma também encontra o `.env` na raiz nativamente.
 
 **Frontend**
 - [frontend/src/pages/instance/Chat/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/instance/Chat/index.tsx): Adicionado banner descritivo no topo da barra lateral de chats exibindo o nome e o status de conexão atual da instância (Conectado/Conectando/Desconectado) com um indicador visual colorido.
