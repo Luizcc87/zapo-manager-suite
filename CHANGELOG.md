@@ -10,7 +10,8 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 **Backend — `backend/src/routes/contact.routes.ts` (novo)**
 - `GET /contact/find/:instanceName` protegido por `checkInstanceApiKey`.
-- Dual-store: PostgreSQL via `prisma.$queryRawUnsafe` na tabela `wa_contacts`; SQLite via `better-sqlite3` em `.auth/{instanceName}.sqlite`.
+- Dual-store: PostgreSQL via `prisma.$queryRawUnsafe` na tabela `"wa_mailbox_contacts"` (corrigido de `"wa_contacts"`); SQLite via `better-sqlite3` na tabela `mailbox_contacts` (em `.auth/{instanceName}.sqlite`).
+- Adicionados logs descritivos do processo de busca de contatos no backend.
 - try/catch retorna `[]` silenciosamente se tabela não existe (requer `SAVE_DATA_CONTACTS=true`).
 - Normalização de campos com múltiplos fallbacks (`id || jid`, `name || notify || verifiedName`).
 - Proteção contra path traversal: regex `[A-Za-z0-9_-]+` + `path.resolve` confinamento ao diretório `.auth/`.

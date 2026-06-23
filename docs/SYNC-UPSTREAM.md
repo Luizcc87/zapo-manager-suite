@@ -121,6 +121,64 @@ Acompanhar: `https://github.com/vinikjkkj/zapo/releases`
 
 Changelog e breaking changes aparecem lá antes de chegar no npm.
 
+### Script de triagem
+
+Use o script local para gerar um esqueleto de análise antes de implementar:
+
+```bash
+node scripts/zapo-release-triage.mjs --release-url https://github.com/vinikjkkj/zapo/releases/tag/v1.2.0 --tag v1.2.0
+```
+
+Opcionalmente, grave o relatório em arquivo:
+
+```bash
+node scripts/zapo-release-triage.mjs --tag v1.2.0 --output tmp/zapo-release-triage.md
+```
+
+O script não altera código. Ele só padroniza:
+- resumo da release
+- mapa de impacto local
+- pontos de código prováveis
+- testes sugeridos
+- docs a atualizar
+
+### Triagem rápida de release
+
+Quando sair uma nova tag no upstream, use este checklist antes de tocar no backend:
+
+1. Ler o release note e identificar se o impacto é:
+   - evento novo
+   - alteração de payload
+   - correção de envio/mapeamento de JID
+   - mudança de persistência/segredos
+2. Mapear o impacto para os pontos locais:
+   - `backend/src/manager.ts`
+   - `backend/src/routes/message.routes.ts`
+   - `backend/src/routes/instance.routes.ts`
+   - `backend/src/config/device.ts`
+   - `backend/src/config/fetchAndroidWaVersion.ts`
+3. Conferir se o comportamento já existe no repo local antes de implementar.
+4. Se a mudança tocar contrato público, atualizar `CHANGELOG.md` e `docs/openapi.yaml`.
+
+#### Release `v1.2.0` do Zapo
+
+Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.2.0`
+
+Mudanças relevantes:
+
+- `feat(message): emit typed message_unavailable event for unavailable placeholders`
+  - Impacto provável: novos eventos de mensagem em `backend/src/manager.ts` e, se expostos, novos tipos para webhook/socket/UI.
+- `feat(message): opt-in persistAllSecrets for all message secrets`
+  - Impacto provável: configuração de store/persistência em `backend/src/manager.ts` e revisão de segurança para qualquer material de auth/crypto gravado em disco.
+- `fix(message): stamp peer_recipient_pn on LID-addressed 1:1 sends`
+  - Impacto provável: envios de mensagem e resolução de JID em `backend/src/routes/message.routes.ts`, principalmente nos fluxos que lidam com LID/JID e números do Brasil.
+
+Leitura prática para o projeto local:
+
+- Se o problema for de entrega de mensagem, começar por `message.routes.ts` e pelos helpers de resolução de JID.
+- Se a mudança envolver eventos novos, começar por `manager.ts` e pelos testes de webhook/socket.
+- Se a mudança envolver segredos/persistência, revisar o contrato de store e o que realmente deve ser persistido no backend antes de habilitar qualquer flag equivalente.
+
 ---
 
 ## Resumo dos comandos do dia a dia
@@ -141,3 +199,4 @@ Changelog e breaking changes aparecem lá antes de chegar no npm.
 | Ver o que está desatualizado | `cd backend && npm outdated` |
 | Atualizar pacotes zapo | `npm update zapo-js @zapo-js/*` |
 | Usar commit específico do GitHub | `npm install github:vinikjkkj/zapo#<ref>` |
+| Comparar release tag com o estado local | `git log --oneline --decorate v1.1.3..v1.2.0` |

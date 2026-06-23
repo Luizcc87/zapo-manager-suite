@@ -21,14 +21,16 @@ router.get('/find/:instanceName', checkInstanceApiKey, async (req: Request, res:
 
     if (isPostgres) {
       try {
-        // Query wa_contacts directly
+        console.log(`[ZapoRouter] [Contacts] Fetching contacts for session '${instanceName}' from PostgreSQL (wa_mailbox_contacts)...`);
+        // Query wa_mailbox_contacts directly
         rawContacts = await prisma.$queryRawUnsafe<any[]>(
-          `SELECT * FROM "wa_contacts" WHERE "session_id" = $1 ORDER BY "name" ASC`,
+          `SELECT * FROM "wa_mailbox_contacts" WHERE "session_id" = $1 ORDER BY COALESCE("display_name", "push_name", "jid") ASC`,
           instanceName
         );
+        console.log(`[ZapoRouter] [Contacts] Found ${rawContacts.length} raw contacts in PostgreSQL for '${instanceName}'.`);
       } catch (err: any) {
         // Try/catch returns [] if table does not exist or querying fails
-        console.warn(`[ZapoRouter] [Contacts] Failed to query PostgreSQL wa_contacts table:`, err.message);
+        console.warn(`[ZapoRouter] [Contacts] Failed to query PostgreSQL wa_mailbox_contacts table:`, err.message);
         rawContacts = [];
       }
     } else {
@@ -41,14 +43,18 @@ router.get('/find/:instanceName', checkInstanceApiKey, async (req: Request, res:
 
       if (fs.existsSync(sqlitePath)) {
         try {
+          console.log(`[ZapoRouter] [Contacts] Fetching contacts for session '${instanceName}' from SQLite (mailbox_contacts)...`);
           const sqlite = require('better-sqlite3');
           const db = sqlite(sqlitePath);
           rawContacts = db.prepare('SELECT * FROM mailbox_contacts ORDER BY COALESCE(display_name, push_name, jid) ASC').all();
           db.close();
+          console.log(`[ZapoRouter] [Contacts] Found ${rawContacts.length} raw contacts in SQLite for '${instanceName}'.`);
         } catch (err: any) {
           console.warn(`[ZapoRouter] [Contacts] Failed to query SQLite mailbox_contacts table:`, err.message);
           rawContacts = [];
         }
+      } else {
+        console.log(`[ZapoRouter] [Contacts] SQLite file not found for '${instanceName}' at ${sqlitePath}`);
       }
     }
 
