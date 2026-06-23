@@ -451,6 +451,7 @@ export class ZapoManager {
     byChat.set(remoteJid, chatEntry);
 
     // Persiste chat no banco (wa_chats) — fire-and-forget
+    console.log(`[ZapoManager] [${instanceName}] [DATABASE] Tentando salvar/atualizar chat no banco para JID=${remoteJid}...`);
     prisma.chatEntry.upsert({
       where: { instanceName_remoteJid: { instanceName, remoteJid } },
       create: {
@@ -465,12 +466,15 @@ export class ZapoManager {
         profilePicUrl: chatEntry.profilePicUrl,
         updatedAt: new Date(),
       },
+    }).then(() => {
+      console.log(`[ZapoManager] [${instanceName}] [DATABASE] ✅ Chat ${remoteJid} persistido com sucesso.`);
     }).catch((err: any) => {
-      console.error(`[ZapoManager] [${instanceName}] Erro ao persistir chat ${remoteJid}:`, err.message);
+      console.error(`[ZapoManager] [${instanceName}] [DATABASE] ❌ Erro ao persistir chat ${remoteJid}:`, err.message);
     });
 
     // Persiste mensagem no banco quando SAVE_DATA_NEW_MESSAGE=true — fire-and-forget
     if (process.env.SAVE_DATA_NEW_MESSAGE === 'true') {
+      console.log(`[ZapoManager] [${instanceName}] [DATABASE] Tentando salvar mensagem ${normalized.id} no banco para JID=${remoteJid}...`);
       prisma.message.upsert({
         where: { instanceName_messageId: { instanceName, messageId: normalized.id } },
         create: {
@@ -485,8 +489,10 @@ export class ZapoManager {
           source: normalized.source,
         },
         update: {},
+      }).then(() => {
+        console.log(`[ZapoManager] [${instanceName}] [DATABASE] ✅ Mensagem ${normalized.id} salva com sucesso.`);
       }).catch((err: any) => {
-        console.error(`[ZapoManager] [${instanceName}] Erro ao persistir mensagem ${normalized.id}:`, err.message);
+        console.error(`[ZapoManager] [${instanceName}] [DATABASE] ❌ Erro ao persistir mensagem ${normalized.id}:`, err.message);
       });
     }
 
