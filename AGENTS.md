@@ -146,6 +146,9 @@ O projeto possui uma suíte de testes de integração implementada com **Playwri
 
 Para garantir que a imagem oficial funcione tanto em ambientes Intel/AMD (`amd64`) quanto ARM (como servidores Oracle ARM, Raspberry Pi, Macs com Apple Silicon), sempre publique imagens usando build multi-arch.
 
+> [!IMPORTANT]
+> **REGRA OBRIGATÓRIA DE COMPILAÇÃO:** Toda compilação e publicação de imagens Docker do projeto (seja manual ou automatizada) deve obrigatoriamente gerar as duas arquiteturas: `linux/amd64` e `linux/arm64` em conjunto. Nunca publique imagens com apenas uma arquitetura para produção.
+
 *   **Configuração de Buildx:** Requer a criação de um builder do tipo `docker-container` (ex: `evo-multiarch`).
 *   **Script Automatizado:** [scripts/build-push.sh](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/scripts/build-push.sh)
 
