@@ -6,6 +6,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Upgrade: Zapo backend package to v1.2.0
+
+**Backend**
+- `backend/package.json`: `zapo-js` updated to `^1.2.0` to pick up the upstream release with `message_unavailable`, `persistAllSecrets`, and LID/PN fixes.
+- `backend/package-lock.json`: regenerated to lock the resolved `zapo-js` version and keep the install reproducible.
+- `backend/src/manager.ts`, `backend/src/routes/message.routes.ts`: preserved existing behavior while upgrading the dependency; targeted verification required for message and JID paths.
+
+**Commits:** pending
+
 ### Feat: Logs verbosos de mensagens e recibos
 
 **Backend**
