@@ -25,6 +25,8 @@
       "methodSms": "SMS",
       "methodVoice": "Llamada de voz",
       "submit": "Enviar código SMS",
+      "submitSms": "Enviar código SMS",
+      "submitVoice": "Recibir código por llamada",
       "sending": "Enviando..."
     },
     "otp": {
@@ -36,6 +38,8 @@
     },
     "toast": {
       "codeSent": "Código enviado a su número. Verifique el SMS.",
+      "codeSentSms": "Código enviado a su número. Verifique el SMS.",
+      "codeSentVoice": "Código solicitado por llamada. Atienda la llamada en el SIM físico.",
       "success": "¡Número registrado exitosamente como Principal!",
       "errorRequest": "Error al solicitar el código. Verifique los datos.",
       "errorConfirm": "Código inválido o expirado. Intente nuevamente."

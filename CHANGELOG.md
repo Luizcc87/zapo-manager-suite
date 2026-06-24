@@ -6,6 +6,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Fix: botão e toast do OTP refletem SMS ou ligação
+
+**Frontend**
+- [frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx): O botão de solicitação e o toast de sucesso agora exibem texto específico para SMS ou ligação conforme o método selecionado, evitando indicar "Enviar código SMS" quando o payload está usando `method: "voice"`.
+- [frontend/src/translate/languages/pt-BR.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/translate/languages/pt-BR.json), [frontend/src/translate/languages/en-US.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/translate/languages/en-US.json), [frontend/src/translate/languages/es-ES.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/translate/languages/es-ES.json), [frontend/src/translate/languages/fr-FR.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/translate/languages/fr-FR.json): Adicionadas chaves separadas para textos de SMS e ligação.
+
 ### Fix: classificação correta de erro OTP quando WhatsApp retorna objeto
 
 **Backend**

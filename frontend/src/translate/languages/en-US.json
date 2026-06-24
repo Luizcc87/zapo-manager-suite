@@ -25,6 +25,8 @@
       "methodSms": "SMS",
       "methodVoice": "Voice call",
       "submit": "Send SMS code",
+      "submitSms": "Send SMS code",
+      "submitVoice": "Receive code by call",
       "sending": "Sending..."
     },
     "otp": {
@@ -36,6 +38,8 @@
     },
     "toast": {
       "codeSent": "Code sent to your number. Check your SMS.",
+      "codeSentSms": "Code sent to your number. Check your SMS.",
+      "codeSentVoice": "Code requested by call. Answer the call on the physical SIM.",
       "success": "Number successfully registered as Primary!",
       "errorRequest": "Error requesting code. Please check your details.",
       "errorConfirm": "Invalid or expired code. Please try again."

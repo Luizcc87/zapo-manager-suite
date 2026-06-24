@@ -110,6 +110,7 @@ export function PrimaryRegistrationDialog({
     resolver: zodResolver(otpSchema),
     defaultValues: { code: "" },
   });
+  const selectedMethod = formMethods.watch("method");
 
   useEffect(() => {
     if (open && defaultInstanceName) {
@@ -196,9 +197,13 @@ export function PrimaryRegistrationDialog({
       setOtpRequestId(requestId);
       console.debug("[PrimaryRegistration][Browser] otpRequestId stored", requestId);
       toast.info(
-        t("primaryRegistration.toast.codeSent", {
-          defaultValue: "Código enviado para o seu número. Verifique o SMS.",
-        }),
+        data.method === "voice"
+          ? t("primaryRegistration.toast.codeSentVoice", {
+              defaultValue: "Código solicitado por ligação. Atenda a chamada no chip físico.",
+            })
+          : t("primaryRegistration.toast.codeSentSms", {
+              defaultValue: "Código enviado para o seu número. Verifique o SMS.",
+            }),
       );
       setStep("otp");
     } catch (err: any) {
@@ -479,9 +484,13 @@ export function PrimaryRegistrationDialog({
                       })}
                     </>
                   ) : (
-                    t("primaryRegistration.form.submit", {
-                      defaultValue: "Enviar código SMS",
-                    })
+                    selectedMethod === "voice"
+                      ? t("primaryRegistration.form.submitVoice", {
+                          defaultValue: "Receber código por ligação",
+                        })
+                      : t("primaryRegistration.form.submitSms", {
+                          defaultValue: "Enviar código SMS",
+                        })
                   )}
                 </Button>
               </DialogFooter>
