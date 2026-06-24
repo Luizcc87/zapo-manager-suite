@@ -6,6 +6,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `requestId` alcança `ZapoManager.createClient`
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): `createClient` recebeu `requestId` opcional e agora registra início, reaproveitamento de instância e fim da criação com o mesmo identificador.
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): `POST /create` passou a encaminhar `requestId` para `ZapoManager.createClient`.
+
 ### Debug: `requestId` também nas transições finais do `confirmCode`
 
 **Backend**

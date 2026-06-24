@@ -95,7 +95,7 @@ router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) =>
     if (effectiveRequestId) {
       console.log(`[ZapoRouter] [Create] requestId=${effectiveRequestId} | payload bruto: ${JSON.stringify(req.body)}`);
     }
-    const instance = await ZapoManager.createClient(instanceName, mobileTransport || false, deviceInfo, token);
+    const instance = await ZapoManager.createClient(instanceName, mobileTransport || false, deviceInfo, token, effectiveRequestId);
 
     // Salva proxy se fornecido — testa conectividade mas não bloqueia criação em caso de falha
     if (proxy?.host && proxy?.port) {

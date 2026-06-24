@@ -565,14 +565,20 @@ export class ZapoManager {
     return active?.messageStatus?.get(messageId) || null;
   }
 
-  static async createClient(instanceName: string, mobileTransport = false, deviceInfo?: any, customApiKey?: string) {
+  static async createClient(instanceName: string, mobileTransport = false, deviceInfo?: any, customApiKey?: string, requestId?: string) {
+    const trace = requestId ? `requestId=${requestId} | ` : '';
+    console.log(`[ZapoManager] [Create] ${trace}createClient start instanceName=${instanceName} mobileTransport=${mobileTransport}`);
     let instance = await prisma.instance.findUnique({ where: { instanceName } });
     if (!instance) {
       const apiKey = customApiKey || 'apikey_' + randomBytes(32).toString('hex');
       instance = await prisma.instance.create({
         data: { instanceName, apiKey, status: 'disconnected', mobileTransport, deviceInfo: deviceInfo || null }
       });
+      console.log(`[ZapoManager] [Create] ${trace}instance created with apiKey=${apiKey.slice(0, 12)}...`);
+    } else {
+      console.log(`[ZapoManager] [Create] ${trace}existing instance found status=${instance.status} mobileTransport=${instance.mobileTransport}`);
     }
+    console.log(`[ZapoManager] [Create] ${trace}createClient end instanceName=${instanceName} id=${instance.id}`);
     return instance;
   }
 
