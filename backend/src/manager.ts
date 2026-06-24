@@ -585,6 +585,12 @@ export class ZapoManager {
   static async connectClient(instanceName: string, requestId?: string) {
     const trace = requestId ? `requestId=${requestId} | ` : '';
     const attachTrace = (payload: any) => requestId ? { ...payload, requestId } : payload;
+    const emitSocket = (event: string, payload: any) => {
+      if (requestId) {
+        console.log(`[ZapoSocket] [${instanceName}] requestId=${requestId} | emit ${event}`);
+      }
+      _socketEmitter?.(event, payload);
+    };
     if (activeClients.has(instanceName)) {
       console.log(`[ZapoManager] [Connect] ${trace}instance already active instanceName=${instanceName}`);
       return activeClients.get(instanceName);
@@ -694,7 +700,7 @@ export class ZapoManager {
       activeData.qrCode = qr;
       await prisma.instance.update({ where: { instanceName }, data: { status: 'connecting' } });
       ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'connecting', qr }));
-      _socketEmitter?.('connection.update', { instance: instanceName, data: attachTrace({ status: 'connecting', qr }) });
+      emitSocket('connection.update', { instance: instanceName, data: attachTrace({ status: 'connecting', qr }) });
     });
 
     client.on('auth_paired', async ({ credentials }) => {
@@ -703,6 +709,7 @@ export class ZapoManager {
       activeData.qrCount = 0;
       await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
       ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'connected', meJid: credentials.meJid }));
+      emitSocket('connection.update', { instance: instanceName, data: attachTrace({ status: 'connected', meJid: credentials.meJid }) });
     });
 
     client.on('connection', async (event) => {
@@ -713,6 +720,7 @@ export class ZapoManager {
           activeData.qrCode = undefined;
           await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
           ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'connected' }));
+          emitSocket('connection.update', { instance: instanceName, data: attachTrace({ status: 'connected' }) });
 
           // Buscar foto e nome do perfil próprio de forma assíncrona (fire-and-forget)
           // Não bloquear o evento de conexão
@@ -744,6 +752,13 @@ export class ZapoManager {
             status: 'disconnected',
             reason: (event as any).reason
           }));
+          emitSocket('connection.update', {
+            instance: instanceName,
+            data: attachTrace({
+              status: 'disconnected',
+              reason: (event as any).reason
+            })
+          });
         }
       }
     });
@@ -775,7 +790,7 @@ export class ZapoManager {
         console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] [MESSAGE EVENT] [${direction}] jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id} pushName=${event.pushName || 'N/A'} content=${JSON.stringify(event.message)}`);
       const webhookPayload = { instance: instanceName, data: attachTrace(normalized ?? msgData) };
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', webhookPayload);
-      _socketEmitter?.('messages.upsert', webhookPayload);
+      emitSocket('messages.upsert', webhookPayload);
     });
 
     client.on('message_addon', (event) => {
@@ -802,7 +817,7 @@ export class ZapoManager {
       }
       const updatePayload = { instance: instanceName, data: attachTrace({ chatJid: event.chatJid, status: event.status, messageIds: event.messageIds }) };
       ZapoManager.sendWebhook(instanceName, 'messages.update', updatePayload);
-      _socketEmitter?.('messages.update', updatePayload);
+      emitSocket('messages.update', updatePayload);
     });
 
     // ── Presence & Chat-state ─────────────────────────────────────────────────
@@ -871,7 +886,7 @@ export class ZapoManager {
           data: attachTrace({ syncType, messagesCount, conversationsCount, progress, chunkOrder })
         };
         ZapoManager.sendWebhook(instanceName, 'history.sync', payload);
-        _socketEmitter?.('history.sync', payload);
+        emitSocket('history.sync', payload);
       });
     }
 

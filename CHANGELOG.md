@@ -6,6 +6,11 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `_socketEmitter` do OTP loga `requestId`
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): Os emits de socket gerados pelo `connectClient` do fluxo OTP agora passam por um wrapper que loga `requestId` explicitamente no terminal antes de emitir `connection.update`, `messages.upsert`, `messages.update` e `history.sync`.
+
 ### Debug: `sendWebhook` interno loga `requestId`
 
 **Backend**
