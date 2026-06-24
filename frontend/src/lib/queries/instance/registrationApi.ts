@@ -4,6 +4,7 @@ export interface RequestCodeParams {
   instanceName: string;
   phoneNumber: string; // E.164: "+5511999999999"
   method: "sms" | "voice";
+  requestId?: string;
 }
 
 export interface RequestCodeResponse {
@@ -14,6 +15,7 @@ export interface RequestCodeResponse {
 export interface ConfirmCodeParams {
   instanceName: string;
   code: string; // 6 dígitos
+  requestId?: string;
 }
 
 export interface ConfirmCodeResponse {
@@ -29,6 +31,7 @@ export const requestRegistrationCode = async (
     instanceName: params.instanceName,
     phoneNumber: params.phoneNumber,
     method: params.method,
+    requestId: params.requestId,
   });
   const response = await apiGlobal.post<RequestCodeResponse>(
     "/instance/register/requestCode",
@@ -49,6 +52,7 @@ export const confirmRegistrationCode = async (
   console.debug("[PrimaryRegistration][Browser] confirm payload", {
     instanceName: params.instanceName,
     codeLength: params.code?.length,
+    requestId: params.requestId,
   });
   const response = await apiGlobal.post<ConfirmCodeResponse>(
     "/instance/register/confirmCode",

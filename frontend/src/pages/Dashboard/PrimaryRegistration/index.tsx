@@ -73,6 +73,7 @@ export function PrimaryRegistrationDialog({
   const [step, setStep] = useState<Step>("warning");
   const [loading, setLoading] = useState(false);
   const [instanceName, setInstanceName] = useState("");
+  const [otpRequestId, setOtpRequestId] = useState("");
 
   // Proxy state
   const [proxyOpen, setProxyOpen] = useState(false);
@@ -132,6 +133,7 @@ export function PrimaryRegistrationDialog({
     setProxyPort("");
     setProxyUsername("");
     setProxyPassword("");
+    setOtpRequestId("");
   };
 
   const handleClose = (next: boolean) => {
@@ -142,12 +144,14 @@ export function PrimaryRegistrationDialog({
 
   const handleRequestCode = async (data: FormData) => {
     setLoading(true);
+    const requestId = uuidv4();
     try {
       console.groupCollapsed("[PrimaryRegistration][Browser] handleRequestCode");
       console.debug("[PrimaryRegistration][Browser] form data", {
         instanceName: data.instanceName,
         phoneNumber: data.phoneNumber,
         method: data.method,
+        requestId,
         proxyOpen,
         proxyEnabled,
         proxyProtocol,
@@ -183,10 +187,13 @@ export function PrimaryRegistrationDialog({
         instanceName: data.instanceName,
         phoneNumber: phone,
         method: data.method,
+        requestId,
       });
       console.debug("[PrimaryRegistration][Browser] requestRegistrationCode resolved");
 
       setInstanceName(data.instanceName);
+      setOtpRequestId(requestId);
+      console.debug("[PrimaryRegistration][Browser] otpRequestId stored", requestId);
       toast.info(
         t("primaryRegistration.toast.codeSent", {
           defaultValue: "Código enviado para o seu número. Verifique o SMS.",
@@ -216,8 +223,9 @@ export function PrimaryRegistrationDialog({
       console.debug("[PrimaryRegistration][Browser] confirm data", {
         instanceName,
         codeLength: data.code?.length,
+        requestId: otpRequestId,
       });
-      await confirmRegistrationCode({ instanceName, code: data.code });
+      await confirmRegistrationCode({ instanceName, code: data.code, requestId: otpRequestId });
       console.debug("[PrimaryRegistration][Browser] confirmRegistrationCode resolved");
       toast.success(
         t("primaryRegistration.toast.success", {

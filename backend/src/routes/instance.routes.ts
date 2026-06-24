@@ -137,8 +137,10 @@ router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) =>
 // 1.1. Solicitar código de registro (SMS/Voz)
 router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
-    const { instanceName, phoneNumber, method } = req.body;
+    const { instanceName, phoneNumber, method, requestId } = req.body;
     console.log(`[ZapoRouter] [RegisterCode] HTTP payload bruto: ${JSON.stringify(req.body)}`);
+    const effectiveRequestId = typeof requestId === 'string' && requestId.trim() ? requestId.trim() : require('crypto').randomUUID();
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId}`);
     if (!instanceName || !phoneNumber) {
       return res.status(400).json({ error: 'instanceName and phoneNumber are required' });
     }
@@ -154,11 +156,11 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     // Patch Baileys: MOBILE_TOKEN e MOBILE_USERAGENT com versão atual (iOS — Baileys projetado para iOS)
     patchBaileysDefaults();
     const device = getMobileDevice();
-    console.log(`[ZapoRouter] [RegisterCode] ── Início do registro primário ──`);
-    console.log(`[ZapoRouter] [RegisterCode] Instância: ${instanceName} | Telefone: ${phoneNumber} | Método: ${method || 'sms'}`);
-    console.log(`[ZapoRouter] [RegisterCode] appVersion iOS (Baileys): ${getCurrentIosVersion()} | Android (TCP): ${device.appVersion}`);
-    console.log(`[ZapoRouter] [RegisterCode] User-Agent: ${BaileysMobileDefaults.MOBILE_USERAGENT}`);
-    console.log(`[ZapoRouter] [RegisterCode] MOBILE_TOKEN (hex): ${BaileysMobileDefaults.MOBILE_TOKEN.toString('hex').slice(0, 16)}...`);
+    console.log(`[ZapoRouter] [RegisterCode] ── Início do registro primário ── requestId=${effectiveRequestId}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | Instância: ${instanceName} | Telefone: ${phoneNumber} | Método: ${method || 'sms'}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | appVersion iOS (Baileys): ${getCurrentIosVersion()} | Android (TCP): ${device.appVersion}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | User-Agent: ${BaileysMobileDefaults.MOBILE_USERAGENT}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | MOBILE_TOKEN (hex): ${BaileysMobileDefaults.MOBILE_TOKEN.toString('hex').slice(0, 16)}...`);
 
     // Garante que qualquer cliente ativo anterior seja desconectado
     await ZapoManager.disconnectClient(instanceName);
@@ -184,12 +186,12 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
 
     const { state } = await useMultiFileAuthState(tempAuthDir);
 
-    console.log(`[ZapoRouter] [RegisterCode] Auth state criado em: ${tempAuthDir}`);
-    console.log(`[ZapoRouter] [RegisterCode] Iniciando makeRegistrationSocket...`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | Auth state criado em: ${tempAuthDir}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | Iniciando makeRegistrationSocket...`);
 
     const registrationFetchOptions = buildRegistrationFetchOptions(instanceName, dbInstance.proxyConfig);
-    console.log(`[ZapoRouter] [RegisterCode] Proxy config DB: ${JSON.stringify(dbInstance.proxyConfig)}`);
-    console.log(`[ZapoRouter] [RegisterCode] registrationFetchOptions keys: ${Object.keys(registrationFetchOptions).join(',') || '(none)'}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | Proxy config DB: ${JSON.stringify(dbInstance.proxyConfig)}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | registrationFetchOptions keys: ${Object.keys(registrationFetchOptions).join(',') || '(none)'}`);
 
     // Inicializar socket de registro Baileys v6
     const sock = makeRegistrationSocket({
@@ -203,8 +205,8 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     // Parsar o número para extrair o código do país e o número nacional
     const parsed = parsePhoneNumber(phoneNumber);
 
-    console.log(`[ZapoRouter] [RegisterCode] Formatado - DDI: ${parsed.cc}, Nacional: ${parsed.national}`);
-    console.log(`[ZapoRouter] [RegisterCode] socket.requestRegistrationCode payload: ${JSON.stringify({
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | Formatado - DDI: ${parsed.cc}, Nacional: ${parsed.national}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | socket.requestRegistrationCode payload: ${JSON.stringify({
       phoneNumber: parsed.full,
       phoneNumberCountryCode: parsed.cc,
       phoneNumberNationalNumber: parsed.national,
@@ -223,7 +225,7 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
       method: method || 'sms',
     });
 
-    console.log(`[ZapoRouter] [RegisterCode] Código solicitado com sucesso para ${parsed.full}`);
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | Código solicitado com sucesso para ${parsed.full}`);
 
     // Salvar no cache com TTL
     setRegistrationCacheWithTTL(instanceName, {
@@ -234,8 +236,8 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     // Persistir telefone no DB — sobrevive a restarts do servidor
     await prisma.$executeRaw`UPDATE "Instance" SET "registeredPhone" = ${parsed.full} WHERE "instanceName" = ${instanceName}`;
 
-    console.log(`[ZapoRouter] [RegisterCode] ── Registro iniciado com sucesso ──`);
-    return res.status(200).json({ status: 'success' });
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | ── Registro iniciado com sucesso ──`);
+    return res.status(200).json({ status: 'success', requestId: effectiveRequestId });
   } catch (err: any) {
     const classified = classifyOtpRegistrationError(err);
     const errDetail = classified.details || (err instanceof Error ? err.message : JSON.stringify(err));
@@ -249,6 +251,7 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
       code: classified.code,
       error: classified.message,
       details: errDetail,
+      requestId: typeof req.body?.requestId === 'string' && req.body.requestId.trim() ? req.body.requestId.trim() : undefined,
     });
   }
 });
@@ -256,13 +259,15 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
 // 1.2. Confirmar código de registro
 router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
-    const { instanceName, code } = req.body;
+    const { instanceName, code, requestId } = req.body;
     console.log(`[ZapoRouter] [ConfirmCode] HTTP payload bruto: ${JSON.stringify(req.body)}`);
+    const effectiveRequestId = typeof requestId === 'string' && requestId.trim() ? requestId.trim() : 'unknown-request';
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId}`);
     if (!instanceName || !code) {
       return res.status(400).json({ error: 'instanceName and code are required' });
     }
 
-    console.log(`[ZapoRouter] [ConfirmCode] Confirmando código ${code} para ${instanceName}`);
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Confirmando código ${code} para ${instanceName}`);
     
     // 1. Recuperar sock do cache
     const cached = registrationSocketCache.get(instanceName);
@@ -271,12 +276,12 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
     }
 
     const { sock } = cached;
-    console.log(`[ZapoRouter] [ConfirmCode] Socket do cache encontrado. phoneNumber=${cached.phoneNumber}`);
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Socket do cache encontrado. phoneNumber=${cached.phoneNumber}`);
 
     // 2. Validar OTP com servidores do WhatsApp
-    console.log(`[ZapoRouter] [ConfirmCode] Enviando sock.register(${code})`);
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Enviando sock.register(${code})`);
     await sock.register(code);
-    console.log(`[ZapoRouter] [ConfirmCode] sock.register concluído com sucesso`);
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | sock.register concluído com sucesso`);
 
     // 3. Log de mitigação: logar creds de Baileys e de Zapo (se houver outra instância) lado a lado
     let existingCredsFromZapo: any = null;
@@ -292,12 +297,12 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
         }
       }
     } catch (e: any) {
-      console.log(`[ZapoRouter] [ConfirmCode] Erro ao buscar credenciais existentes de outra instância para o log de comparação:`, e.message);
+      console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Erro ao buscar credenciais existentes de outra instância para o log de comparação:`, e.message);
     }
 
-    console.log('[ZapoRouter] [ConfirmCode] === COMPARATIVO DE CREDENCIAIS ===');
-    console.log('Baileys credentials:', JSON.stringify(sock.authState.creds, null, 2));
-    console.log('Zapo credentials:', JSON.stringify(existingCredsFromZapo, null, 2));
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | === COMPARATIVO DE CREDENCIAIS ===`);
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Baileys credentials:`, JSON.stringify(sock.authState.creds, null, 2));
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Zapo credentials:`, JSON.stringify(existingCredsFromZapo, null, 2));
 
     // 4. Mapear credenciais Baileys v6 para WaAuthCredentials do zapo-js
     const creds = sock.authState.creds;
@@ -342,7 +347,7 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
       deviceInfo: getMobileDevice()
     };
 
-    console.log('[ZapoRouter] [ConfirmCode] Credenciais mapeadas para Zapo:', JSON.stringify(mappedCreds, null, 2));
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Credenciais mapeadas para Zapo:`, JSON.stringify(mappedCreds, null, 2));
 
     // 5. Salvar no mesmo store que o Zapo usa para sessões normais
     await ZapoManager.saveCredentials(instanceName, mappedCreds);
@@ -373,15 +378,16 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
 
     // 8. Iniciar a conexão real da instância via ZapoManager em background
     ZapoManager.connectClient(instanceName).catch(err => {
-      console.error(`[ZapoRouter] [ConfirmCode] Falha ao iniciar conexão real de Zapo para ${instanceName}:`, err.message);
+      console.error(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Falha ao iniciar conexão real de Zapo para ${instanceName}:`, err.message);
     });
 
-    return res.status(200).json({ status: 'success' });
+    return res.status(200).json({ status: 'success', requestId: effectiveRequestId });
   } catch (err: any) {
     const errDetail = err instanceof Error ? err.message : JSON.stringify(err);
-    console.error(`[ZapoRouter] [ConfirmCode] Erro ao confirmar código:`, err);
-    console.error(`[ZapoRouter] [ConfirmCode] Stack:`, err instanceof Error ? err.stack : 'sem stack');
-    return res.status(500).json({ error: errDetail });
+    const requestId = typeof req.body?.requestId === 'string' && req.body.requestId.trim() ? req.body.requestId.trim() : 'unknown-request';
+    console.error(`[ZapoRouter] [ConfirmCode] requestId=${requestId} | Erro ao confirmar código:`, err);
+    console.error(`[ZapoRouter] [ConfirmCode] requestId=${requestId} | Stack:`, err instanceof Error ? err.stack : 'sem stack');
+    return res.status(500).json({ error: errDetail, requestId });
   }
 });
 

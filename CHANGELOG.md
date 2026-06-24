@@ -6,6 +6,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `requestId` único para correlacionar tentativas de OTP
+
+**Backend**
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): `requestCode` e `confirmCode` agora aceitam e propagam `requestId`, gerando um UUID quando o cliente não envia um valor. Os logs do container passaram a prefixar todas as linhas com o mesmo `requestId` e as respostas da API também o retornam.
+
+**Frontend**
+- [frontend/src/lib/queries/instance/registrationApi.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/lib/queries/instance/registrationApi.ts): O payload e a resposta das chamadas OTP agora carregam `requestId`.
+- [frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx): A tentativa de OTP ganha um `requestId` único ao iniciar o `requestCode` e reutiliza o mesmo valor no `confirmCode`.
+
 ### Debug: Logs verbosos no cadastro SMS OTP
 
 **Backend**
