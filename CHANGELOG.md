@@ -6,6 +6,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: Logs verbosos no cadastro SMS OTP
+
+**Backend**
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): Adicionados logs detalhados do payload bruto, configuração de proxy, payload do `requestRegistrationCode`, classificação de erro e stack nos fluxos `requestCode` e `confirmCode`.
+
+**Frontend**
+- [frontend/src/lib/queries/instance/registrationApi.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/lib/queries/instance/registrationApi.ts): Logs no console do navegador para payload e resposta das chamadas de solicitação/validação de OTP.
+- [frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx): Logs de fluxo no diálogo de registro primário, incluindo dados do formulário, proxy derivado, normalização do telefone e erros capturados.
+
 ### Fix: OTP bloqueado retorna resposta estruturada na API
 
 **Backend**

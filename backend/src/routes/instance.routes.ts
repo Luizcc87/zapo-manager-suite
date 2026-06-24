@@ -138,6 +138,7 @@ router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) =>
 router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName, phoneNumber, method } = req.body;
+    console.log(`[ZapoRouter] [RegisterCode] HTTP payload bruto: ${JSON.stringify(req.body)}`);
     if (!instanceName || !phoneNumber) {
       return res.status(400).json({ error: 'instanceName and phoneNumber are required' });
     }
@@ -187,6 +188,8 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     console.log(`[ZapoRouter] [RegisterCode] Iniciando makeRegistrationSocket...`);
 
     const registrationFetchOptions = buildRegistrationFetchOptions(instanceName, dbInstance.proxyConfig);
+    console.log(`[ZapoRouter] [RegisterCode] Proxy config DB: ${JSON.stringify(dbInstance.proxyConfig)}`);
+    console.log(`[ZapoRouter] [RegisterCode] registrationFetchOptions keys: ${Object.keys(registrationFetchOptions).join(',') || '(none)'}`);
 
     // Inicializar socket de registro Baileys v6
     const sock = makeRegistrationSocket({
@@ -201,6 +204,14 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     const parsed = parsePhoneNumber(phoneNumber);
 
     console.log(`[ZapoRouter] [RegisterCode] Formatado - DDI: ${parsed.cc}, Nacional: ${parsed.national}`);
+    console.log(`[ZapoRouter] [RegisterCode] socket.requestRegistrationCode payload: ${JSON.stringify({
+      phoneNumber: parsed.full,
+      phoneNumberCountryCode: parsed.cc,
+      phoneNumberNationalNumber: parsed.national,
+      phoneNumberMobileCountryCode: '000',
+      phoneNumberMobileNetworkCode: '000',
+      method: method || 'sms',
+    })}`);
 
     // Solicitar código via SMS ou Ligação de voz
     await sock.requestRegistrationCode({
@@ -231,6 +242,8 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     console.error(`[ZapoRouter] [RegisterCode] ── ERRO no registro ──`);
     console.error(`[ZapoRouter] [RegisterCode] Tipo: ${err instanceof Error ? 'Error' : 'WA rejection (JSON)'}`);
     console.error(`[ZapoRouter] [RegisterCode] Detalhe:`, errDetail);
+    console.error(`[ZapoRouter] [RegisterCode] Classificação: ${JSON.stringify(classified)}`);
+    console.error(`[ZapoRouter] [RegisterCode] Stack:`, err instanceof Error ? err.stack : 'sem stack');
     return res.status(classified.statusCode).json({
       status: 'error',
       code: classified.code,
@@ -244,6 +257,7 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
 router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName, code } = req.body;
+    console.log(`[ZapoRouter] [ConfirmCode] HTTP payload bruto: ${JSON.stringify(req.body)}`);
     if (!instanceName || !code) {
       return res.status(400).json({ error: 'instanceName and code are required' });
     }
@@ -257,9 +271,12 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
     }
 
     const { sock } = cached;
+    console.log(`[ZapoRouter] [ConfirmCode] Socket do cache encontrado. phoneNumber=${cached.phoneNumber}`);
 
     // 2. Validar OTP com servidores do WhatsApp
+    console.log(`[ZapoRouter] [ConfirmCode] Enviando sock.register(${code})`);
     await sock.register(code);
+    console.log(`[ZapoRouter] [ConfirmCode] sock.register concluído com sucesso`);
 
     // 3. Log de mitigação: logar creds de Baileys e de Zapo (se houver outra instância) lado a lado
     let existingCredsFromZapo: any = null;
@@ -363,6 +380,7 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
   } catch (err: any) {
     const errDetail = err instanceof Error ? err.message : JSON.stringify(err);
     console.error(`[ZapoRouter] [ConfirmCode] Erro ao confirmar código:`, err);
+    console.error(`[ZapoRouter] [ConfirmCode] Stack:`, err instanceof Error ? err.stack : 'sem stack');
     return res.status(500).json({ error: errDetail });
   }
 });

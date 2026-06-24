@@ -143,11 +143,26 @@ export function PrimaryRegistrationDialog({
   const handleRequestCode = async (data: FormData) => {
     setLoading(true);
     try {
+      console.groupCollapsed("[PrimaryRegistration][Browser] handleRequestCode");
+      console.debug("[PrimaryRegistration][Browser] form data", {
+        instanceName: data.instanceName,
+        phoneNumber: data.phoneNumber,
+        method: data.method,
+        proxyOpen,
+        proxyEnabled,
+        proxyProtocol,
+        proxyHost,
+        proxyPort,
+        proxyUsername,
+        hasProxyPassword: !!proxyPassword,
+      });
       const proxy = proxyOpen && proxyHost && proxyPort
         ? { enabled: proxyEnabled, protocol: proxyProtocol, host: proxyHost, port: proxyPort, username: proxyUsername, password: proxyPassword }
         : undefined;
+      console.debug("[PrimaryRegistration][Browser] derived proxy", proxy);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.debug("[PrimaryRegistration][Browser] creating instance");
       await createInstance({
         instanceName: data.instanceName,
         integration: "WHATSAPP-BAILEYS",
@@ -157,15 +172,19 @@ export function PrimaryRegistrationDialog({
         mobileTransport: true,
         ...(proxy && { proxy }),
       } as any);
+      console.debug("[PrimaryRegistration][Browser] instance created");
 
       let phone = data.phoneNumber.trim();
       if (!phone.startsWith("+")) phone = `+${phone}`;
+      console.debug("[PrimaryRegistration][Browser] normalized phone", phone);
 
+      console.debug("[PrimaryRegistration][Browser] requesting registration code");
       await requestRegistrationCode({
         instanceName: data.instanceName,
         phoneNumber: phone,
         method: data.method,
       });
+      console.debug("[PrimaryRegistration][Browser] requestRegistrationCode resolved");
 
       setInstanceName(data.instanceName);
       toast.info(
@@ -175,14 +194,17 @@ export function PrimaryRegistrationDialog({
       );
       setStep("otp");
     } catch (err: any) {
+      console.error("[PrimaryRegistration][Browser] handleRequestCode error", err);
       const msg =
         err?.response?.data?.error ||
+        err?.response?.data?.details ||
         (err instanceof Error ? err.message : null) ||
         t("primaryRegistration.toast.errorRequest", {
           defaultValue: "Erro ao solicitar código. Verifique os dados.",
         });
       toast.error(msg);
     } finally {
+      console.groupEnd();
       setLoading(false);
     }
   };
@@ -190,7 +212,13 @@ export function PrimaryRegistrationDialog({
   const handleConfirmCode = async (data: OtpData) => {
     setLoading(true);
     try {
+      console.groupCollapsed("[PrimaryRegistration][Browser] handleConfirmCode");
+      console.debug("[PrimaryRegistration][Browser] confirm data", {
+        instanceName,
+        codeLength: data.code?.length,
+      });
       await confirmRegistrationCode({ instanceName, code: data.code });
+      console.debug("[PrimaryRegistration][Browser] confirmRegistrationCode resolved");
       toast.success(
         t("primaryRegistration.toast.success", {
           defaultValue: "Número registrado com sucesso como Primário!",
@@ -199,14 +227,17 @@ export function PrimaryRegistrationDialog({
       resetTable();
       handleClose(false);
     } catch (err: any) {
+      console.error("[PrimaryRegistration][Browser] handleConfirmCode error", err);
       const msg =
         err?.response?.data?.error ||
+        err?.response?.data?.details ||
         (err instanceof Error ? err.message : null) ||
         t("primaryRegistration.toast.errorConfirm", {
           defaultValue: "Código inválido ou expirado. Tente novamente.",
         });
       toast.error(msg);
     } finally {
+      console.groupEnd();
       setLoading(false);
     }
   };
