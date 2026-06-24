@@ -6,6 +6,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `requestId` de OTP também em create e persistência de `registeredPhone`
+
+**Backend**
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): `POST /create` agora aceita `requestId` opcional e o replica nos logs da criação e do proxy. O `requestCode` também loga a persistência de `registeredPhone` com o mesmo `requestId`.
+
+**Frontend**
+- [frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/Dashboard/PrimaryRegistration/index.tsx): O `requestId` gerado na tentativa OTP agora também é enviado no payload de criação da instância.
+
 ### Debug: `requestId` único para correlacionar tentativas de OTP
 
 **Backend**

@@ -174,6 +174,7 @@ export function PrimaryRegistrationDialog({
         number: null,
         businessId: null,
         mobileTransport: true,
+        requestId,
         ...(proxy && { proxy }),
       } as any);
       console.debug("[PrimaryRegistration][Browser] instance created");

@@ -86,11 +86,15 @@ function parsePhoneNumber(fullPhone: string) {
 // 1. Criar Instância
 router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
-    const { instanceName, mobileTransport, deviceInfo, token, proxy } = req.body;
+    const { instanceName, mobileTransport, deviceInfo, token, proxy, requestId } = req.body;
+    const effectiveRequestId = typeof requestId === 'string' && requestId.trim() ? requestId.trim() : undefined;
     if (!instanceName) {
       return res.status(400).json({ error: 'instanceName is required' });
     }
 
+    if (effectiveRequestId) {
+      console.log(`[ZapoRouter] [Create] requestId=${effectiveRequestId} | payload bruto: ${JSON.stringify(req.body)}`);
+    }
     const instance = await ZapoManager.createClient(instanceName, mobileTransport || false, deviceInfo, token);
 
     // Salva proxy se fornecido — testa conectividade mas não bloqueia criação em caso de falha
@@ -108,13 +112,13 @@ router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) =>
       const test = await testProxyConnectivity(proxyData).catch(() => ({ connected: false, error: 'check failed', details: undefined }));
       ZapoManager.proxyStatusCache.set(instanceName, { connected: test.connected, error: test.error, details: (test as any).details });
       await prisma.instance.update({ where: { instanceName }, data: { proxyConfig: proxyData } });
-      console.log(`[ZapoRouter] [Create] Proxy salvo para ${instanceName}: connected=${test.connected}`);
+      console.log(`[ZapoRouter] [Create] requestId=${effectiveRequestId || 'n/a'} | Proxy salvo para ${instanceName}: connected=${test.connected}`);
     }
 
     // Inicia a conexão de forma assíncrona (gerar QR ou reconectar)
     if (!instance.mobileTransport) {
       ZapoManager.connectClient(instanceName).catch(err => {
-        console.error(`[ZapoRouter] Falha na inicialização assíncrona de ${instanceName}:`, err.message);
+        console.error(`[ZapoRouter] [Create] requestId=${effectiveRequestId || 'n/a'} | Falha na inicialização assíncrona de ${instanceName}:`, err.message);
       });
     }
 
@@ -129,7 +133,7 @@ router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) =>
         apikey: instance.apiKey
       }
     });
-  } catch (err: any) {
+    } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
 });
@@ -234,7 +238,9 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     });
 
     // Persistir telefone no DB — sobrevive a restarts do servidor
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | Persistindo registeredPhone=${parsed.full} no banco`);
     await prisma.$executeRaw`UPDATE "Instance" SET "registeredPhone" = ${parsed.full} WHERE "instanceName" = ${instanceName}`;
+    console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | registeredPhone persistido com sucesso`);
 
     console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | ── Registro iniciado com sucesso ──`);
     return res.status(200).json({ status: 'success', requestId: effectiveRequestId });
