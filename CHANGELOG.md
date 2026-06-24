@@ -6,6 +6,11 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `sendWebhook` interno loga `requestId`
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): `sendWebhook` agora extrai `requestId` do payload OTP, inclui o identificador no log do terminal e também no log de retries/falha definitiva.
+
 ### Debug: eventos de webhook/socket do OTP carregam `requestId`
 
 **Backend**

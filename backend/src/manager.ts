@@ -1000,13 +1000,18 @@ export class ZapoManager {
   private static async sendWebhook(instanceName: string, event: string, payload: any) {
     const instance = await prisma.instance.findUnique({ where: { instanceName } });
     const cfg = (instance?.webhookConfig as any) ?? {};
+    const requestId = payload?.requestId ?? payload?.data?.requestId ?? null;
+    const trace = requestId ? `requestId=${requestId} | ` : '';
 
     if (!cfg.enabled || !cfg.url) return;
     // Normaliza para suportar tanto 'connection.update' quanto 'CONNECTION_UPDATE' armazenados
     const norm = (e: string) => e.toLowerCase().replace(/_/g, '.');
     if (cfg.events?.length > 0 && !cfg.events.some((e: string) => norm(e) === norm(event))) return;
 
-    console.log(`[ZapoWebhook] [${instanceName}] → ${event}`);
+    console.log(`[ZapoWebhook] [${instanceName}] ${trace}→ ${event}`);
+    if (requestId) {
+      console.log(`[ZapoWebhook] [${instanceName}] requestId=${requestId} | payload=${JSON.stringify(payload)}`);
+    }
 
     // FIX 4: 3 tentativas com backoff exponencial (1s, 2s, 4s)
     const MAX_ATTEMPTS = 3;
@@ -1024,11 +1029,11 @@ export class ZapoManager {
       } catch (err: any) {
         if (n < MAX_ATTEMPTS) {
           const delayMs = 1000 * Math.pow(2, n - 1); // 1s, 2s, 4s
-          console.warn(`[ZapoWebhook] [${instanceName}] [${event}] tentativa ${n}/${MAX_ATTEMPTS} falhou — retry em ${delayMs}ms: ${err.message}`);
+          console.warn(`[ZapoWebhook] [${instanceName}] ${trace}[${event}] tentativa ${n}/${MAX_ATTEMPTS} falhou — retry em ${delayMs}ms: ${err.message}`);
           await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
           return attempt(n + 1);
         }
-        console.error(`[ZapoWebhook] Erro definitivo ao disparar [${event}] para ${cfg.url} após ${MAX_ATTEMPTS} tentativas:`, err.message);
+        console.error(`[ZapoWebhook] ${trace}Erro definitivo ao disparar [${event}] para ${cfg.url} após ${MAX_ATTEMPTS} tentativas:`, err.message);
       }
     };
 
