@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ZapoManager, testProxyConnectivity } from '../manager';
 import { getMobileDevice, getCurrentIosVersion, buildIosMobileToken, buildIosMobileUserAgent } from '../config/device';
 import { buildRegistrationFetchOptions } from '../config/proxyUtils';
+import { classifyOtpRegistrationError } from '../config/otpErrors';
 import { useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { makeRegistrationSocket } from '@whiskeysockets/baileys/lib/Socket/registration.js';
 import { DEFAULT_CONNECTION_CONFIG } from '@whiskeysockets/baileys/lib/Defaults/index.js';
@@ -225,11 +226,17 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     console.log(`[ZapoRouter] [RegisterCode] ── Registro iniciado com sucesso ──`);
     return res.status(200).json({ status: 'success' });
   } catch (err: any) {
-    const errDetail = err instanceof Error ? err.message : JSON.stringify(err);
+    const classified = classifyOtpRegistrationError(err);
+    const errDetail = classified.details || (err instanceof Error ? err.message : JSON.stringify(err));
     console.error(`[ZapoRouter] [RegisterCode] ── ERRO no registro ──`);
     console.error(`[ZapoRouter] [RegisterCode] Tipo: ${err instanceof Error ? 'Error' : 'WA rejection (JSON)'}`);
     console.error(`[ZapoRouter] [RegisterCode] Detalhe:`, errDetail);
-    return res.status(500).json({ error: errDetail });
+    return res.status(classified.statusCode).json({
+      status: 'error',
+      code: classified.code,
+      error: classified.message,
+      details: errDetail,
+    });
   }
 });
 

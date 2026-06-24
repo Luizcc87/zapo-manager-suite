@@ -6,6 +6,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Fix: OTP bloqueado retorna resposta estruturada na API
+
+**Backend**
+- [backend/src/config/otpErrors.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/config/otpErrors.ts): Novo helper puro para classificar erros do fluxo de registro OTP, detectando o retorno `reason=blocked` do WhatsApp.
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): `POST /register/requestCode` agora responde `423` com `code: "otp_blocked"` e mensagem estável quando o WhatsApp bloqueia o login; demais falhas continuam retornando erro genérico estruturado.
+
+**Testes**
+- [backend/src/tests/otp-errors.test.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/tests/otp-errors.test.ts): Cobertura unitária para bloqueio explícito e falha genérica do OTP.
+
 ### Fix: Mensagens persistidas sem corrida de unique constraint em `wa_messages`
 
 **Backend**
