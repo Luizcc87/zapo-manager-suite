@@ -6,6 +6,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `requestId` também em `saveCredentials` e `disconnectClient`
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): `saveCredentials` e `disconnectClient` receberam `requestId` opcional e passaram a registrar início/fim/limpeza com o mesmo identificador.
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): O fluxo OTP agora encaminha o `requestId` para a persistência de credenciais e para a desconexão do cliente anterior.
+
 ### Debug: `requestId` alcança `ZapoManager.createClient`
 
 **Backend**

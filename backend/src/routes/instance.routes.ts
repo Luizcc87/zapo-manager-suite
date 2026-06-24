@@ -167,7 +167,7 @@ router.post('/register/requestCode', checkGlobalApiKey, async (req: Request, res
     console.log(`[ZapoRouter] [RegisterCode] requestId=${effectiveRequestId} | MOBILE_TOKEN (hex): ${BaileysMobileDefaults.MOBILE_TOKEN.toString('hex').slice(0, 16)}...`);
 
     // Garante que qualquer cliente ativo anterior seja desconectado
-    await ZapoManager.disconnectClient(instanceName);
+    await ZapoManager.disconnectClient(instanceName, effectiveRequestId);
 
     // Limpar cache anterior de registro para evitar vazamento
     const oldItem = registrationSocketCache.get(instanceName);
@@ -357,12 +357,12 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
 
     // 5. Salvar no mesmo store que o Zapo usa para sessões normais
     console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Salvando credenciais no store Zapo`);
-    await ZapoManager.saveCredentials(instanceName, mappedCreds);
+    await ZapoManager.saveCredentials(instanceName, mappedCreds, effectiveRequestId);
     console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Credenciais salvas no store Zapo`);
 
     // Desconecta qualquer cliente ativo anterior (garantia final)
     console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Desconectando cliente ativo anterior`);
-    await ZapoManager.disconnectClient(instanceName);
+    await ZapoManager.disconnectClient(instanceName, effectiveRequestId);
     console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Cliente anterior desconectado`);
 
     // 6. Atualizar status no banco de dados para "connected"

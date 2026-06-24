@@ -664,7 +664,7 @@ export class ZapoManager {
       const renewed = await renewLock(instanceName, CONTAINER_ID);
       if (!renewed) {
         console.error(`[ZapoManager] [${instanceName}] Perda do Lock de concorrência! Desconectando.`);
-        await ZapoManager.disconnectClient(instanceName);
+    await ZapoManager.disconnectClient(instanceName);
       }
     }, LOCK_RENEW);
 
@@ -898,7 +898,8 @@ export class ZapoManager {
     return activeData;
   }
 
-  static async disconnectClient(instanceName: string) {
+  static async disconnectClient(instanceName: string, requestId?: string) {
+    const trace = requestId ? `requestId=${requestId} | ` : '';
     const data = activeClients.get(instanceName);
     if (data) {
       if (data.lockInterval) clearInterval(data.lockInterval);
@@ -908,6 +909,7 @@ export class ZapoManager {
       if (data.pgStore) { try { await data.pgStore.destroy(); } catch (e) {} }
       activeClients.delete(instanceName);
     }
+    console.log(`[ZapoManager] [Disconnect] ${trace}disconnectClient done instanceName=${instanceName}`);
     await releaseLock(instanceName, CONTAINER_ID);
     await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
   }
@@ -974,16 +976,20 @@ export class ZapoManager {
     await prisma.instance.delete({ where: { instanceName } });
   }
 
-  static async saveCredentials(instanceName: string, credentials: any) {
+  static async saveCredentials(instanceName: string, credentials: any, requestId?: string) {
+    const trace = requestId ? `requestId=${requestId} | ` : '';
+    console.log(`[ZapoManager] [SaveCredentials] ${trace}start instanceName=${instanceName}`);
     const { store, pgStore, redisClient } = await buildStore(instanceName);
     try {
       const session = store.session(instanceName);
       await session.auth.save(credentials);
       await session.destroy();
+      console.log(`[ZapoManager] [SaveCredentials] ${trace}credentials saved instanceName=${instanceName}`);
     } finally {
       if (redisClient) { try { await redisClient.quit(); } catch (e) {} }
       if (pgStore) { try { await pgStore.destroy(); } catch (e) {} }
       try { await store.destroy(); } catch (e) {}
+      console.log(`[ZapoManager] [SaveCredentials] ${trace}resources released instanceName=${instanceName}`);
     }
   }
 
