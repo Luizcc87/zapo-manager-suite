@@ -584,6 +584,7 @@ export class ZapoManager {
 
   static async connectClient(instanceName: string, requestId?: string) {
     const trace = requestId ? `requestId=${requestId} | ` : '';
+    const attachTrace = (payload: any) => requestId ? { ...payload, requestId } : payload;
     if (activeClients.has(instanceName)) {
       console.log(`[ZapoManager] [Connect] ${trace}instance already active instanceName=${instanceName}`);
       return activeClients.get(instanceName);
@@ -681,8 +682,8 @@ export class ZapoManager {
 
       if (activeData.qrCount > QR_LIMIT) {
         console.warn(`[ZapoManager] [Connect] ${trace}[${instanceName}] Limite de QR Codes atingido (${QR_LIMIT}). Encerrando tentativas.`);
-        ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'disconnected', reason: 'qrcode_limit_reached' });
-        _socketEmitter?.('connection.update', { instance: instanceName, data: { status: 'disconnected', reason: 'qrcode_limit_reached' } });
+        ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'disconnected', reason: 'qrcode_limit_reached' }));
+        _socketEmitter?.('connection.update', { instance: instanceName, data: attachTrace({ status: 'disconnected', reason: 'qrcode_limit_reached' }) });
         // Desconecta sem marcar como logout — pode ser reconectado manualmente depois
         ZapoManager.disconnectClient(instanceName, requestId).catch((err: any) => {
           console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao encerrar após limite de QR:`, err.message);
@@ -692,8 +693,8 @@ export class ZapoManager {
 
       activeData.qrCode = qr;
       await prisma.instance.update({ where: { instanceName }, data: { status: 'connecting' } });
-      ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connecting', qr });
-      _socketEmitter?.('connection.update', { instance: instanceName, data: { status: 'connecting', qr } });
+      ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'connecting', qr }));
+      _socketEmitter?.('connection.update', { instance: instanceName, data: attachTrace({ status: 'connecting', qr }) });
     });
 
     client.on('auth_paired', async ({ credentials }) => {
@@ -701,7 +702,7 @@ export class ZapoManager {
       activeData.qrCode = undefined;
       activeData.qrCount = 0;
       await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
-      ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connected', meJid: credentials.meJid });
+      ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'connected', meJid: credentials.meJid }));
     });
 
     client.on('connection', async (event) => {
@@ -711,7 +712,7 @@ export class ZapoManager {
         if (isRegistered) {
           activeData.qrCode = undefined;
           await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
-          ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'connected' });
+          ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'connected' }));
 
           // Buscar foto e nome do perfil próprio de forma assíncrona (fire-and-forget)
           // Não bloquear o evento de conexão
@@ -739,10 +740,10 @@ export class ZapoManager {
           } catch (err: any) {
             console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Falha ao definir status como desconectado (provavelmente excluída):`, err.message);
           }
-          ZapoManager.sendWebhook(instanceName, 'connection.update', {
+          ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({
             status: 'disconnected',
             reason: (event as any).reason
-          });
+          }));
         }
       }
     });
@@ -772,7 +773,7 @@ export class ZapoManager {
       const normalized = ZapoManager.storeMessage(instanceName, msgData);
       const direction = event.key?.fromMe ? 'OUTBOUND/SENT' : 'INBOUND/RECEIVED';
         console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] [MESSAGE EVENT] [${direction}] jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id} pushName=${event.pushName || 'N/A'} content=${JSON.stringify(event.message)}`);
-      const webhookPayload = { instance: instanceName, data: normalized ?? msgData };
+      const webhookPayload = { instance: instanceName, data: attachTrace(normalized ?? msgData) };
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', webhookPayload);
       _socketEmitter?.('messages.upsert', webhookPayload);
     });
@@ -781,7 +782,7 @@ export class ZapoManager {
       console.log(`[ZapoManager] [${instanceName}] [MESSAGE ADDON EVENT] type=addon, fromMe=${event.key?.fromMe} jid=${event.key?.remoteJid} id=${event.key?.id} addonType=${(event as any).type || 'unknown'} content=${JSON.stringify(event)}`);
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', {
         instance: instanceName,
-        data: { type: 'addon', addon: event }
+        data: attachTrace({ type: 'addon', addon: event })
       });
     });
 
@@ -799,7 +800,7 @@ export class ZapoManager {
           updatedAt: new Date().toISOString()
         });
       }
-      const updatePayload = { instance: instanceName, data: { chatJid: event.chatJid, status: event.status, messageIds: event.messageIds } };
+      const updatePayload = { instance: instanceName, data: attachTrace({ chatJid: event.chatJid, status: event.status, messageIds: event.messageIds }) };
       ZapoManager.sendWebhook(instanceName, 'messages.update', updatePayload);
       _socketEmitter?.('messages.update', updatePayload);
     });
@@ -807,15 +808,15 @@ export class ZapoManager {
     // ── Presence & Chat-state ─────────────────────────────────────────────────
 
     client.on('presence', (event) => {
-      ZapoManager.sendWebhook(instanceName, 'presence.update', { instance: instanceName, data: event });
+      ZapoManager.sendWebhook(instanceName, 'presence.update', { instance: instanceName, data: attachTrace(event) });
     });
 
     client.on('chatstate', (event) => {
-      ZapoManager.sendWebhook(instanceName, 'chats.update', { instance: instanceName, data: event });
+      ZapoManager.sendWebhook(instanceName, 'chats.update', { instance: instanceName, data: attachTrace(event) });
     });
 
     client.on('call', async (event) => {
-      ZapoManager.sendWebhook(instanceName, 'call', { instance: instanceName, data: event });
+      ZapoManager.sendWebhook(instanceName, 'call', { instance: instanceName, data: attachTrace(event) });
 
       if (settings.rejectCall && event.type === 'offer') {
         const toJid = event.callerPnJid ?? event.callCreatorJid;
@@ -847,7 +848,7 @@ export class ZapoManager {
     // ── Groups ────────────────────────────────────────────────────────────────
 
     client.on('group', (event) => {
-      ZapoManager.sendWebhook(instanceName, 'groups.update', { instance: instanceName, data: event });
+      ZapoManager.sendWebhook(instanceName, 'groups.update', { instance: instanceName, data: attachTrace(event) });
     });
 
     // ── History Sync ──────────────────────────────────────────────────────────
@@ -867,7 +868,7 @@ export class ZapoManager {
         );
         const payload = {
           instance: instanceName,
-          data: { syncType, messagesCount, conversationsCount, progress, chunkOrder }
+          data: attachTrace({ syncType, messagesCount, conversationsCount, progress, chunkOrder })
         };
         ZapoManager.sendWebhook(instanceName, 'history.sync', payload);
         _socketEmitter?.('history.sync', payload);

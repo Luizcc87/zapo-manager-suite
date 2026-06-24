@@ -6,6 +6,11 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: eventos de webhook/socket do OTP carregam `requestId`
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): Os eventos emitidos pelo `connectClient` acionado no fluxo OTP agora incluem `requestId` em `connection.update`, `messages.upsert`, `messages.update`, `presence.update`, `chats.update`, `call`, `groups.update` e `history.sync`, além dos logs do caminho de conexão.
+
 ### Debug: `requestId` também em `connectClient`
 
 **Backend**
