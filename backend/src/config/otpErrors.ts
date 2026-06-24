@@ -13,10 +13,25 @@ const safeJsonParse = (value: string): any | null => {
   }
 };
 
+const stringifyError = (err: unknown): string => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+};
+
 export const classifyOtpRegistrationError = (err: unknown): OtpErrorClassification => {
-  const fallbackMessage = err instanceof Error ? err.message : String(err);
+  const fallbackMessage = stringifyError(err);
   const raw = fallbackMessage.trim();
-  const parsed = raw.startsWith('{') ? safeJsonParse(raw) : null;
+  const parsed = typeof err === 'object' && err !== null && !(err instanceof Error)
+    ? err as any
+    : raw.startsWith('{')
+      ? safeJsonParse(raw)
+      : null;
   const reason = typeof parsed?.reason === 'string' ? parsed.reason : '';
   const status = typeof parsed?.status === 'string' ? parsed.status : '';
 

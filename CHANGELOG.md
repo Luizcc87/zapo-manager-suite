@@ -6,6 +6,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Fix: classificação correta de erro OTP quando WhatsApp retorna objeto
+
+**Backend**
+- [backend/src/config/otpErrors.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/config/otpErrors.ts): `classifyOtpRegistrationError` agora serializa objetos de rejeição do WhatsApp corretamente e detecta `reason: "blocked"` mesmo quando o erro chega como objeto puro, evitando resposta genérica `500` com `"[object Object]"`.
+
+**Testes**
+- [backend/src/tests/otp-errors.test.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/tests/otp-errors.test.ts): Adicionado caso cobrindo retorno OTP bloqueado como objeto.
+
 ### Debug: `_socketEmitter` do OTP loga `requestId`
 
 **Backend**
