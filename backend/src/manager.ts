@@ -391,6 +391,34 @@ export class ZapoManager {
     this.storeMessage(instanceName, msgData);
   }
 
+  private static persistMessageIfEnabled(instanceName: string, normalized: any, remoteJid: string) {
+    if (process.env.SAVE_DATA_NEW_MESSAGE !== 'true') return;
+
+    console.log(`[ZapoManager] [${instanceName}] [DATABASE] Tentando salvar mensagem ${normalized.id} no banco para JID=${remoteJid}...`);
+    prisma.message.createMany({
+      data: [{
+        instanceName,
+        remoteJid,
+        messageId: normalized.id,
+        fromMe: normalized.key?.fromMe ?? false,
+        pushName: normalized.pushName,
+        messageType: normalized.messageType,
+        message: normalized.message as any,
+        messageTimestamp: normalized.messageTimestamp,
+        source: normalized.source,
+      }],
+      skipDuplicates: true,
+    }).then((result) => {
+      if (result.count > 0) {
+        console.log(`[ZapoManager] [${instanceName}] [DATABASE] ✅ Mensagem ${normalized.id} salva com sucesso.`);
+      } else {
+        console.log(`[ZapoManager] [${instanceName}] [DATABASE] ↷ Mensagem ${normalized.id} já existia; duplicate ignorado.`);
+      }
+    }).catch((err: any) => {
+      console.error(`[ZapoManager] [${instanceName}] [DATABASE] ❌ Erro ao persistir mensagem ${normalized.id}:`, err.message);
+    });
+  }
+
   private static storeMessage(instanceName: string, msgData: any): any {
     // Mobile Transport sends @lid JIDs; prefer the @s.whatsapp.net alt when available
     // so messages are stored under the same JID the frontend uses for navigation.
@@ -473,28 +501,7 @@ export class ZapoManager {
     });
 
     // Persiste mensagem no banco quando SAVE_DATA_NEW_MESSAGE=true — fire-and-forget
-    if (process.env.SAVE_DATA_NEW_MESSAGE === 'true') {
-      console.log(`[ZapoManager] [${instanceName}] [DATABASE] Tentando salvar mensagem ${normalized.id} no banco para JID=${remoteJid}...`);
-      prisma.message.upsert({
-        where: { instanceName_messageId: { instanceName, messageId: normalized.id } },
-        create: {
-          instanceName,
-          remoteJid,
-          messageId: normalized.id,
-          fromMe: msgData.key?.fromMe ?? false,
-          pushName: normalized.pushName,
-          messageType: normalized.messageType,
-          message: normalized.message as any,
-          messageTimestamp: normalized.messageTimestamp,
-          source: normalized.source,
-        },
-        update: {},
-      }).then(() => {
-        console.log(`[ZapoManager] [${instanceName}] [DATABASE] ✅ Mensagem ${normalized.id} salva com sucesso.`);
-      }).catch((err: any) => {
-        console.error(`[ZapoManager] [${instanceName}] [DATABASE] ❌ Erro ao persistir mensagem ${normalized.id}:`, err.message);
-      });
-    }
+    this.persistMessageIfEnabled(instanceName, normalized, remoteJid);
 
     return normalized;
   }

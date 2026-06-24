@@ -6,6 +6,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Fix: Mensagens persistidas sem corrida de unique constraint em `wa_messages`
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): Persistência de mensagens trocada de `upsert` para `createMany({ skipDuplicates: true })` no caminho `storeMessage()`, reduzindo corrida entre o envio local e os eventos do cliente que antes podiam estourar `Unique constraint failed on the fields: (instanceName,messageId)`.
+
+**Testes**
+- `npx tsc -p backend/tsconfig.json --noEmit`: validação de compilação passou após a alteração.
+
 ### Upgrade: Zapo backend package to v1.2.0
 
 **Backend**
