@@ -356,10 +356,14 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
     console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Credenciais mapeadas para Zapo:`, JSON.stringify(mappedCreds, null, 2));
 
     // 5. Salvar no mesmo store que o Zapo usa para sessões normais
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Salvando credenciais no store Zapo`);
     await ZapoManager.saveCredentials(instanceName, mappedCreds);
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Credenciais salvas no store Zapo`);
 
     // Desconecta qualquer cliente ativo anterior (garantia final)
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Desconectando cliente ativo anterior`);
     await ZapoManager.disconnectClient(instanceName);
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Cliente anterior desconectado`);
 
     // 6. Atualizar status no banco de dados para "connected"
     // ownerJid obrigatório: connectClient checa !!ownerJid para ativar mobileTransport TCP
@@ -372,6 +376,7 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
         ownerJid: mappedCreds.meJid || null,
       }
     });
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Banco atualizado com status connected e ownerJid=${mappedCreds.meJid || 'null'}`);
 
     // 7. Limpar cache de registro e deletar diretório temporário
     registrationSocketCache.delete(instanceName);
@@ -383,9 +388,11 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
     }
 
     // 8. Iniciar a conexão real da instância via ZapoManager em background
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Iniciando connectClient em background`);
     ZapoManager.connectClient(instanceName).catch(err => {
       console.error(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Falha ao iniciar conexão real de Zapo para ${instanceName}:`, err.message);
     });
+    console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | connectClient despachado`);
 
     return res.status(200).json({ status: 'success', requestId: effectiveRequestId });
   } catch (err: any) {

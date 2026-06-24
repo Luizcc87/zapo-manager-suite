@@ -6,6 +6,11 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `requestId` também nas transições finais do `confirmCode`
+
+**Backend**
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): O fluxo de `confirmCode` agora loga `requestId` ao salvar credenciais no store, desconectar o cliente anterior, atualizar `ownerJid`/status no banco e despachar o `connectClient` em background.
+
 ### Debug: `requestId` de OTP também em create e persistência de `registeredPhone`
 
 **Backend**
