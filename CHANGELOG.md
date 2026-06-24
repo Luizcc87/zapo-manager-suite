@@ -6,6 +6,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-06-23
 
+### Debug: `requestId` também em `connectClient`
+
+**Backend**
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): `connectClient` recebeu `requestId` opcional e agora registra lock, proxy, QR, pareamento, fechamento e eventos de mensagem com o mesmo identificador.
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): O `requestId` do fluxo OTP agora é repassado ao `connectClient` final após o `confirmCode`.
+
 ### Debug: `requestId` também em `saveCredentials` e `disconnectClient`
 
 **Backend**

@@ -582,20 +582,23 @@ export class ZapoManager {
     return instance;
   }
 
-  static async connectClient(instanceName: string) {
+  static async connectClient(instanceName: string, requestId?: string) {
+    const trace = requestId ? `requestId=${requestId} | ` : '';
     if (activeClients.has(instanceName)) {
+      console.log(`[ZapoManager] [Connect] ${trace}instance already active instanceName=${instanceName}`);
       return activeClients.get(instanceName);
     }
 
     const gotLock = await acquireLock(instanceName, CONTAINER_ID);
     if (!gotLock) {
-      console.warn(`[ZapoManager] [${instanceName}] Conexão negada: Outro container possui o lock de execução.`);
+      console.warn(`[ZapoManager] [Connect] ${trace}[${instanceName}] Conexão negada: Outro container possui o lock de execução.`);
       throw new Error('Sessão ativa em outra réplica');
     }
 
     const instance = await prisma.instance.findUnique({ where: { instanceName } });
     if (!instance) {
       await releaseLock(instanceName, CONTAINER_ID);
+      console.warn(`[ZapoManager] [Connect] ${trace}[${instanceName}] Instância não encontrada ao conectar.`);
       throw new Error(`Instância ${instanceName} não cadastrada.`);
     }
 
@@ -619,7 +622,7 @@ export class ZapoManager {
     }
 
     if (proxy) {
-      console.log(`[ZapoManager] [${instanceName}] Proxy ativo: ${proxyConfig.protocol}://${proxyConfig.host}:${proxyConfig.port}`);
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Proxy ativo: ${proxyConfig.protocol}://${proxyConfig.host}:${proxyConfig.port}`);
     }
 
     const clientOptions: any = {
@@ -645,9 +648,9 @@ export class ZapoManager {
       clientOptions.mobileTransport = {
         deviceInfo: instance.deviceInfo || getMobileDevice()
       };
-      console.log(`[ZapoManager] [${instanceName}] Inicializando cliente com Mobile Transport:`, JSON.stringify(clientOptions.mobileTransport, null, 2));
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Inicializando cliente com Mobile Transport:`, JSON.stringify(clientOptions.mobileTransport, null, 2));
     } else if (instance.mobileTransport) {
-      console.warn(`[ZapoManager] [${instanceName}] Instância Mobile sem credenciais registradas (ownerJid vazio). Ignorando mobileTransport para permitir pareamento QR Code via WebSocket.`);
+      console.warn(`[ZapoManager] [Connect] ${trace}[${instanceName}] Instância Mobile sem credenciais registradas (ownerJid vazio). Ignorando mobileTransport para permitir pareamento QR Code via WebSocket.`);
     }
 
     const client = new WaClient(clientOptions, logger);
@@ -663,8 +666,8 @@ export class ZapoManager {
     activeData.lockInterval = setInterval(async () => {
       const renewed = await renewLock(instanceName, CONTAINER_ID);
       if (!renewed) {
-        console.error(`[ZapoManager] [${instanceName}] Perda do Lock de concorrência! Desconectando.`);
-    await ZapoManager.disconnectClient(instanceName);
+        console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Perda do Lock de concorrência! Desconectando.`);
+    await ZapoManager.disconnectClient(instanceName, requestId);
       }
     }, LOCK_RENEW);
 
@@ -674,15 +677,15 @@ export class ZapoManager {
 
     client.on('auth_qr', async ({ qr }) => {
       activeData.qrCount += 1;
-      console.log(`[ZapoManager] [${instanceName}] QR Code recebido (${activeData.qrCount}/${QR_LIMIT}).`);
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] QR Code recebido (${activeData.qrCount}/${QR_LIMIT}).`);
 
       if (activeData.qrCount > QR_LIMIT) {
-        console.warn(`[ZapoManager] [${instanceName}] Limite de QR Codes atingido (${QR_LIMIT}). Encerrando tentativas.`);
+        console.warn(`[ZapoManager] [Connect] ${trace}[${instanceName}] Limite de QR Codes atingido (${QR_LIMIT}). Encerrando tentativas.`);
         ZapoManager.sendWebhook(instanceName, 'connection.update', { status: 'disconnected', reason: 'qrcode_limit_reached' });
         _socketEmitter?.('connection.update', { instance: instanceName, data: { status: 'disconnected', reason: 'qrcode_limit_reached' } });
         // Desconecta sem marcar como logout — pode ser reconectado manualmente depois
-        ZapoManager.disconnectClient(instanceName).catch((err: any) => {
-          console.error(`[ZapoManager] [${instanceName}] Erro ao encerrar após limite de QR:`, err.message);
+        ZapoManager.disconnectClient(instanceName, requestId).catch((err: any) => {
+          console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao encerrar após limite de QR:`, err.message);
         });
         return;
       }
@@ -694,7 +697,7 @@ export class ZapoManager {
     });
 
     client.on('auth_paired', async ({ credentials }) => {
-      console.log(`[ZapoManager] [${instanceName}] Dispositivo pareado como ${credentials.meJid}`);
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Dispositivo pareado como ${credentials.meJid}`);
       activeData.qrCode = undefined;
       activeData.qrCount = 0;
       await prisma.instance.update({ where: { instanceName }, data: { status: 'connected' } });
@@ -702,7 +705,7 @@ export class ZapoManager {
     });
 
     client.on('connection', async (event) => {
-      console.log(`[ZapoManager] [${instanceName}] Evento de conexão:`, event);
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Evento de conexão:`, event);
       if (event.status === 'open') {
         const isRegistered = client.getState().registered;
         if (isRegistered) {
@@ -716,25 +719,25 @@ export class ZapoManager {
             try {
               await ZapoManager.syncProfile(instanceName);
             } catch (err: any) {
-              console.warn(`[ZapoManager] [${instanceName}] Falha ao buscar perfil na conexão:`, err.message);
+              console.warn(`[ZapoManager] [Connect] ${trace}[${instanceName}] Falha ao buscar perfil na conexão:`, err.message);
             }
           });
         } else {
-          console.log(`[ZapoManager] [${instanceName}] Conexão de rede aberta, aguardando autenticação (registered=false).`);
+          console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Conexão de rede aberta, aguardando autenticação (registered=false).`);
         }
       } else if (event.status === 'close') {
         activeData.qrCode = undefined;
         const isLogout = (event as any).isLogout || (event as any).reason === 'stream_error_device_removed';
         if (isLogout) {
-          console.log(`[ZapoManager] [${instanceName}] Desconexão permanente (logout/device_removed). Limpando recursos.`);
-          ZapoManager.disconnectClient(instanceName).catch(err => {
-            console.error(`[ZapoManager] [${instanceName}] Erro ao desconectar no evento de close:`, err.message);
+          console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Desconexão permanente (logout/device_removed). Limpando recursos.`);
+          ZapoManager.disconnectClient(instanceName, requestId).catch(err => {
+            console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao desconectar no evento de close:`, err.message);
           });
         } else {
           try {
             await prisma.instance.update({ where: { instanceName }, data: { status: 'disconnected' } });
           } catch (err: any) {
-            console.log(`[ZapoManager] [${instanceName}] Falha ao definir status como desconectado (provavelmente excluída):`, err.message);
+            console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Falha ao definir status como desconectado (provavelmente excluída):`, err.message);
           }
           ZapoManager.sendWebhook(instanceName, 'connection.update', {
             status: 'disconnected',
@@ -768,7 +771,7 @@ export class ZapoManager {
       };
       const normalized = ZapoManager.storeMessage(instanceName, msgData);
       const direction = event.key?.fromMe ? 'OUTBOUND/SENT' : 'INBOUND/RECEIVED';
-      console.log(`[ZapoManager] [${instanceName}] [MESSAGE EVENT] [${direction}] jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id} pushName=${event.pushName || 'N/A'} content=${JSON.stringify(event.message)}`);
+        console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] [MESSAGE EVENT] [${direction}] jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id} pushName=${event.pushName || 'N/A'} content=${JSON.stringify(event.message)}`);
       const webhookPayload = { instance: instanceName, data: normalized ?? msgData };
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', webhookPayload);
       _socketEmitter?.('messages.upsert', webhookPayload);

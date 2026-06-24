@@ -389,7 +389,7 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
 
     // 8. Iniciar a conexão real da instância via ZapoManager em background
     console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Iniciando connectClient em background`);
-    ZapoManager.connectClient(instanceName).catch(err => {
+    ZapoManager.connectClient(instanceName, effectiveRequestId).catch(err => {
       console.error(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | Falha ao iniciar conexão real de Zapo para ${instanceName}:`, err.message);
     });
     console.log(`[ZapoRouter] [ConfirmCode] requestId=${effectiveRequestId} | connectClient despachado`);
