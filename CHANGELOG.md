@@ -4,6 +4,20 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-06-29
+
+### Upgrade de Dependências e Desativação de OTP/SMS
+
+**Backend**
+- [backend/package.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/package.json): Atualizado `@whiskeysockets/baileys` para `7.0.0-rc13` (ESM) e `zapo-js` para `1.2.1` (com os adaptadores de store correspondentes atualizados para `1.0.2`).
+- [backend/src/routes/instance.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/instance.routes.ts): Comentados os imports legados do Baileys v6 removidos no v7. Refatoradas as rotas `/instance/register/requestCode` e `/instance/register/confirmCode` para validar os parâmetros obrigatórios e retornar `400 Bad Request` informando que o registro via OTP foi desativado na versão atual da biblioteca Baileys, exigindo importação direta de credenciais.
+
+**Documentação**
+- [docs/superpowers/plans/2026-06-19-primary-registration-sms-otp.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/superpowers/plans/2026-06-19-primary-registration-sms-otp.md): Adicionada nota de atualização informando sobre a desativação do fluxo no Baileys v7.
+- [memory/project_primary_registration.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/memory/project_primary_registration.md): Atualizado o estado da Fase 2 para registrar o upgrade de versão e a inatividade das rotas SMS/OTP.
+
+**Commits:** `ab42343`
+
 ## [Unreleased] — 2026-06-23
 
 ### Fix: botão e toast do OTP refletem SMS ou ligação
