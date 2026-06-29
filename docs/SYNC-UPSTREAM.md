@@ -239,4 +239,4 @@ Leitura prática para o projeto local:
 | Ver o que está desatualizado | `cd backend && npm outdated` |
 | Atualizar pacotes zapo | `npm update zapo-js @zapo-js/*` |
 | Usar commit específico do GitHub | `npm install github:vinikjkkj/zapo#<ref>` |
-| Comparar release tag com o estado local | `git log --oneline --decorate v1.1.3..v1.2.0` |
+| Comparar release tag com o estado local | `git log --oneline --decorate v1.2.0..v1.2.1` |
