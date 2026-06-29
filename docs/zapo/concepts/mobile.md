@@ -1,7 +1,7 @@
 # Mobile connections
-Source: https://zapo.to/en/concepts/mobile
+Source: https://zapo.to/en/concepts/mobile.md
 
-Connect zapo as a primary mobile (Android) WhatsApp client over the TCP transport instead of a companion device, including the limitations involved.
+> Connect zapo as a primary mobile (Android) WhatsApp client over the TCP transport instead of a companion device, including the limitations involved.
 
 Besides the standard **companion** mode (linking via QR / pairing code, like WhatsApp Web), `zapo` can connect as a **primary mobile client** — speaking the Android app's protocol over a raw TCP socket.
 
@@ -100,7 +100,7 @@ client.on('mobile_account_takeover_notice', (event) => {
 
 ## Email binding
 
-<Badge icon="mobile">Mobile-only</Badge>
+<Badge color="orange" icon="mobile">Mobile-only</Badge>
 
 `client.email` ([`WaEmailCoordinator`](/en/reference/client)) binds and verifies an email address on the account — a recovery/login factor. It is **mobile-only**: every method throws on a Web/companion connection.
 

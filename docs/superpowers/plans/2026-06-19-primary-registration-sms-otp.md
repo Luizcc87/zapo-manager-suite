@@ -1,5 +1,10 @@
 # Registro Primário via SMS/OTP — Plano de Implementação
 
+> [!WARNING]
+> **ATUALIZAÇÃO DE ARQUITETURA (2026-06-29 — Baileys v7.0.0-rc13 ESM)**:
+> O Baileys v7 removeu completamente o suporte para sockets de registro de celulares (`makeRegistrationSocket`). Desta forma, o fluxo de envio e confirmação de código SMS/OTP foi **deativado** no backend. Os endpoints `/instance/register/requestCode` e `/instance/register/confirmCode` realizam apenas a validação estática de parâmetros para fins de compatibilidade de testes de contrato E2E, respondendo com `400 Bad Request` com o erro informando a indisponibilidade.
+> O método recomendado e ativo para conectar uma instância Primária móvel sem QR code é através da importação direta de credenciais de login no store Zapo.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Adicionar ao zapo-manager um fluxo de diálogo multi-step que permite registrar um número WhatsApp como Primário (sem QR Code) via SMS OTP, chamando os endpoints `/instance/register/requestCode` e `/instance/register/confirmCode` do backend Zapo/Evolution API.

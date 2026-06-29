@@ -16,11 +16,11 @@ Fluxo completo para registrar número WhatsApp como Primário (sem QR Code) via 
 - Dashboard: botão "Registrar como Primário" visível só para provider `"api"` e `provider !== "go"`
 - i18n em 4 idiomas
 
-**Fase 2 — Backend real via Baileys (concluída 2026-06-19):**
-- Baileys downgraded para v6.6.0 (v7 removeu API mobile)
-- `POST /instance/register/requestCode` — chama `makeRegistrationSocket` + `requestRegistrationCode`; persiste `registeredPhone` no DB
-- `POST /instance/register/confirmCode` — chama `sock.register(code)`; mapeia `AuthenticationCreds` → `WaAuthCredentials`; salva via `ZapoManager.saveCredentials()`; dispara `ZapoManager.connectClient()` em background
-- Bug fixes: domínios `preKey`/`session`/`identity` no store, sanitização de keyPrefix Redis para nomes com hífen
+**Fase 2 — Backend real via Baileys (Atualizada 2026-06-29):**
+- Baileys atualizado para v7.0.0-rc13 (ESM) e zapo-js para 1.2.1.
+- Como a API Mobile de registro (`makeRegistrationSocket`) foi removida no Baileys v7, as rotas `/instance/register/requestCode` e `/instance/register/confirmCode` foram desativadas e agora retornam `400 Bad Request`.
+- O suporte à importação direta de credenciais via ZapoManager continua ativo como único método para o modo Primário.
+- Bug fixes anteriores de persistência e chaves de Redis permanecem integrados.
 
 **Fase 3 — Companion QR Code & Proxy Visuals (Concluída 2026-06-20):**
 - Bypass de mobileTransport: quando `ownerJid` vazio, backend ignora `mobileTransport` para pareamento inicial por QR
