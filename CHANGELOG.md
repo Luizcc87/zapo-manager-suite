@@ -4,6 +4,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-06-30
+
+### Upgrade Zapo-JS para v1.3.0
+
+**Backend**
+- [backend/package.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/package.json): Atualizado `zapo-js` para `^1.3.0` (suporte a VoIP e expiração no Redis). Mantidos os adaptadores de store em `^1.0.2` por estarem na última versão estável disponível no npm.
+
+**Commits:** `b2bc349`
+
 ## [Unreleased] — 2026-06-29
 
 ### Upgrade de Dependências e Desativação de OTP/SMS
