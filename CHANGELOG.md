@@ -4,6 +4,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-07-03
+
+### Upgrade Zapo-JS para v1.4.0
+
+**Backend**
+- [backend/package.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/package.json): Atualizado `zapo-js` para `^1.4.0` (Shortcake passkey companion-linking protocol e correção de retentativas de pkmsg sem device-identity).
+
+**Commits:** pendente
+
 ## [Unreleased] — 2026-06-30
 
 ### Upgrade Zapo-JS para v1.3.0

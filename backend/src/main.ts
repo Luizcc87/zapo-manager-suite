@@ -28,6 +28,21 @@ function getZapoWebVersion(): string {
   } catch { return 'unknown'; }
 }
 
+function getZapoLibVersion(): string {
+  try {
+    const zapoPkgPath = require.resolve('zapo-js/package.json');
+    const pkg = JSON.parse(readFileSync(zapoPkgPath, 'utf8'));
+    return pkg.version ?? 'unknown';
+  } catch {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('zapo-js/package.json').version ?? 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+}
+
 // Centraliza a leitura do arquivo .env buscando na pasta atual (backend) ou subindo para a raiz
 const localEnv = path.resolve(process.cwd(), '.env');
 const parentEnv = path.resolve(process.cwd(), '../.env');
@@ -106,7 +121,8 @@ app.get('/', (req, res, next) => {
   }
   res.json({
     version: '2.0.0',
-    clientName: 'zapo-manager'
+    clientName: 'zapo-manager',
+    zapoVersion: getZapoLibVersion()
   });
 });
 
