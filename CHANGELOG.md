@@ -6,6 +6,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-03
 
+### Exibição da versão do Zapo no Sidebar
+
+**Backend**
+- [backend/src/main.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/main.ts): Adicionado helper `getZapoLibVersion` e exposta a propriedade `zapoVersion` na rota `GET /`.
+
+**Frontend**
+- [frontend/src/components/sidebar.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/components/sidebar.tsx): Consome a propriedade `zapoVersion` do `serverInfo` e a exibe no sidebar do manager.
+
 ### Upgrade Zapo-JS para v1.4.0
 
 **Backend**
