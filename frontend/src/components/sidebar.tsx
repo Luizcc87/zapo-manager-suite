@@ -18,6 +18,8 @@ import { useInstance } from "@/contexts/InstanceContext";
 import { useTheme } from "@/components/theme-provider";
 import { FEATURES, FeatureKey, isFeatureEnabled } from "@/lib/provider/features";
 import { cn } from "@/lib/utils";
+import { useVerifyServer } from "@/lib/queries/auth/verifyServer";
+import { getProvider, getToken, TOKEN_ID } from "@/lib/queries/token";
 
 const GATED_IDS = new Set<string>(Object.keys(FEATURES));
 const isGated = (id: string): id is FeatureKey => GATED_IDS.has(id);
@@ -44,6 +46,12 @@ function SidebarShell({ children, footer }: { children: React.ReactNode; footer?
   const { theme } = useTheme();
   const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
+
+  const url = getToken(TOKEN_ID.API_URL);
+  const provider = getProvider();
+  const { data: serverInfo } = useVerifyServer({ url, enabled: provider !== "go" });
+  const zapoVersion = serverInfo?.zapoVersion;
+
   return (
     <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-56 border-r border-sidebar-border">
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
@@ -62,6 +70,9 @@ function SidebarShell({ children, footer }: { children: React.ReactNode; footer?
 
       <div className="p-4 border-t border-sidebar-border">
         <div className="text-sm font-medium text-primary">Zapo Manager</div>
+        {zapoVersion && (
+          <div className="text-xs text-muted-foreground mt-0.5">Zapo: v{zapoVersion}</div>
+        )}
         <div className="mt-1 text-xs text-muted-foreground">© {currentYear} All rights reserved</div>
       </div>
     </aside>
