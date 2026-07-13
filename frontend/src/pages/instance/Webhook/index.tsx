@@ -85,8 +85,8 @@ function Webhook() {
         enabled: webhook.enabled,
         url: webhook.url,
         events: webhook.events,
-        base64: webhook.webhookBase64,
-        byEvents: webhook.webhookByEvents,
+        base64: webhook.base64 ?? webhook.webhookBase64,
+        byEvents: webhook.byEvents ?? webhook.webhookByEvents,
       });
     }
   }, [webhook]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -20,8 +20,8 @@ const DEFAULT_WEBHOOK = {
   enabled: false,
   url: '',
   events: [],
-  webhookBase64: false,
-  webhookByEvents: false,
+  base64: false,
+  byEvents: false,
 };
 
 const DEFAULT_PROXY = {

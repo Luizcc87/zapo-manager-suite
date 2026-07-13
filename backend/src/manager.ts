@@ -1,4 +1,4 @@
-import { createStore, WaClient, ConsoleLogger } from 'zapo-js';
+import { createStore, WaClient, ConsoleLogger, downloadMediaMessage } from 'zapo-js';
 import { getMobileDevice } from './config/device';
 import { createPrismaCompanionHostPersistence } from './companions/companionHostPersistence';
 import { createPostgresStore } from '@zapo-js/store-postgres';
@@ -420,6 +420,37 @@ export class ZapoManager {
     });
   }
 
+  // Tipos de mensagem com mídia baixável/decriptável via downloadMediaMessage.
+  private static readonly MEDIA_MESSAGE_TYPES = new Set([
+    'imageMessage', 'stickerMessage', 'videoMessage', 'audioMessage', 'documentMessage'
+  ]);
+
+  // Limite de tamanho para decriptação inline em base64 — mídia maior que isso
+  // infla demais o payload do socket/webhook/JSON persistido; fica só metadata.
+  private static readonly MAX_INLINE_MEDIA_BYTES = 5 * 1024 * 1024; // 5MB
+
+  /**
+   * Baixa e decripta a mídia de uma mensagem recebida, retornando base64.
+   * Usa downloadMediaMessage do zapo-js (decripta sem precisar reconectar,
+   * a partir das chaves já presentes no próprio evento). Retorna null em
+   * qualquer falha (mídia expirada no CDN, tamanho excedido, etc.) — mídia
+   * ausente não deve derrubar o fluxo de mensagem/webhook.
+   */
+  private static async decryptMessageMedia(instanceName: string, event: any, messageType: string): Promise<string | null> {
+    if (!this.MEDIA_MESSAGE_TYPES.has(messageType)) return null;
+    try {
+      const stream = await downloadMediaMessage(event, { maxBytes: this.MAX_INLINE_MEDIA_BYTES });
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk as Buffer);
+      }
+      return Buffer.concat(chunks).toString('base64');
+    } catch (err: any) {
+      console.warn(`[ZapoManager] [${instanceName}] [MEDIA] Falha ao decriptar mídia (${messageType}): ${err.message}`);
+      return null;
+    }
+  }
+
   private static storeMessage(instanceName: string, msgData: any): any {
     // Mobile Transport sends @lid JIDs; prefer the @s.whatsapp.net alt when available
     // so messages are stored under the same JID the frontend uses for navigation.
@@ -824,6 +855,32 @@ export class ZapoManager {
       const normalized = ZapoManager.storeMessage(instanceName, msgData);
       const direction = event.key?.fromMe ? 'OUTBOUND/SENT' : 'INBOUND/RECEIVED';
         console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] [MESSAGE EVENT] [${direction}] jid=${normalizedJid} type=${normalized?.messageType} id=${event.key?.id} pushName=${event.pushName || 'N/A'} content=${JSON.stringify(event.message)}`);
+
+      const messageType = normalized?.messageType;
+      const isMedia = !!messageType && ZapoManager.MEDIA_MESSAGE_TYPES.has(messageType);
+
+      // Mídia aguarda a decriptação (I/O de rede) antes de disparar socket/webhook
+      // uma única vez com o base64 já anexado — evita emitir o evento duas vezes
+      // (sem mídia, depois com mídia) para o mesmo messages.upsert. Texto e demais
+      // tipos seguem o caminho síncrono normal, sem esperar por download algum.
+      if (isMedia) {
+        const base64 = await ZapoManager.decryptMessageMedia(instanceName, event, messageType!);
+        if (base64 && normalized) {
+          normalized.message.base64 = base64;
+          // storeMessage já persistiu a mensagem sem mídia (createMany rodou antes
+          // da decriptação assíncrona); completa o registro salvo com o base64 agora
+          // que está disponível, para sobreviver a reload/restart.
+          if (process.env.SAVE_DATA_NEW_MESSAGE === 'true') {
+            prisma.message.updateMany({
+              where: { instanceName, messageId: normalized.id },
+              data: { message: normalized.message },
+            }).catch((err: any) => {
+              console.error(`[ZapoManager] [${instanceName}] [DATABASE] ❌ Erro ao completar mídia da mensagem ${normalized.id}:`, err.message);
+            });
+          }
+        }
+      }
+
       const webhookPayload = { instance: instanceName, data: attachTrace(normalized ?? msgData) };
       ZapoManager.sendWebhook(instanceName, 'messages.upsert', webhookPayload);
       emitSocket('messages.upsert', webhookPayload);
@@ -1058,6 +1115,14 @@ export class ZapoManager {
     // Normaliza para suportar tanto 'connection.update' quanto 'CONNECTION_UPDATE' armazenados
     const norm = (e: string) => e.toLowerCase().replace(/_/g, '.');
     if (cfg.events?.length > 0 && !cfg.events.some((e: string) => norm(e) === norm(event))) return;
+
+    // Toggle "Webhook Base64" (cfg.base64): mídia decriptada só sai no payload
+    // do webhook quando explicitamente habilitado — evita vazar conteúdo pesado
+    // (e potencialmente sensível) para integrações que não pediram por ele.
+    if (payload?.data?.message?.base64 && !cfg.base64) {
+      const { base64: _omit, ...messageWithoutMedia } = payload.data.message;
+      payload = { ...payload, data: { ...payload.data, message: messageWithoutMedia } };
+    }
 
     console.log(`[ZapoWebhook] [${instanceName}] ${trace}→ ${event}`);
     if (requestId) {

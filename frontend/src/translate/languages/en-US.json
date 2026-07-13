@@ -478,7 +478,7 @@
       },
       "base64": {
         "label": "Webhook Base64",
-        "description": "Send media base64 data in webhook"
+        "description": "When enabled, received images, videos, audio, stickers and documents are decrypted and sent as base64 inside the webhook payload (5MB limit per file; larger media arrives without the base64 field). When disabled, the webhook receives only message metadata, without the media content."
       },
       "events": {
         "label": "Events"

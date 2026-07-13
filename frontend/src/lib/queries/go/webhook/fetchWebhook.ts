@@ -53,8 +53,9 @@ export const useFetchWebhookGo = (props: UseQueryParams<FetchWebhookResponse> & 
         enabled: !!url,
         url,
         events,
-        webhookBase64: false,
-        webhookByEvents: false,
+        // Evolution Go não suporta base64/byEvents no webhook — sempre desligado.
+        base64: false,
+        byEvents: false,
       };
     },
     enabled: !!instanceName && (enabled ?? true),

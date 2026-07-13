@@ -436,7 +436,7 @@
       },
       "base64": {
         "label": "Webhook Base64",
-        "description": "Enviar dados de mídia em base64 no webhook"
+        "description": "Quando ativado, imagens, vídeos, áudios, figurinhas e documentos recebidos são decriptados e enviados em base64 dentro do payload do webhook (limite de 5MB por arquivo; mídias maiores chegam sem o campo base64). Quando desativado, o webhook recebe apenas os metadados da mensagem, sem o conteúdo da mídia."
       },
       "events": {
         "label": "Eventos"

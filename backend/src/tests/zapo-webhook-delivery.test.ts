@@ -35,8 +35,8 @@ describe('Zapo Webhook Delivery Test Suite', () => {
             enabled: true,
             url: `http://127.0.0.1:${receiverPort}/webhook`,
             events: ['connection.update', 'messages.upsert'],
-            webhookBase64: false,
-            webhookByEvents: true,
+            base64: false,
+            byEvents: true,
           },
         };
       }
@@ -165,8 +165,8 @@ describe('Zapo Webhook Delivery Test Suite', () => {
             enabled: true,
             url: `http://127.0.0.1:${http500Port}/webhook`,
             events: ['connection.update'],
-            webhookBase64: false,
-            webhookByEvents: true,
+            base64: false,
+            byEvents: true,
           },
         };
       }
