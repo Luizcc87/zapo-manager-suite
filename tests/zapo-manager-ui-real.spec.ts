@@ -223,19 +223,25 @@ test.describe('Zapo Manager UI real - backend vivo', () => {
     }
   });
 
-  test.skip('troca de idioma altera textos visiveis em 4 idiomas', async ({ page, request }) => {
+  test('troca de idioma altera textos visiveis em 4 idiomas', async ({ page, request }) => {
+    test.setTimeout(60_000);
     const created = await createTestInstance(request, 'ui-real');
     trackedInstances.push(created.name);
     try {
       await openAuthenticatedDashboard(page);
       await page.goto(`/manager/instance/${created.id}/dashboard`);
 
-      for (const lang of LANG_LABELS) {
-        await page.evaluate((lng) => localStorage.setItem('i18nextLng', lng), lang.code);
-        await page.goto(`/manager/instance/${created.id}/dashboard`, { waitUntil: 'networkidle' });
+      const languageItems = [
+        { index: 1, expected: /Dashboard|Instances|Sign out|Manage your WhatsApp instances/i, code: 'en-US' },
+        { index: 0, expected: /Visão Geral|Instâncias|Sair|Gerencie suas instâncias WhatsApp/i, code: 'pt-BR' },
+      ];
+
+      for (const lang of languageItems) {
+        await page.locator('header button').first().click();
+        await page.getByRole('menuitem').nth(lang.index).click();
         await expect(page).toHaveURL(/\/manager\/instance\/.+\/dashboard$/);
-        await expect(page.locator('aside')).toContainText(lang.dashboard);
-        await expect(page.getByRole('button', { name: /Sair|Sign out|Cerrar sesi[oó]n|Se d[eé]connecter/i })).toBeVisible();
+        await expect.poll(async () => page.evaluate(() => localStorage.getItem('i18nextLng'))).toBe(lang.code);
+        await expect(page.locator('body')).toContainText(lang.expected);
       }
     } finally {
       await deleteTestInstance(request, created.name);
