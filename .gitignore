@@ -7,7 +7,11 @@ dist/
 
 # BMad and agent folders
 _bmad-output/
-.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/zapo-manager-test-runner/
+!.agents/skills/zapo-manager-test-runner/**
 .agent/
 .claude/
 _bmad/**/*.user.toml
@@ -19,5 +23,4 @@ playwright-report/
 blob-report/
 webhook-tester
 memory/
-
-
+tmp/

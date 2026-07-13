@@ -1,0 +1,3 @@
+display_name: Zapo Manager Test Runner
+short_description: Runs the local Zapo Manager API/UI test gates.
+default_prompt: Run the offline-safe Zapo Manager test gate and report the commands, pass/fail status, and remaining real-WhatsApp risks.

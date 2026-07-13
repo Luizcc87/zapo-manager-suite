@@ -286,7 +286,10 @@ const MessageContent = ({ message }: { message: Message }) => {
       );
 
     case "stickerMessage":
-      const stickerSrc = message.message.mediaUrl || message.message.stickerMessage?.url || (message.message.base64 ? (message.message.base64.startsWith("data:") ? message.message.base64 : `data:image/webp;base64,${message.message.base64}`) : null);
+      // stickerMessage.url aponta para o arquivo .enc criptografado no CDN do
+      // WhatsApp — nunca renderizável direto num <img>. Só mediaUrl/base64
+      // (mídia já decriptada) servem de fonte válida aqui.
+      const stickerSrc = message.message.mediaUrl || (message.message.base64 ? (message.message.base64.startsWith("data:") ? message.message.base64 : `data:image/webp;base64,${message.message.base64}`) : null);
       return stickerSrc ? (
         <img src={stickerSrc} alt="Sticker" className="max-w-32 max-h-32 object-contain" />
       ) : (

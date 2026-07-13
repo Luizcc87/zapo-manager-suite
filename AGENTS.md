@@ -163,15 +163,17 @@ Para garantir que a imagem oficial funcione tanto em ambientes Intel/AMD (`amd64
 
 ---
 
-## 🛠️ Metodologia BMAD (BMAD Method v6.9.0)
+## 🛠️ Metodologia BMAD (BMAD Method v6.10.0)
 
 O projeto utiliza a metodologia **BMAD (Build More, Architect Dreams)** para especificação, arquitetura, design e testes. 
 
-### Diretrizes Operacionais (v6.9.0):
-*   **Executor de Scripts (`uv run`):** A partir da v6.9.0, todos os scripts Python do BMAD e customizações devem ser executados usando `uv run <script>` em vez de `python3` diretamente. O suporte a `python3` direto será removido na v7.
+### Diretrizes Operacionais (v6.10.0):
+*   **Executor de Scripts (`uv run`):** Todos os scripts Python do BMAD e customizações devem ser executados usando `uv run <script>` em vez de `python3` diretamente. O suporte a `python3` direto será removido na v7.
 *   **Espinha Dorsal da Arquitetura (`ARCHITECTURE-SPINE.md`):** É o ponto focal de design técnico e fonte única de verdade arquitetural. As especificações (`SPEC.md`) derivam diretamente dela.
 *   **Memória Compartilhada (`_bmad/scripts/memlog.py`):** Centraliza o log de progresso cognitivo dos agentes de forma unificada.
 *   **Novas Ferramentas:** Use `bmad-forge-idea` para validação socrática de conceitos iniciais, e `bmad-architecture` para o design arquitetural.
+*   **BMAD Loop:** O módulo `bmad-loop` está instalado para runs automatizados com resolução de escalations e triagem de deferred work.
+*   **Testes do Manager:** Use a skill local `.agents/skills/zapo-manager-test-runner` para rodar `test:manager:api`, `test:manager:ui` e `test:manager` sem misturar smoke real de WhatsApp.
 
 Para mais detalhes e o guia completo, consulte [docs/BMAD_METHOD.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/BMAD_METHOD.md).
 

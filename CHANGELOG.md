@@ -6,6 +6,27 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-12
 
+### Renderização segura de stickers no chat
+
+**Frontend**
+- `frontend/src/pages/instance/Chat/messages.tsx`: stickers passam a renderizar apenas `mediaUrl` ou `base64` de mídia já decriptada, evitando usar diretamente a URL `.enc` criptografada do CDN do WhatsApp.
+
+### Estrutura local de testes do Manager
+
+**Testes**
+- `tests/helpers/manager-fixtures.ts`: adicionadas fixtures compartilhadas para instancias temporarias, payloads interativos e mocks da API usada pelo frontend.
+- `tests/zapo-manager-endpoints.spec.ts`: criada suite offline-safe para validar endpoints Express, auth, configuracoes, webhook, proxy, chat, contato, companion/e-mail e payloads interativos sem exigir WhatsApp conectado.
+- `tests/zapo-manager-ui.spec.ts`: criada suite de UI com API mockada para validar botoes e funcoes principais do frontend Manager.
+- `playwright.manager-ui.config.ts`: configuracao dedicada para subir apenas o Vite frontend nos testes de UI.
+- `.agents/skills/zapo-manager-test-runner`: criada skill local BMAD/Codex para executar os gates `test:manager:*` e reportar evidencias.
+
+**Documentacao**
+- `docs/zapo/manager-local-tests.md`: documentado o uso das camadas API offline, UI mockada e smoke real opt-in.
+- `docs/BMAD_METHOD.md` e `AGENTS.md`: atualizados para refletir BMAD Method v6.10.0, `bmad-loop` e a skill local de testes.
+
+**Infra**
+- `package.json`: adicionados scripts `test:manager:api`, `test:manager:ui` e `test:manager`.
+
 ### Suporte a Recursos Avançados do zapo-js (Companions, Email e Alertas)
 
 **Backend**
