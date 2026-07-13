@@ -102,7 +102,17 @@ app.use('/', configRouter);
 
 
 // API docs interativa (Scalar)
-const openapiSpec = readFileSync(path.join(__dirname, '../../docs/openapi.yaml'), 'utf8');
+const openapiSpecPath = path.join(__dirname, '../../docs/openapi.yaml');
+let openapiSpec = readFileSync(openapiSpecPath, 'utf8');
+
+// Injeta o SERVER_URL se estiver configurado na Stack Docker / .env
+if (process.env.SERVER_URL) {
+  openapiSpec = openapiSpec.replace(
+    /servers:[\s\S]*?(?=\n[a-zA-Z])/,
+    `servers:\n  - url: ${process.env.SERVER_URL}\n    description: Ambiente Atual`
+  );
+}
+
 app.use('/api-docs', apiReference({ spec: { content: openapiSpec } }));
 
 // Mock de licença da Evolution API v2 para evitar bloqueios na UI

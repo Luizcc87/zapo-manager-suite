@@ -3,6 +3,7 @@ import {
   ChevronDown,
   CircleHelp,
   Cog,
+  FileCode,
   FileQuestion,
   IterationCcw,
   LayoutDashboard,
@@ -114,8 +115,13 @@ function NavItem({ to, icon: Icon, label, isExternal }: { to: string; icon?: typ
 }
 
 function ExternalLinks() {
+  const apiUrl = getToken(TOKEN_ID.API_URL) || "";
+  // Se houver uma API URL configurada, aponta para ela, caso contrário usa o caminho relativo local
+  const docsUrl = apiUrl ? `${apiUrl.replace(/\/$/, "")}/api-docs` : "/api-docs";
+
   return (
     <>
+      <NavItem to={docsUrl} icon={FileCode} label="API Docs (Swagger)" isExternal />
       <NavItem to="https://github.com/Luizcc87/zapo-manager-suite" icon={FileQuestion} label="GitHub" isExternal />
       <NavItem to="https://github.com/vinikjkkj/zapo" icon={CircleHelp} label="Zapo API" isExternal />
     </>
