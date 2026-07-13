@@ -113,7 +113,7 @@ if (process.env.SERVER_URL) {
   );
 }
 
-app.use('/api-docs', apiReference({ spec: { content: openapiSpec } }));
+app.use('/api-docs', apiReference({ content: openapiSpec }));
 
 // Mock de licença da Evolution API v2 para evitar bloqueios na UI
 app.get('/license/status', (req, res) => {
