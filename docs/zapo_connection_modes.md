@@ -101,5 +101,22 @@ Neste modo, o Zapo assume a identidade do **celular principal** do número. Não
 Se você possui uma ferramenta que extrai sessões registradas em formato JSON e quer importá-la para rodar de forma primária (sem celular físico):
 1. Crie a instância no Zapo-Manager com a opção **Zapo Mobile** ativada, mas **não** escaneie o QR Code.
 2. Acesse o seu banco de dados Postgres ou localize o arquivo `.auth/nome_da_instancia.sqlite` no diretório do backend.
-3. Insira os dados estruturados de chaves e registros de autenticação dentro do banco de dados ou do arquivo SQLite de autenticação correspondente.
 4. Reinicie o backend. O Zapo lerá as credenciais e conectará diretamente sem gerar QR Code, deslogando qualquer celular físico anterior daquele chip.
+
+---
+
+## 🔐 Vinculação por Chave de Acesso (Passkeys / Protocolo Shortcake)
+
+O WhatsApp está implementando gradualmente um mecanismo de segurança chamado **Shortcake** (no lado web) e **CRSC** (*Companion Registration over Side Channel*, no aplicativo móvel) para contas consideradas de maior risco ou que já tenham chaves de acesso (passkeys) configuradas.
+
+### Como Funciona:
+* **Gatilho do Servidor:** Para contas restritas a passkeys, o servidor do WhatsApp recusa o fluxo clássico de pareamento (QR Code ou código de pareamento simples) e envia uma notificação `passkey_prologue_request`.
+* **Fluxo de Autenticação:** A aplicação companheira (neste caso, a nossa API/Zapo) precisa solicitar uma asserção WebAuthn do navegador ou dispositivo do proprietário da conta (`navigator.credentials.get()`). Essa requisição exige verificação biométrica (impressão digital ou FaceID) no aparelho do dono da conta.
+* **Validação Criptográfica:** O Zapo realiza uma troca de chaves ECDH (X25519) segura diretamente através de estanzas com o servidor do WhatsApp para encriptar a requisição de pareamento.
+
+### ⚠️ Limitação Crucial (Sem Bypass Headless):
+> [!WARNING]
+> **Não existe bypass automatizado (headless) para contas restritas a Passkeys.**
+> 
+> Se uma conta foi marcada pelo WhatsApp para exigir validação por passkey durante a vinculação de um novo dispositivo, **é obrigatório** que o dono da conta realize a validação biométrica no navegador dele. Como a chave privada da passkey reside no chip de segurança física (TPM/Enclave) do aparelho do usuário e é não-exportável, não é possível simular ou burlar essa etapa de forma 100% automatizada no servidor.
+

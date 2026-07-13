@@ -235,6 +235,21 @@ Leitura prática para o projeto local:
 ### Backend (npm)
 
 | Ação | Comando |
+
+## Resumo dos comandos do dia a dia
+
+### Frontend (subtree)
+
+| Ação | Comando |
+|---|---|
+| Configurar remote oficial (se necessário) | `git remote add upstream-frontend https://github.com/evolution-foundation/evolution-manager-v2.git` |
+| Buscar atualizações upstream | `git fetch upstream-frontend` |
+| Mesclar atualizações com squash | `git subtree pull --prefix=frontend upstream-frontend main --squash` |
+| Ver o que mudou no upstream | `git log master..upstream-frontend/main --oneline` |
+
+### Backend (npm)
+
+| Ação | Comando |
 |---|---|
 | Ver o que está desatualizado | `cd backend && npm outdated` |
 | Atualizar pacotes zapo | `npm update zapo-js @zapo-js/*` |
