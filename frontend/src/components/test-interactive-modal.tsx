@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
 import { api } from "@/lib/queries/api";
@@ -228,11 +228,13 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("testInteractive.title")}</DialogTitle>
+          <DialogDescription>
+            {t("testInteractive.subtitle", { instance: instance.name })}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            {t("testInteractive.subtitle", { instance: instance.name })}{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-[11px]">POST {endpoint}</code>
           </p>
 

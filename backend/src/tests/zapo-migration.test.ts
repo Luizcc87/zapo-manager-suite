@@ -168,6 +168,59 @@ describe('Zapo Migration Integration Test Suite', () => {
       ZapoManager.getActive = originalGetActive;
     });
 
+    test('POST /message/sendText/:instanceName -> keeps legacy text object linkPreview compatible when image fetch fails', async () => {
+      const originalGetActive = ZapoManager.getActive;
+      const originalFetch = global.fetch;
+      let sentContent: any;
+
+      const mockClient = {
+        sessionId: mockInstanceName,
+        profile: {
+          getLidsByPhoneNumbers: async () => []
+        },
+        message: {
+          send: async (_jid: string, content: any) => {
+            sentContent = content;
+            return { id: 'msg-preview-legacy-123' };
+          }
+        }
+      };
+
+      ZapoManager.getActive = () => ({ client: mockClient } as any);
+      global.fetch = async () => {
+        throw new Error('blocked in production');
+      };
+
+      const legacyText = '*Freezer Horizontal Electrolux 95L Inverter Bivolt Uma Porta Branco (HB100) Bivolt*\n\nR$1.449\n\nhttps://meli.la/2MU3MXd';
+      const res = await request(app)
+        .post(`/message/sendText/${mockInstanceName}`)
+        .set('apikey', mockApiKey)
+        .send({
+          number: '5555999999999',
+          text: {
+            type: 'text',
+            text: legacyText,
+            linkPreview: {
+              title: 'Freezer Horizontal Electrolux 95L Inverter Bivolt',
+              description: 'R$1.449',
+              image: 'https://httpbin.org/image/jpeg'
+            }
+          }
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(sentContent.type, 'text');
+      assert.strictEqual(sentContent.text, legacyText);
+      assert.strictEqual(sentContent.linkPreview.matchedText, 'https://meli.la/2MU3MXd');
+      assert.strictEqual(sentContent.linkPreview.title, 'Freezer Horizontal Electrolux 95L Inverter Bivolt');
+      assert.strictEqual(sentContent.linkPreview.description, 'R$1.449');
+      assert.strictEqual(sentContent.linkPreview.image, undefined);
+      assert.strictEqual(sentContent.linkPreview.thumbnail, undefined);
+
+      global.fetch = originalFetch;
+      ZapoManager.getActive = originalGetActive;
+    });
+
     test('POST /message/sendMedia/:instanceName -> image via URL', async () => {
       const originalGetActive = ZapoManager.getActive;
 

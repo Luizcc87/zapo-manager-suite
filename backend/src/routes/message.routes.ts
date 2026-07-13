@@ -55,7 +55,7 @@ type LinkPreviewInput = {
   url?: string;
   title?: string;
   description?: string;
-  image?: LinkPreviewImageInput;
+  image?: LinkPreviewImageInput | string;
 };
 
 async function fetchBuffer(url: string): Promise<Buffer> {
@@ -70,26 +70,70 @@ async function fetchBuffer(url: string): Promise<Buffer> {
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function buildLinkPreviewThumbnail(image?: LinkPreviewImageInput): Promise<{ bytes: Uint8Array; width: number; height: number } | undefined> {
+function extractFirstUrl(text: unknown): string | undefined {
+  if (typeof text !== 'string') return undefined;
+  return text.match(/https?:\/\/\S+/)?.[0];
+}
+
+function normalizePreviewImageInput(image?: LinkPreviewImageInput | string): LinkPreviewImageInput | undefined {
+  if (!image) return undefined;
+  if (typeof image === 'string') return { url: image };
+  return image;
+}
+
+async function buildLinkPreviewThumbnail(image?: LinkPreviewImageInput | string): Promise<{ bytes: Uint8Array; width: number; height: number } | undefined> {
   if (!image) return undefined;
 
+  const normalizedImage = normalizePreviewImageInput(image);
+  if (!normalizedImage) return undefined;
+
   let input: Buffer | undefined;
-  if (typeof image.url === 'string' && image.url.trim()) {
-    input = await fetchBuffer(image.url.trim());
-  } else if (typeof image.data === 'string' && image.data.trim()) {
-    const base64 = image.data.includes(',') ? image.data.split(',').pop()! : image.data;
-    input = Buffer.from(base64, 'base64');
+  try {
+    if (typeof normalizedImage.url === 'string' && normalizedImage.url.trim()) {
+      input = await fetchBuffer(normalizedImage.url.trim());
+    } else if (typeof normalizedImage.data === 'string' && normalizedImage.data.trim()) {
+      const base64 = normalizedImage.data.includes(',') ? normalizedImage.data.split(',').pop()! : normalizedImage.data;
+      input = Buffer.from(base64, 'base64');
+    }
+
+    if (!input) return undefined;
+
+    const bytes = await sharp(input)
+      .resize(640, 640, { fit: 'contain', background: 'white' })
+      .flatten({ background: 'white' })
+      .jpeg({ quality: 86 })
+      .toBuffer();
+
+    return { bytes, width: 640, height: 640 };
+  } catch (err: any) {
+    console.warn(`[MessageRoutes] linkPreview thumbnail ignored: ${err.message}`);
+    return undefined;
+  }
+}
+
+async function normalizeTextObjectContent(textInput: any): Promise<any> {
+  if (
+    typeof textInput !== 'object'
+    || textInput === null
+    || typeof textInput.linkPreview !== 'object'
+    || textInput.linkPreview === null
+  ) {
+    return normalizeLinkPreviewContent(textInput);
   }
 
-  if (!input) return undefined;
+  const { image, url, ...linkPreview } = textInput.linkPreview;
+  const thumbnail = await buildLinkPreviewThumbnail(
+    textInput.linkPreview.thumbnail ? undefined : image
+  );
 
-  const bytes = await sharp(input)
-    .resize(640, 640, { fit: 'contain', background: 'white' })
-    .flatten({ background: 'white' })
-    .jpeg({ quality: 86 })
-    .toBuffer();
-
-  return { bytes, width: 640, height: 640 };
+  return normalizeLinkPreviewContent({
+    ...textInput,
+    linkPreview: {
+      ...linkPreview,
+      matchedText: linkPreview.matchedText ?? url ?? extractFirstUrl(textInput.text),
+      ...(thumbnail ? { thumbnail } : {}),
+    },
+  });
 }
 
 async function buildSendTextContent(body: any): Promise<any> {
@@ -98,7 +142,7 @@ async function buildSendTextContent(body: any): Promise<any> {
   const hasPreviewOverride = preview && typeof preview === 'object';
 
   if (typeof textInput === 'object' && textInput !== null) {
-    return normalizeLinkPreviewContent(textInput);
+    return normalizeTextObjectContent(textInput);
   }
 
   if (hasPreviewOverride) {
