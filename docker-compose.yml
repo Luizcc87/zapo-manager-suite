@@ -21,6 +21,7 @@ services:
       - PROXY_REPLACE_API_URL=
       - PROXY_REPLACE_API_KEY=
       - PORT=8080
+      - DEFAULT_LANGUAGE=pt-BR
     deploy:
       replicas: 1
       restart_policy:

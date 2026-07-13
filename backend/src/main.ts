@@ -125,7 +125,8 @@ app.get('/', (req, res, next) => {
   res.json({
     version: '2.0.0',
     clientName: 'zapo-manager',
-    zapoVersion: getZapoLibVersion()
+    zapoVersion: getZapoLibVersion(),
+    defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US'
   });
 });
 
@@ -408,6 +409,7 @@ async function bootstrap() {
       }
     });
 
+    console.log(`[Zapo-Manager] Versão do Zapo-JS: v${getZapoLibVersion()}`);
     console.log(`[Zapo-Manager] Servidor rodando na porta ${port}`);
     console.log(`[Zapo-Manager] Acesse a API em: http://localhost:${port}`);
 

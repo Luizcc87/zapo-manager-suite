@@ -13,13 +13,16 @@ import { ThemeProvider } from "./components/theme-provider.tsx";
 import { queryClient } from "./lib/queries/react-query.ts";
 import router from "./routes/index.tsx";
 import i18n from "./translate/i18n";
+import { AppInitializer } from "./components/providers/app-initializer.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <I18nextProvider i18n={i18n}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
+          <AppInitializer>
+            <RouterProvider router={router} />
+          </AppInitializer>
         </QueryClientProvider>
       </ThemeProvider>
     </I18nextProvider>

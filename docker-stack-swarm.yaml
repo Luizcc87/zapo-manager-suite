@@ -61,6 +61,10 @@ version: '3.8'
 #                      Equivalente ao QRCODE_LIMIT da Evolution API.
 #                      Exemplo: export QRCODE_LIMIT=10
 #
+#   DEFAULT_LANGUAGE — Idioma padrão inicial da interface se não definido no localStorage (padrão: pt-BR).
+#                      Opções: pt-BR, en-US, es-ES, fr-FR.
+#                      Exemplo: export DEFAULT_LANGUAGE=pt-BR
+#
 # ─── CLOUDFLARE TUNNEL ────────────────────────────────────────────────────────
 #   Para expor o painel via Cloudflare Tunnel, crie uma rota pública apontando
 #   para o serviço interno do Swarm:
@@ -100,6 +104,7 @@ services:
       - SAVE_DATA_CONTACTS=${SAVE_DATA_CONTACTS:-false}
       - SAVE_DATA_HISTORIC=${SAVE_DATA_HISTORIC:-false}
       - QRCODE_LIMIT=${QRCODE_LIMIT:-5}
+      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-pt-BR}
       - PORT=8080
       - NODE_ENV=production
     networks:
