@@ -30,7 +30,9 @@ Use `scripts/run-manager-tests.ps1` instead of retyping commands when PowerShell
 powershell -ExecutionPolicy Bypass -File "{skill-root}/scripts/run-manager-tests.ps1" -Mode all -ProjectRoot "{project-root}"
 ```
 
-Choose `-Mode api`, `-Mode ui`, `-Mode all`, or `-Mode real` from the user's request. If the script is unavailable, run the matching npm command directly from `{project-root}`.
+Choose `-Mode api`, `-Mode ui`, `-Mode ui-real`, `-Mode all`, or `-Mode real` from the user's request. If the script is unavailable, run the matching npm command directly from `{project-root}`.
+
+`ui-real` assumes a backend process visible in its own terminal window and validates the UI against the live Express/Prisma/Postgres/Redis stack without mocking HTTP. Do not use it for WhatsApp sends or pairing flows.
 
 ## Report
 

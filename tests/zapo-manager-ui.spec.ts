@@ -1,7 +1,7 @@
 /**
  * Frontend manager smoke tests with a mocked local API.
  *
- * Run with playwright.manager-ui.config.ts. These tests validate visible
+ * Run with tests/playwright/manager-ui.config.ts. These tests validate visible
  * buttons and the manager-facing client functions without requiring a real
  * WhatsApp session or live backend.
  */

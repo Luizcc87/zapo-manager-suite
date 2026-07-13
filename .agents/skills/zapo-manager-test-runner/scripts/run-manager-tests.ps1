@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('api', 'ui', 'all', 'real')]
+  [ValidateSet('api', 'ui', 'ui-real', 'all', 'real')]
   [string]$Mode = 'all',
 
   [string]$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
@@ -14,6 +14,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot 'package.json'))) {
 $commands = switch ($Mode) {
   'api'  { @('test:manager:api') }
   'ui'   { @('test:manager:ui') }
+  'ui-real' { @('test:manager:ui:real') }
   'all'  { @('test:manager') }
   'real' { @('test:smoke:real') }
 }

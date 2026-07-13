@@ -1,6 +1,10 @@
+import fs from 'node:fs';
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
 
-export const GLOBAL_API_KEY = process.env.GLOBAL_API_KEY || 'global_key';
+const envFile = fs.existsSync('.env') ? fs.readFileSync('.env', 'utf8') : '';
+const envGlobalKey = envFile.match(/^GLOBAL_API_KEY=(.+)$/m)?.[1]?.trim();
+
+export const GLOBAL_API_KEY = process.env.GLOBAL_API_KEY || envGlobalKey || 'global_key';
 export const LOCAL_API_URL = process.env.PLAYWRIGHT_API_URL || process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8080';
 export const LOCAL_UI_URL = process.env.PLAYWRIGHT_UI_URL || 'http://127.0.0.1:5173';
 
@@ -15,7 +19,7 @@ export type TestInstance = {
 
 export async function createTestInstance(request: APIRequestContext, prefix = 'test-manager'): Promise<TestInstance> {
   const instanceName = tmpName(prefix);
-  const response = await request.post('/instance/create', {
+  const response = await request.post(`${LOCAL_API_URL}/instance/create`, {
     headers: { apikey: GLOBAL_API_KEY },
     data: { instanceName },
   });
@@ -32,7 +36,7 @@ export async function createTestInstance(request: APIRequestContext, prefix = 't
 
 export async function deleteTestInstance(request: APIRequestContext, instanceName?: string) {
   if (!instanceName) return;
-  await request.delete(`/instance/delete/${instanceName}`, {
+  await request.delete(`${LOCAL_API_URL}/instance/delete/${instanceName}`, {
     headers: { apikey: GLOBAL_API_KEY },
   });
 }

@@ -6,6 +6,21 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-12
 
+### Suite Playwright de UI real com backend em janela própria
+
+**Testes**
+- `tests/zapo-manager-ui-real.spec.ts`: nova suite Playwright cobrindo login, dashboard, criacao de instancia, navegacao entre abas, troca de idioma e persistencia de settings/webhook contra backend real sem mock de rede.
+- `tests/playwright/manager-ui-real.config.ts`: nova configuracao Playwright para a suite de UI real.
+- `scripts/start-backend-window.ps1`: helper que abre o backend em janela propria e aguarda a porta 8080 ficar disponivel.
+- `.agents/skills/zapo-manager-test-runner/SKILL.md`: adicionado o modo `ui-real`.
+- `.agents/skills/zapo-manager-test-runner/scripts/run-manager-tests.ps1`: adicionado o modo `ui-real`.
+
+**Infra**
+- `package.json`: adicionado `test:manager:ui:real`.
+
+**Documentacao**
+- `docs/zapo/manager-local-tests.md`: documentada a quarta camada de testes e o requisito de backend visivel.
+
 ### Renderização segura de stickers no chat
 
 **Frontend**
@@ -17,7 +32,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `tests/helpers/manager-fixtures.ts`: adicionadas fixtures compartilhadas para instancias temporarias, payloads interativos e mocks da API usada pelo frontend.
 - `tests/zapo-manager-endpoints.spec.ts`: criada suite offline-safe para validar endpoints Express, auth, configuracoes, webhook, proxy, chat, contato, companion/e-mail e payloads interativos sem exigir WhatsApp conectado.
 - `tests/zapo-manager-ui.spec.ts`: criada suite de UI com API mockada para validar botoes e funcoes principais do frontend Manager.
-- `playwright.manager-ui.config.ts`: configuracao dedicada para subir apenas o Vite frontend nos testes de UI.
+- `tests/playwright/manager-ui.config.ts`: configuracao dedicada para subir apenas o Vite frontend nos testes de UI.
 - `.agents/skills/zapo-manager-test-runner`: criada skill local BMAD/Codex para executar os gates `test:manager:*` e reportar evidencias.
 
 **Documentacao**
