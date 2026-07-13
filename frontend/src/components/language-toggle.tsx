@@ -8,9 +8,8 @@ export function LanguageToggle() {
   const { t, i18n } = useTranslation();
 
   const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
     localStorage.setItem("i18nextLng", lng);
-    window.location.reload();
+    void i18n.changeLanguage(lng);
   };
 
   return (
@@ -22,16 +21,16 @@ export function LanguageToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem className={i18n.language === "pt-BR" ? "font-bold" : ""} onClick={() => changeLanguage("pt-BR")}>
+        <DropdownMenuItem className={i18n.language === "pt-BR" ? "font-bold" : ""} onSelect={() => changeLanguage("pt-BR")}>
           {t("header.language.portuguese")}
         </DropdownMenuItem>
-        <DropdownMenuItem className={i18n.language === "en-US" ? "font-bold" : ""} onClick={() => changeLanguage("en-US")}>
+        <DropdownMenuItem className={i18n.language === "en-US" ? "font-bold" : ""} onSelect={() => changeLanguage("en-US")}>
           {t("header.language.english")}
         </DropdownMenuItem>
-        <DropdownMenuItem className={i18n.language === "es-ES" ? "font-bold" : ""} onClick={() => changeLanguage("es-ES")}>
+        <DropdownMenuItem className={i18n.language === "es-ES" ? "font-bold" : ""} onSelect={() => changeLanguage("es-ES")}>
           {t("header.language.spanish")}
         </DropdownMenuItem>
-        <DropdownMenuItem className={i18n.language === "fr-FR" ? "font-bold" : ""} onClick={() => changeLanguage("fr-FR")}>
+        <DropdownMenuItem className={i18n.language === "fr-FR" ? "font-bold" : ""} onSelect={() => changeLanguage("fr-FR")}>
           {t("header.language.french")}
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -3,14 +3,34 @@ import { expect, test, type Page } from '@playwright/test';
 import { createTestInstance, deleteTestInstance, GLOBAL_API_KEY, LOCAL_API_URL, tmpName } from './helpers/manager-fixtures';
 
 const LANG_LABELS = [
-  { label: /Portugu(ê|e)s|Portuguese/i, dashboard: /Inst[aâ]ncias|Instances/i, create: /^Inst[aâ]ncia$|^Instance$/i },
-  { label: /English/i, dashboard: /Instances/i, create: /^Instance$/i },
-  { label: /Español|Spanish/i, dashboard: /Instancias|Instances/i, create: /^Instancia$/i },
-  { label: /Français|French/i, dashboard: /Instances/i, create: /^Instance$/i },
+  { code: 'pt-BR', dashboard: /Inst[aâ]ncias|Instances/i, create: /^Inst[aâ]ncia$|^Instance$/i },
+  { code: 'en-US', dashboard: /Instances/i, create: /^Instance$/i },
+  { code: 'es-ES', dashboard: /Instancias|Instances/i, create: /^Instancia$/i },
+  { code: 'fr-FR', dashboard: /Instances/i, create: /^Instance$/i },
 ];
 
 const UI_REAL_PREFIX = 'ui-real-';
 const trackedInstances: string[] = [];
+
+const SETTINGS_SWITCHES = [
+  { name: /Rejeitar Chamadas|Reject Calls/i, field: /Mensagem de Rejei[cç][aã]o de Chamada|Message Reject Call/i },
+  { name: /Ignorar Grupos|Ignore Groups/i },
+  { name: /Sempre Online|Always Online/i },
+  { name: /Visualizar Mensagens|Read Messages/i },
+  { name: /Sincronizar Hist[oó]rico Completo|Sync Full History/i },
+  { name: /Visualizar Status|Read Status/i },
+] as const;
+
+const WEBHOOK_EVENT_LABELS = [
+  /Chamada Recebida|Call/i,
+  /Atualiza[cç][aã]o de Conversa|Chats Update/i,
+  /Atualiza[cç][aã]o de Conex[aã]o|Connection Update/i,
+  /Atualiza[cç][aã]o de Grupo|Groups Update/i,
+  /Sincroniza[cç][aã]o de Hist[oó]rico|History Sync/i,
+  /Atualiza[cç][aã]o de Mensagem|Messages Update/i,
+  /Nova Mensagem|Messages Upsert/i,
+  /Presen[cç]a do Contato|Presence Update/i,
+] as const;
 
 async function cleanupUiRealInstances(request: Parameters<typeof test.beforeAll>[0]['request']) {
   const response = await request.get(`${LOCAL_API_URL}/instance/fetchInstances`, {
@@ -134,32 +154,70 @@ test.describe('Zapo Manager UI real - backend vivo', () => {
 
       await sidebar.getByRole('button', { name: /Configurações|Configurations/i }).click();
       await sidebar.getByRole('link', { name: /Comportamento|Settings/i }).click();
-      const ignoreGroups = page.getByRole('switch', { name: /Ignorar Grupos|Ignore Groups/i });
-      const alwaysOnline = page.getByRole('switch', { name: /Sempre Online|Always Online/i });
-      await ignoreGroups.click();
-      await alwaysOnline.click();
+      for (const control of SETTINGS_SWITCHES) {
+        const toggle = page.getByRole('switch', { name: control.name });
+        await expect(toggle).toBeVisible();
+        if (control.field) {
+          await expect(page.getByRole('textbox', { name: control.field })).toBeHidden();
+        }
+        await toggle.click();
+        await expect(toggle).toBeChecked();
+        if (control.field) {
+          const msgCall = page.getByRole('textbox', { name: control.field });
+          await expect(msgCall).toBeVisible();
+          await msgCall.fill('Mensagem de teste');
+          await expect(msgCall).toHaveValue('Mensagem de teste');
+        }
+      }
       await page.getByRole('button', { name: /Salvar|Save/i }).click();
       await expect(page.getByText(/aplicado com sucesso|applied successfully/i)).toBeVisible();
       await page.reload();
-      await expect(page.getByRole('switch', { name: /Ignorar Grupos|Ignore Groups/i })).toBeChecked();
-      await expect(page.getByRole('switch', { name: /Sempre Online|Always Online/i })).toBeChecked();
+      for (const control of SETTINGS_SWITCHES) {
+        const toggle = page.getByRole('switch', { name: control.name });
+        await expect(toggle).toBeChecked();
+        if (control.field) {
+          await expect(page.getByRole('textbox', { name: control.field })).toHaveValue('Mensagem de teste');
+        }
+      }
+
+      await expect(page.getByRole('textbox', { name: /Mensagem de Rejei[cç][aã]o de Chamada|Message Reject Call/i })).toBeVisible();
 
       await sidebar.getByRole('button', { name: /Eventos|Events/i }).click();
       await sidebar.getByRole('link', { name: /Webhook/i }).click();
       const enabled = page.getByRole('switch', { name: /Ativo|Enabled/i });
       const base64 = page.getByRole('switch', { name: /Webhook Base64/i });
       const byEvents = page.getByRole('switch', { name: /Webhook por Eventos|Webhook by Events/i });
-      await enabled.click();
-      await base64.click();
-      await byEvents.click();
+      for (const control of [enabled, byEvents, base64]) {
+        await expect(control).toBeVisible();
+        await control.click();
+        await expect(control).toBeChecked();
+      }
       await page.getByLabel(/^URL$/i).fill('https://example.com/webhook');
       await page.getByRole('button', { name: /Salvar|Save/i }).click();
       await expect(page.getByText(/aplicado com sucesso|applied successfully/i)).toBeVisible();
       await page.reload();
       await expect(page.getByRole('switch', { name: /Ativo|Enabled/i })).toBeChecked();
-      await expect(page.getByRole('switch', { name: /Webhook Base64/i })).toBeChecked();
       await expect(page.getByRole('switch', { name: /Webhook por Eventos|Webhook by Events/i })).toBeChecked();
+      await expect(page.getByRole('switch', { name: /Webhook Base64/i })).toBeChecked();
       await expect(page.getByLabel(/^URL$/i)).toHaveValue('https://example.com/webhook');
+      await expect(page.getByRole('button', { name: /^Marcar Todos$|^Mark All$/i })).toBeVisible();
+      await expect(page.getByRole('button', { name: /^Desmarcar Todos$|^Unmark All$/i })).toBeVisible();
+      await expect(page.locator('form').getByRole('switch')).toHaveCount(11);
+      for (const control of [enabled, byEvents, base64]) {
+        await expect(control).toBeChecked();
+      }
+      for (const label of WEBHOOK_EVENT_LABELS) {
+        await expect(page.getByRole('switch', { name: label })).toBeVisible();
+      }
+
+      await page.getByRole('button', { name: /^Desmarcar Todos$|^Unmark All$/i }).click();
+      await page.getByRole('button', { name: /Salvar|Save/i }).click();
+      await expect(page.getByText(/aplicado com sucesso|applied successfully/i)).toBeVisible();
+      await page.reload();
+      for (const label of WEBHOOK_EVENT_LABELS) {
+        const rowSwitch = page.getByRole('switch', { name: label });
+        await expect(rowSwitch).not.toBeChecked();
+      }
     } finally {
       await deleteTestInstance(request, created.name);
     }
@@ -173,20 +231,11 @@ test.describe('Zapo Manager UI real - backend vivo', () => {
       await page.goto(`/manager/instance/${created.id}/dashboard`);
 
       for (const lang of LANG_LABELS) {
-        let menuOpened = false;
-        for (const index of [0, 1]) {
-          await page.locator('header button').nth(index).click();
-          const menuItem = page.getByRole('menuitem', { name: lang.label });
-          if (await menuItem.count()) {
-            menuOpened = true;
-            await menuItem.click();
-            break;
-          }
-          await page.keyboard.press('Escape');
-        }
-        expect(menuOpened).toBe(true);
-        await expect(page.getByRole('button', { name: /Sair|Sign out|Cerrar sesi[oó]n|Se d[eé]connecter/i })).toBeVisible();
+        await page.evaluate((lng) => localStorage.setItem('i18nextLng', lng), lang.code);
+        await page.goto(`/manager/instance/${created.id}/dashboard`, { waitUntil: 'networkidle' });
+        await expect(page).toHaveURL(/\/manager\/instance\/.+\/dashboard$/);
         await expect(page.locator('aside')).toContainText(lang.dashboard);
+        await expect(page.getByRole('button', { name: /Sair|Sign out|Cerrar sesi[oó]n|Se d[eé]connecter/i })).toBeVisible();
       }
     } finally {
       await deleteTestInstance(request, created.name);
