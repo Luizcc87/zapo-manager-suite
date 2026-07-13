@@ -12,11 +12,14 @@ docker login                                        # autenticar no Docker Hub
 ## Build multi-arch (amd64 + arm64)
 
 ```bash
-# tag: latest
+# tags: zapo-js-<versao-resolvida> + latest
 bash scripts/build-push.sh
 
 # tag específica + latest
 bash scripts/build-push.sh v1.2.0
+
+# somente latest
+bash scripts/build-push.sh latest
 ```
 
 Imagem publicada em: `lc1868/zapo-manager`  
@@ -80,7 +83,7 @@ docker service logs zapo_app --follow
 ### 5. Atualizar imagem (rolling update)
 
 ```bash
-bash scripts/build-push.sh          # rebuild + push
+bash scripts/build-push.sh          # rebuild + push zapo-js-<versao> + latest
 docker service update --image lc1868/zapo-manager:latest zapo_app
 ```
 

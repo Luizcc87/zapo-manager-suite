@@ -15,6 +15,10 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `backend/src/manager.ts`: habilita explicitamente `linkPreview.enabled` e `uploadHqThumbnail` nas opções do `WaClient`.
 - `docs/openapi.yaml`: documentado o contrato compatível com Evolution/Uazapi e a extensão WAHA-like de custom preview.
 
+**Infra**
+- `scripts/build-push.sh`: passa a publicar por padrão a tag `zapo-js-<versao-resolvida>` junto com `latest`, preservando multi-arch `linux/amd64` e `linux/arm64`.
+- `docs/DOCKER.md`: documentado o versionamento da imagem Docker por versão resolvida do `zapo-js`.
+
 ### Suite Playwright de UI real com backend em janela própria
 
 **Testes**
