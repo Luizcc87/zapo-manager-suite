@@ -168,6 +168,71 @@ describe('Zapo Migration Integration Test Suite', () => {
       ZapoManager.getActive = originalGetActive;
     });
 
+    test('POST /message/sendText/:instanceName -> upgrades text linkPreview true with Open Graph thumbnail', async () => {
+      const originalGetActive = ZapoManager.getActive;
+      const originalFetch = global.fetch;
+      let sentContent: any;
+      const tinyPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+      const tinyPng = Buffer.from(tinyPngBase64, 'base64');
+
+      const mockClient = {
+        sessionId: mockInstanceName,
+        profile: {
+          getLidsByPhoneNumbers: async () => []
+        },
+        message: {
+          send: async (_jid: string, content: any) => {
+            sentContent = content;
+            return { id: 'msg-preview-auto-123' };
+          }
+        }
+      };
+
+      ZapoManager.getActive = () => ({ client: mockClient } as any);
+      global.fetch = async (url: any) => {
+        const href = String(url);
+        if (href.includes('meli.la')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => '<html><head><meta property="og:title" content="Freezer Electrolux"><meta property="og:description" content="R$1.449"><meta property="og:image" content="https://cdn.example.test/freezer.png"></head></html>'
+          } as any;
+        }
+        if (href.includes('cdn.example.test')) {
+          return {
+            ok: true,
+            status: 200,
+            arrayBuffer: async () => tinyPng.buffer.slice(tinyPng.byteOffset, tinyPng.byteOffset + tinyPng.byteLength)
+          } as any;
+        }
+        throw new Error(`Unexpected fetch: ${href}`);
+      };
+
+      const text = 'Olá! Este é um teste de envio de mensagem de texto.\nhttps://meli.la/2MU3MXd';
+      const res = await request(app)
+        .post(`/message/sendText/${mockInstanceName}`)
+        .set('apikey', mockApiKey)
+        .send({
+          number: '5555999999999',
+          text,
+          linkPreview: true
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(sentContent.type, 'text');
+      assert.strictEqual(sentContent.text, text);
+      assert.strictEqual(sentContent.linkPreview.matchedText, 'https://meli.la/2MU3MXd');
+      assert.strictEqual(sentContent.linkPreview.title, 'Freezer Electrolux');
+      assert.strictEqual(sentContent.linkPreview.description, 'R$1.449');
+      assert.strictEqual(sentContent.linkPreview.previewType, proto.Message.ExtendedTextMessage.PreviewType.IMAGE);
+      assert.ok(sentContent.linkPreview.thumbnail.bytes instanceof Uint8Array);
+      assert.strictEqual(sentContent.linkPreview.thumbnail.width, 640);
+      assert.strictEqual(sentContent.linkPreview.thumbnail.height, 640);
+
+      global.fetch = originalFetch;
+      ZapoManager.getActive = originalGetActive;
+    });
+
     test('POST /message/sendText/:instanceName -> falls back to OG image when legacy linkPreview image fetch fails', async () => {
       const originalGetActive = ZapoManager.getActive;
       const originalFetch = global.fetch;

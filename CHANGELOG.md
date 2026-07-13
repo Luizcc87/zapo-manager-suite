@@ -13,6 +13,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `backend/src/routes/message.routes.ts`: aceita `textMessage.text` no formato Evolution API v2 e `preview`/`linkPreviewHighQuality` no estilo WAHA para preview customizado com `image.url` ou `image.data`.
 - `backend/src/routes/message.routes.ts`: mantém compatibilidade com payload legado `text.linkPreview.image` e não aborta o envio se a imagem externa do preview falhar.
 - `backend/src/routes/message.routes.ts`: usa `og:image`/`twitter:image` da URL do preview como fallback quando a imagem informada falha ou não é enviada.
+- `backend/src/routes/message.routes.ts`: transforma `text` simples com URL e `linkPreview: true` em preview manual com metadados Open Graph para também enviar thumbnail.
 - `frontend/src/components/test-interactive-modal.tsx`: remove dependência de `httpbin.org` no exemplo de link preview, usando a própria URL do produto para resolver a imagem.
 - `backend/src/manager.ts`: habilita explicitamente `linkPreview.enabled` e `uploadHqThumbnail` nas opções do `WaClient`.
 - `docs/openapi.yaml`: documentado o contrato compatível com Evolution/Uazapi e a extensão WAHA-like de custom preview.

@@ -58,6 +58,12 @@ type LinkPreviewInput = {
   image?: LinkPreviewImageInput | string;
 };
 
+type OpenGraphPreview = {
+  title?: string;
+  description?: string;
+  image?: string;
+};
+
 async function fetchBuffer(url: string): Promise<Buffer> {
   const response = await fetch(url, {
     headers: {
@@ -104,20 +110,33 @@ function extractMetaContent(html: string, key: string): string | undefined {
   return match?.[1] ? decodeHtmlAttribute(match[1]) : undefined;
 }
 
-async function fetchOpenGraphImageUrl(pageUrl?: string): Promise<string | undefined> {
+async function fetchOpenGraphPreview(pageUrl?: string): Promise<OpenGraphPreview | undefined> {
   if (!pageUrl) return undefined;
 
   try {
     const html = await fetchText(pageUrl);
+    const title = extractMetaContent(html, 'og:title')
+      || extractMetaContent(html, 'twitter:title');
+    const description = extractMetaContent(html, 'og:description')
+      || extractMetaContent(html, 'twitter:description')
+      || extractMetaContent(html, 'description');
     const imageUrl = extractMetaContent(html, 'og:image')
       || extractMetaContent(html, 'og:image:secure_url')
       || extractMetaContent(html, 'twitter:image');
-    if (!imageUrl) return undefined;
-    return new URL(imageUrl, pageUrl).toString();
+
+    return {
+      title,
+      description,
+      image: imageUrl ? new URL(imageUrl, pageUrl).toString() : undefined,
+    };
   } catch (err: any) {
-    console.warn(`[MessageRoutes] linkPreview OG image lookup ignored: ${err.message}`);
+    console.warn(`[MessageRoutes] linkPreview OG lookup ignored: ${err.message}`);
     return undefined;
   }
+}
+
+async function fetchOpenGraphImageUrl(pageUrl?: string): Promise<string | undefined> {
+  return (await fetchOpenGraphPreview(pageUrl))?.image;
 }
 
 function normalizePreviewImageInput(image?: LinkPreviewImageInput | string): LinkPreviewImageInput | undefined {
@@ -197,6 +216,41 @@ async function normalizeTextObjectContent(textInput: any): Promise<any> {
   });
 }
 
+async function buildAutoLinkPreviewContent(textInput: string): Promise<any> {
+  const matchedText = extractFirstUrl(textInput);
+  if (!matchedText) {
+    return {
+      type: 'text',
+      text: textInput,
+      linkPreview: true,
+    };
+  }
+
+  const preview = await fetchOpenGraphPreview(matchedText);
+  const thumbnail = await buildLinkPreviewThumbnail(
+    preview?.image ? { url: preview.image } : undefined
+  );
+
+  if (!preview?.title && !preview?.description && !thumbnail) {
+    return {
+      type: 'text',
+      text: textInput,
+      linkPreview: true,
+    };
+  }
+
+  return normalizeLinkPreviewContent({
+    type: 'text',
+    text: textInput,
+    linkPreview: {
+      matchedText,
+      title: preview?.title,
+      description: preview?.description,
+      ...(thumbnail ? { thumbnail } : {}),
+    },
+  });
+}
+
 async function buildSendTextContent(body: any): Promise<any> {
   const textInput = body.textMessage?.text ?? body.text;
   const preview: LinkPreviewInput | undefined = body.preview;
@@ -222,6 +276,10 @@ async function buildSendTextContent(body: any): Promise<any> {
   }
 
   if (body.linkPreview !== undefined) {
+    if (body.linkPreview === true && typeof textInput === 'string') {
+      return buildAutoLinkPreviewContent(textInput);
+    }
+
     return {
       type: 'text',
       text: textInput,
