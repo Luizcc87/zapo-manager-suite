@@ -58,3 +58,35 @@ model ChatEntry {
   @@unique([instanceName, remoteJid])
   @@map("wa_chats")
 }
+
+/// Persiste o estado de época do host de companions para instâncias Mobile Primary.
+/// rawId + currentKeyIndex garantem que o keyIndex não seja reemitido após restart.
+model WaCompanionHostEpoch {
+  id              String   @id @default(cuid())
+  instanceName    String   @unique @map("instance_name")
+  rawId           Int      @map("raw_id")
+  currentKeyIndex Int      @map("current_key_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  companions WaCompanionDevice[]
+
+  @@map("wa_companion_host_epoch")
+}
+
+/// Um companion (ex: WhatsApp Web) pareado a esta instância Mobile Primary.
+model WaCompanionDevice {
+  id                          String   @id @default(cuid())
+  instanceName                String   @map("instance_name")
+  deviceJid                   String   @map("device_jid")
+  keyIndex                    Int      @map("key_index")
+  companionIdentityPublicKey  Bytes    @map("companion_identity_public_key")
+  addedAtSeconds              Int      @map("added_at_seconds")
+  createdAt                   DateTime @default(now()) @map("created_at")
+
+  epoch WaCompanionHostEpoch @relation(fields: [instanceName], references: [instanceName], onDelete: Cascade)
+
+  @@unique([instanceName, deviceJid])
+  @@map("wa_companion_devices")
+}
+

@@ -1,5 +1,6 @@
 import { createStore, WaClient, ConsoleLogger } from 'zapo-js';
 import { getMobileDevice } from './config/device';
+import { createPrismaCompanionHostPersistence } from './companions/companionHostPersistence';
 import { createPostgresStore } from '@zapo-js/store-postgres';
 import { createRedisStore } from '@zapo-js/store-redis';
 import { createSqliteStore } from '@zapo-js/store-sqlite';
@@ -655,6 +656,12 @@ export class ZapoManager {
       clientOptions.mobileTransport = {
         deviceInfo: instance.deviceInfo || getMobileDevice()
       };
+      // A3: Persistence adapter para o companion host epoch.
+      // Garante que rawId + currentKeyIndex sobrevivam a restarts, evitando
+      // reemissão do mesmo keyIndex para um companion diferente.
+      clientOptions.companionHost = {
+        persistence: createPrismaCompanionHostPersistence(prisma, instanceName)
+      };
       console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Inicializando cliente com Mobile Transport:`, JSON.stringify(clientOptions.mobileTransport, null, 2));
     } else if (instance.mobileTransport) {
       console.warn(`[ZapoManager] [Connect] ${trace}[${instanceName}] Instância Mobile sem credenciais registradas (ownerJid vazio). Ignorando mobileTransport para permitir pareamento QR Code via WebSocket.`);
@@ -679,6 +686,35 @@ export class ZapoManager {
     }, LOCK_RENEW);
 
     activeClients.set(instanceName, activeData);
+
+    // ── Bloco C: Eventos de Segurança e Ciclo de Vida de Companions ───────────
+    // Todos os 5 eventos são repassados ao socket para que a UI reaja em tempo
+    // real independentemente do retorno HTTP das rotas.
+
+    client.on('mobile_registration_code', (event: any) => {
+      console.warn(`[ZapoManager] [${instanceName}] ⚠️ Código de registro SMS emitido para o número! code=${event.code} expiry=${event.expiryTimestampMs}`);
+      emitSocket('mobile_registration_code', { instance: instanceName, data: event });
+    });
+
+    client.on('mobile_account_takeover_notice', (event: any) => {
+      console.error(`[ZapoManager] [${instanceName}] 🚨 Tentativa de takeover detectada! Novo dispositivo: ${event.newDeviceName ?? 'desconhecido'} (${event.newDevicePlatform ?? '?'})`);
+      emitSocket('mobile_account_takeover_notice', { instance: instanceName, data: event });
+    });
+
+    client.on('companion_host_linked', (event: any) => {
+      console.log(`[ZapoManager] [${instanceName}] Companion vinculado: deviceJid=${event.deviceJid} keyIndex=${event.keyIndex}`);
+      emitSocket('companion_host_linked', { instance: instanceName, data: event });
+    });
+
+    client.on('companion_host_revoked', (event: any) => {
+      console.log(`[ZapoManager] [${instanceName}] Companion revogado: deviceJid=${event.deviceJid}`);
+      emitSocket('companion_host_revoked', { instance: instanceName, data: event });
+    });
+
+    client.on('companion_host_error', (error: any) => {
+      console.error(`[ZapoManager] [${instanceName}] Erro no companion host:`, error?.message ?? error);
+      emitSocket('companion_host_error', { instance: instanceName, data: { message: error?.message ?? String(error) } });
+    });
 
     // ── Auth & Connection ─────────────────────────────────────────────────────
 

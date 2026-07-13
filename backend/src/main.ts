@@ -14,6 +14,7 @@ import messageRouter from './routes/message.routes';
 import chatRouter from './routes/chat.routes';
 import contactRouter from './routes/contact.routes';
 import configRouter from './routes/config.routes';
+import companionRouter from './routes/companion.routes';
 import { ZapoManager } from './manager';
 import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
 import { fetchLatestIosWaVersion } from './config/fetchIosWaVersion';
@@ -93,10 +94,12 @@ app.use((req, res, next) => {
 
 // Rotas de API
 app.use('/instance', instanceRouter);
+app.use('/instance', companionRouter);
 app.use('/message', messageRouter);
 app.use('/chat', chatRouter);
 app.use('/contact', contactRouter);
 app.use('/', configRouter);
+
 
 // API docs interativa (Scalar)
 const openapiSpec = readFileSync(path.join(__dirname, '../../docs/openapi.yaml'), 'utf8');

@@ -24,6 +24,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import QRCode from "react-qr-code";
+import { toast } from "react-toastify";
 
 import { BaseHeader } from "@/components/base-header";
 import { InstanceStatus } from "@/components/instance-status";
@@ -40,6 +41,10 @@ import { GoQrCodeModal } from "./GoQrCodeModal";
 import { GoSendMessageModal } from "./GoSendMessageModal";
 import { PrimaryRegistrationDialog } from "../../Dashboard/PrimaryRegistration";
 import { ProxyStatusPanel } from "../Proxy";
+import { CompanionsPanel } from "./CompanionsPanel";
+import { EmailSecurityPanel } from "../Settings/EmailSecurityPanel";
+import { connectSocket, disconnectSocket } from "@/services/websocket/socket";
+import { useQueryClient } from "@tanstack/react-query";
 
 function DashboardInstance() {
   const { t, i18n } = useTranslation();
@@ -56,6 +61,11 @@ function DashboardInstance() {
 
   const { connect, logout, restart, syncProfile } = useManageInstance();
   const { instance, reloadInstance } = useInstance();
+  const queryClient = useQueryClient();
+
+  // Estados de alertas do Bloco C (Mobile Security)
+  const [regCodeAlert, setRegCodeAlert] = useState<{ code: string; expiryTimestampMs: number } | null>(null);
+  const [takeoverAlert, setTakeoverAlert] = useState<{ newDeviceName?: string; newDevicePlatform?: string } | null>(null);
 
   useEffect(() => {
     if (instance) {
@@ -82,6 +92,65 @@ function DashboardInstance() {
     const interval = setInterval(refreshQR, 20000);
     return () => clearInterval(interval);
   }, [qrDialogOpen]);
+
+  // Escuta Socket para os eventos de Companions e Alertas de Segurança (Bloco C)
+  useEffect(() => {
+    if (!instance || !token) return;
+
+    const apiUrl = getToken(TOKEN_ID.API_URL) || window.location.origin;
+    const socket = connectSocket(apiUrl.toString(), {
+      instanceName: instance.name,
+      apikey: token,
+    });
+
+    const handleRegCode = (event: any) => {
+      if (event.instance === instance.name) {
+        setRegCodeAlert({
+          code: event.data.code,
+          expiryTimestampMs: Number(event.data.expiryTimestampMs),
+        });
+      }
+    };
+
+    const handleTakeover = (event: any) => {
+      if (event.instance === instance.name) {
+        setTakeoverAlert({
+          newDeviceName: event.data.newDeviceName,
+          newDevicePlatform: event.data.newDevicePlatform,
+        });
+      }
+    };
+
+    const handleCompanionUpdate = (event: any) => {
+      if (event.instance === instance.name) {
+        // Invalida a lista de companions para atualizar na tela em tempo real
+        queryClient.invalidateQueries({ queryKey: ["companions", instance.name] });
+      }
+    };
+
+    const handleCompanionError = (event: any) => {
+      if (event.instance === instance.name) {
+        toast.error(`Erro de Companion Host: ${event.data.message}`);
+      }
+    };
+
+    socket.on("mobile_registration_code", handleRegCode);
+    socket.on("mobile_account_takeover_notice", handleTakeover);
+    socket.on("companion_host_linked", handleCompanionUpdate);
+    socket.on("companion_host_revoked", handleCompanionUpdate);
+    socket.on("companion_host_error", handleCompanionError);
+
+    socket.connect();
+
+    return () => {
+      socket.offHandler("mobile_registration_code", handleRegCode);
+      socket.offHandler("mobile_account_takeover_notice", handleTakeover);
+      socket.offHandler("companion_host_linked", handleCompanionUpdate);
+      socket.offHandler("companion_host_revoked", handleCompanionUpdate);
+      socket.offHandler("companion_host_error", handleCompanionError);
+      disconnectSocket(socket);
+    };
+  }, [instance?.name, token, queryClient]);
 
   const handleReload = async () => {
     await reloadInstance();
@@ -204,6 +273,49 @@ function DashboardInstance() {
       />
 
       <div className="flex flex-col gap-6">
+        {/* Bloco C: Alertas Críticos de Segurança em Tempo Real */}
+        {takeoverAlert && (
+          <Alert variant="destructive" className="w-full flex flex-col gap-2 bg-red-950 border-red-800 text-red-200">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="h-6 w-6 text-red-500 animate-bounce" />
+              <div>
+                <AlertTitle className="text-base font-bold text-red-400">
+                  ALERTA CRÍTICO: Tentativa de Takeover Detectada!
+                </AlertTitle>
+                <p className="text-xs text-red-300">
+                  Outro dispositivo ({takeoverAlert.newDeviceName || "desconhecido"} na plataforma {takeoverAlert.newDevicePlatform || "?"}) está tentando assumir o controle do seu número de WhatsApp!
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button size="sm" variant="outline" className="text-red-200 border-red-700 bg-red-900/55 hover:bg-red-800" onClick={() => setTakeoverAlert(null)}>
+                Desconsiderar
+              </Button>
+            </div>
+          </Alert>
+        )}
+
+        {regCodeAlert && (
+          <Alert variant="destructive" className="w-full flex flex-col gap-2 bg-amber-950 border-amber-800 text-amber-200">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="h-6 w-6 text-amber-500 animate-pulse" />
+              <div>
+                <AlertTitle className="text-base font-bold text-amber-400">
+                  Aviso de Segurança: Código de Registro Solicitado
+                </AlertTitle>
+                <p className="text-xs text-amber-300">
+                  Um código SMS de registro foi solicitado para o seu número! Código recebido: <span className="font-mono font-bold text-sm bg-amber-900 px-2 py-0.5 rounded">{regCodeAlert.code}</span>. Expira em {new Date(regCodeAlert.expiryTimestampMs).toLocaleTimeString()}.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button size="sm" variant="outline" className="text-amber-200 border-amber-700 bg-amber-900/55 hover:bg-amber-800" onClick={() => setRegCodeAlert(null)}>
+                Fechar
+              </Button>
+            </div>
+          </Alert>
+        )}
+
         <Card className="border-sidebar-border bg-sidebar">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -453,6 +565,17 @@ function DashboardInstance() {
             <CardContent className="text-3xl font-bold">{numberFormatter.format(stats.messages)}</CardContent>
           </Card>
         </section>
+        
+        {instanceType === "mobile" && connected && (
+          <>
+            <div className="border-t pt-6">
+              <CompanionsPanel instanceName={instance.name} />
+            </div>
+            <div className="border-t pt-6">
+              <EmailSecurityPanel instanceName={instance.name} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

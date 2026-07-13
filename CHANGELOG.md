@@ -4,6 +4,31 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-07-12
+
+### Suporte a Recursos Avançados do zapo-js (Companions, Email e Alertas)
+
+**Backend**
+- [backend/prisma/schema.prisma](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/prisma/schema.prisma): Adicionadas tabelas `WaCompanionHostEpoch` e `WaCompanionDevice` para persistência atômica do estado de época e metadados de companions hospedados.
+- [backend/src/companions/companionHostPersistence.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/companions/companionHostPersistence.ts): Criado adaptador de persistência transacional (`prisma.$transaction`) integrado nas opções do `WaClient` mobile.
+- [backend/src/routes/companion.routes.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/routes/companion.routes.ts): Criados 10 novos endpoints HTTP mapeados 1-para-1 com os recursos avançados de companions e e-mail do `zapo-js`.
+- [backend/src/manager.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/manager.ts): Adicionado listeners para os 5 novos eventos de segurança e ciclo de companions (`mobile_registration_code`, `mobile_account_takeover_notice`, `companion_host_linked`, `companion_host_revoked`, `companion_host_error`) repassando-os ao Socket.io.
+- [backend/src/main.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/src/main.ts): Registrado o novo roteador de companions.
+
+**Frontend**
+- [frontend/src/pages/instance/DashboardInstance/CompanionsPanel.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/instance/DashboardInstance/CompanionsPanel.tsx): Novo painel de gerência, reconciliação e pareamento de companions para instâncias móveis.
+- [frontend/src/pages/instance/Settings/EmailSecurityPanel.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/instance/Settings/EmailSecurityPanel.tsx): Novo painel guiado de 5 etapas para fluxo de e-mail de segurança.
+- [frontend/src/pages/instance/DashboardInstance/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/instance/DashboardInstance/index.tsx): Integrados os dois painéis no final da tela e banners de alerta em tempo real baseados em eventos do Socket.io.
+- [frontend/src/translate/languages/](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/translate/languages/): Injetadas chaves sob o namespace `zapoMobile` com suporte completo a i18n em pt-BR, en-US, es-ES e fr-FR.
+
+### Upgrade Zapo-JS para v1.5.0
+
+**Backend**
+- [backend/package.json](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/backend/package.json): Atualizado `zapo-js` para `^1.5.0` (suporte a mobile-primary companion, analytics WAM, wa-mobile version fetcher, recuperação automática de erro 405 e ciclo de reinicialização de plugins pós-reconexão).
+
+**Documentação**
+- [docs/zapo_connection_modes.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/zapo_connection_modes.md): Adicionado detalhamento sobre o funcionamento e limitações do protocolo Shortcake/Passkeys (vinculação por chave de acesso).
+
 ## [Unreleased] — 2026-07-03
 
 ### Exibição da versão do Zapo no Sidebar
