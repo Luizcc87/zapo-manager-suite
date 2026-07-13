@@ -101,9 +101,6 @@ test.describe('Zapo Manager frontend controls - mocked API', () => {
           linkPreviewHighQuality: true,
           preview: {
             url: 'https://meli.la/2MU3MXd',
-            image: {
-              url: 'https://httpbin.org/image/jpeg',
-            },
           },
         });
       }

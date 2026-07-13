@@ -70,9 +70,54 @@ async function fetchBuffer(url: string): Promise<Buffer> {
   return Buffer.from(await response.arrayBuffer());
 }
 
+async function fetchText(url: string): Promise<string> {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; ZapoManager/1.0)'
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to download link preview page: ${url} (HTTP ${response.status})`);
+  }
+  return response.text();
+}
+
 function extractFirstUrl(text: unknown): string | undefined {
   if (typeof text !== 'string') return undefined;
   return text.match(/https?:\/\/\S+/)?.[0];
+}
+
+function decodeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function extractMetaContent(html: string, key: string): string | undefined {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const propertyFirst = new RegExp(`<meta\\b(?=[^>]*(?:property|name)=["']${escapedKey}["'])(?=[^>]*content=["']([^"']+)["'])[^>]*>`, 'i');
+  const contentFirst = new RegExp(`<meta\\b(?=[^>]*content=["']([^"']+)["'])(?=[^>]*(?:property|name)=["']${escapedKey}["'])[^>]*>`, 'i');
+  const match = html.match(propertyFirst) || html.match(contentFirst);
+  return match?.[1] ? decodeHtmlAttribute(match[1]) : undefined;
+}
+
+async function fetchOpenGraphImageUrl(pageUrl?: string): Promise<string | undefined> {
+  if (!pageUrl) return undefined;
+
+  try {
+    const html = await fetchText(pageUrl);
+    const imageUrl = extractMetaContent(html, 'og:image')
+      || extractMetaContent(html, 'og:image:secure_url')
+      || extractMetaContent(html, 'twitter:image');
+    if (!imageUrl) return undefined;
+    return new URL(imageUrl, pageUrl).toString();
+  } catch (err: any) {
+    console.warn(`[MessageRoutes] linkPreview OG image lookup ignored: ${err.message}`);
+    return undefined;
+  }
 }
 
 function normalizePreviewImageInput(image?: LinkPreviewImageInput | string): LinkPreviewImageInput | undefined {
@@ -111,6 +156,20 @@ async function buildLinkPreviewThumbnail(image?: LinkPreviewImageInput | string)
   }
 }
 
+async function buildLinkPreviewThumbnailWithFallback(
+  image?: LinkPreviewImageInput | string,
+  pageUrl?: string
+): Promise<{ bytes: Uint8Array; width: number; height: number } | undefined> {
+  const directThumbnail = await buildLinkPreviewThumbnail(image);
+  if (directThumbnail) return directThumbnail;
+
+  const ogImageUrl = await fetchOpenGraphImageUrl(pageUrl);
+  if (!ogImageUrl) return undefined;
+
+  console.log(`[MessageRoutes] linkPreview thumbnail fallback using og:image from ${pageUrl}`);
+  return buildLinkPreviewThumbnail({ url: ogImageUrl });
+}
+
 async function normalizeTextObjectContent(textInput: any): Promise<any> {
   if (
     typeof textInput !== 'object'
@@ -122,15 +181,17 @@ async function normalizeTextObjectContent(textInput: any): Promise<any> {
   }
 
   const { image, url, ...linkPreview } = textInput.linkPreview;
-  const thumbnail = await buildLinkPreviewThumbnail(
-    textInput.linkPreview.thumbnail ? undefined : image
+  const matchedText = linkPreview.matchedText ?? url ?? extractFirstUrl(textInput.text);
+  const thumbnail = await buildLinkPreviewThumbnailWithFallback(
+    textInput.linkPreview.thumbnail ? undefined : image,
+    matchedText
   );
 
   return normalizeLinkPreviewContent({
     ...textInput,
     linkPreview: {
       ...linkPreview,
-      matchedText: linkPreview.matchedText ?? url ?? extractFirstUrl(textInput.text),
+      matchedText,
       ...(thumbnail ? { thumbnail } : {}),
     },
   });
@@ -146,12 +207,13 @@ async function buildSendTextContent(body: any): Promise<any> {
   }
 
   if (hasPreviewOverride) {
-    const thumbnail = await buildLinkPreviewThumbnail(preview.image);
+    const matchedText = preview.url ?? extractFirstUrl(textInput);
+    const thumbnail = await buildLinkPreviewThumbnailWithFallback(preview.image, matchedText);
     return normalizeLinkPreviewContent({
       type: 'text',
       text: textInput,
       linkPreview: {
-        matchedText: preview.url,
+        matchedText,
         title: preview.title,
         description: preview.description,
         ...(thumbnail ? { thumbnail } : {}),

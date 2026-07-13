@@ -41,9 +41,6 @@ const TEMPLATES: Record<TabKey, Record<string, unknown>> = {
       url: "https://meli.la/2MU3MXd",
       title: "Freezer Horizontal Electrolux 95L Inverter Bivolt",
       description: "R$1.449",
-      image: {
-        url: "https://httpbin.org/image/jpeg",
-      },
     },
   },
   reply: {

@@ -168,10 +168,12 @@ describe('Zapo Migration Integration Test Suite', () => {
       ZapoManager.getActive = originalGetActive;
     });
 
-    test('POST /message/sendText/:instanceName -> keeps legacy text object linkPreview compatible when image fetch fails', async () => {
+    test('POST /message/sendText/:instanceName -> falls back to OG image when legacy linkPreview image fetch fails', async () => {
       const originalGetActive = ZapoManager.getActive;
       const originalFetch = global.fetch;
       let sentContent: any;
+      const tinyPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+      const tinyPng = Buffer.from(tinyPngBase64, 'base64');
 
       const mockClient = {
         sessionId: mockInstanceName,
@@ -187,8 +189,26 @@ describe('Zapo Migration Integration Test Suite', () => {
       };
 
       ZapoManager.getActive = () => ({ client: mockClient } as any);
-      global.fetch = async () => {
-        throw new Error('blocked in production');
+      global.fetch = async (url: any) => {
+        const href = String(url);
+        if (href.includes('httpbin.org')) {
+          return { ok: false, status: 503, arrayBuffer: async () => new ArrayBuffer(0) } as any;
+        }
+        if (href.includes('meli.la')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => '<html><head><meta property="og:image" content="https://cdn.example.test/freezer.png"></head></html>'
+          } as any;
+        }
+        if (href.includes('cdn.example.test')) {
+          return {
+            ok: true,
+            status: 200,
+            arrayBuffer: async () => tinyPng.buffer.slice(tinyPng.byteOffset, tinyPng.byteOffset + tinyPng.byteLength)
+          } as any;
+        }
+        throw new Error(`Unexpected fetch: ${href}`);
       };
 
       const legacyText = '*Freezer Horizontal Electrolux 95L Inverter Bivolt Uma Porta Branco (HB100) Bivolt*\n\nR$1.449\n\nhttps://meli.la/2MU3MXd';
@@ -215,7 +235,10 @@ describe('Zapo Migration Integration Test Suite', () => {
       assert.strictEqual(sentContent.linkPreview.title, 'Freezer Horizontal Electrolux 95L Inverter Bivolt');
       assert.strictEqual(sentContent.linkPreview.description, 'R$1.449');
       assert.strictEqual(sentContent.linkPreview.image, undefined);
-      assert.strictEqual(sentContent.linkPreview.thumbnail, undefined);
+      assert.strictEqual(sentContent.linkPreview.previewType, proto.Message.ExtendedTextMessage.PreviewType.IMAGE);
+      assert.ok(sentContent.linkPreview.thumbnail.bytes instanceof Uint8Array);
+      assert.strictEqual(sentContent.linkPreview.thumbnail.width, 640);
+      assert.strictEqual(sentContent.linkPreview.thumbnail.height, 640);
 
       global.fetch = originalFetch;
       ZapoManager.getActive = originalGetActive;
