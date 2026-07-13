@@ -42,7 +42,7 @@ export function CompanionsPanel({ instanceName }: CompanionsPanelProps) {
   };
 
   const handleRevoke = async (deviceJid: string) => {
-    if (!window.confirm(t("zapoMobile.companions.confirmRevoke", { jid: deviceJid, defaultValue: "Tem certeza que deseja desconectar o companion {{jid}}?" }))) return;
+    if (!window.confirm(t("zapoMobile.companions.confirmRevoke", { jid: deviceJid, defaultValue: "Tem certeza que deseja desconectar o aparelho vinculado {{jid}}?" }))) return;
     try {
       await revokeMutation.mutateAsync({ deviceJid });
     } catch (err: any) {
@@ -52,8 +52,8 @@ export function CompanionsPanel({ instanceName }: CompanionsPanelProps) {
 
   const handleRevokeAll = async (excludeHosted: boolean) => {
     const msg = excludeHosted
-      ? t("zapoMobile.companions.confirmRevokeOthers", "Deseja desconectar todos os companions EXCETO o hospedado por esta sessão?")
-      : t("zapoMobile.companions.confirmRevokeAll", "Deseja desconectar absolutamente TODOS os companions secundários?");
+      ? t("zapoMobile.companions.confirmRevokeOthers", "Deseja desconectar todos os aparelhos vinculados EXCETO o hospedado por esta sessão?")
+      : t("zapoMobile.companions.confirmRevokeAll", "Deseja desconectar absolutamente TODOS os aparelhos vinculados?");
     if (!window.confirm(msg)) return;
 
     try {
@@ -74,13 +74,13 @@ export function CompanionsPanel({ instanceName }: CompanionsPanelProps) {
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
-      {/* Esquerda: Lista de Companions */}
+      {/* Esquerda: Lista de Aparelhos Vinculados */}
       <Card className="md:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-xl font-bold flex items-center gap-2">
               <Layers className="h-5 w-5 text-primary" />
-              {t("zapoMobile.companions.title", "Companions Conectados")}
+              {t("zapoMobile.companions.title", "Aparelhos Vinculados")}
             </CardTitle>
             <CardDescription>
               {t("zapoMobile.companions.subtitle", "WhatsApp Web ou celulares secundários atualmente hospedados por esta sessão primária.")}
@@ -100,17 +100,17 @@ export function CompanionsPanel({ instanceName }: CompanionsPanelProps) {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-6 text-muted-foreground">
-              {t("zapoMobile.companions.loading", "Carregando companions...")}
+              {t("zapoMobile.companions.loading", "Carregando aparelhos vinculados...")}
             </div>
           ) : error ? (
             <Alert variant="destructive">
               <ShieldAlert className="h-4 w-4" />
               <AlertTitle>{t("zapoMobile.companions.errorTitle", "Erro")}</AlertTitle>
-              <AlertDescription>{t("zapoMobile.companions.error", "Não foi possível carregar a lista de companions.")}</AlertDescription>
+              <AlertDescription>{t("zapoMobile.companions.error", "Não foi possível carregar a lista de aparelhos vinculados.")}</AlertDescription>
             </Alert>
           ) : !companions || companions.length === 0 ? (
             <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground">
-              {t("zapoMobile.companions.empty", "Nenhum companion pareado. Utilize a seção ao lado para vincular novos aparelhos.")}
+              {t("zapoMobile.companions.empty", "Nenhum aparelho vinculado. Utilize a seção ao lado para vincular novos aparelhos.")}
             </div>
           ) : (
             <div className="space-y-4">
@@ -179,7 +179,7 @@ export function CompanionsPanel({ instanceName }: CompanionsPanelProps) {
         <CardHeader>
           <CardTitle className="text-xl font-bold flex items-center gap-2">
             <Link2 className="h-5 w-5 text-primary" />
-            {t("zapoMobile.companions.linkTitle", "Vincular Novo Companion")}
+            {t("zapoMobile.companions.linkTitle", "Vincular Novo Aparelho")}
           </CardTitle>
           <CardDescription>
             {t("zapoMobile.companions.linkSubtitle", "Insira o QR Code bruto ou o código de pareamento de 8 dígitos gerado pelo aparelho secundário.")}

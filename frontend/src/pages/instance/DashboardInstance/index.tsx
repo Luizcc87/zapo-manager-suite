@@ -130,7 +130,7 @@ function DashboardInstance() {
 
     const handleCompanionError = (event: any) => {
       if (event.instance === instance.name) {
-        toast.error(`Erro de Companion Host: ${event.data.message}`);
+        toast.error(`Erro ao gerenciar aparelho vinculado: ${event.data.message}`);
       }
     };
 
@@ -566,7 +566,15 @@ function DashboardInstance() {
           </Card>
         </section>
         
-        {instanceType === "mobile" && connected && (
+        {/*
+          companionHost/email só existem no zapo-js quando a sessão é Mobile
+          Primary registrada via SMS/OTP (registeredPhone preenchido no
+          backend — ver instanceType em instance.routes.ts). ownerJid não
+          serve de sinal aqui: é preenchido para qualquer sessão autenticada,
+          inclusive pareamento QR clássico (companion de outro celular
+          primário), que sempre receberá 403 dessas rotas.
+        */}
+        {instance.instanceType === "primary" && connected && (
           <>
             <div className="border-t pt-6">
               <CompanionsPanel instanceName={instance.name} />
