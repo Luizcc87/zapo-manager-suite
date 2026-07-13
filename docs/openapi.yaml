@@ -476,13 +476,33 @@ paths:
         required: true
         content:
           application/json:
-            example:
-              number: "{{number}}"
-              text: "Olá, teste!"
-              delay: 1200
+            examples:
+              evolutionTextWithPreview:
+                summary: Texto com linkPreview automático
+                value:
+                  number: "{{number}}"
+                  textMessage:
+                    text: "Olá, teste! https://example.com"
+                  delay: 1200
+                  linkPreview: true
+              customPreviewWithImage:
+                summary: Texto com preview customizado e imagem
+                value:
+                  number: "{{number}}"
+                  textMessage:
+                    text: "*Produto em oferta*\n\nR$1.449\n\nhttps://example.com/produto"
+                  delay: 1200
+                  linkPreview: true
+                  linkPreviewHighQuality: true
+                  preview:
+                    url: "https://example.com/produto"
+                    title: "Produto em oferta"
+                    description: "R$1.449"
+                    image:
+                      url: "https://example.com/imagem.webp"
             schema:
               type: object
-              required: [number, text]
+              required: [number]
               properties:
                 number:
                   type: string
@@ -490,7 +510,46 @@ paths:
                   example: "{{number}}"
                 text:
                   type: string
+                  description: Texto legado/local. Para compatibilidade Evolution API v2, prefira textMessage.text.
                   example: Olá! Mensagem de teste.
+                textMessage:
+                  type: object
+                  description: Formato compatível com Evolution API v2.
+                  properties:
+                    text:
+                      type: string
+                      example: "Olá! https://example.com"
+                linkPreview:
+                  type: boolean
+                  description: Habilita preview automático de link, compatível com Evolution API/Uazapi.
+                  example: true
+                linkPreviewHighQuality:
+                  type: boolean
+                  description: Solicita thumbnail de alta qualidade quando preview customizado for informado.
+                  example: true
+                preview:
+                  type: object
+                  description: Extensão estilo WAHA para preview customizado. O texto deve conter a URL informada em preview.url.
+                  properties:
+                    url:
+                      type: string
+                      example: "https://example.com/produto"
+                    title:
+                      type: string
+                      example: "Produto em oferta"
+                    description:
+                      type: string
+                      example: "R$1.449"
+                    image:
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                          description: URL da imagem; o backend converte para JPEG 640x640.
+                          example: "https://example.com/imagem.webp"
+                        data:
+                          type: string
+                          description: Imagem em base64; o backend converte para JPEG 640x640.
                 delay:
                   type: integer
                   description: Delay em ms antes de enviar (simula digitação)

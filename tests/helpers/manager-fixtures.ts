@@ -55,10 +55,18 @@ export const interactivePayloads = {
     endpoint: 'sendText',
     payload: {
       number: targetNumber,
-      text: {
-        type: 'text',
+      textMessage: {
         text: 'https://example.com',
-        linkPreview: true,
+      },
+      linkPreview: true,
+      linkPreviewHighQuality: true,
+      preview: {
+        url: 'https://example.com',
+        title: 'Example Domain',
+        description: 'Preview customizado',
+        image: {
+          url: 'https://httpbin.org/image/jpeg',
+        },
       },
     },
   },

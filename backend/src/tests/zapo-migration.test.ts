@@ -10,6 +10,7 @@ import messageRouter from '../routes/message.routes';
 import instanceRouter from '../routes/instance.routes';
 import { ZapoManager } from '../manager';
 import { prisma } from '../lib/prisma';
+import { proto } from 'zapo-js';
 
 process.env.GLOBAL_API_KEY = 'test_global_key';
 
@@ -109,6 +110,60 @@ describe('Zapo Migration Integration Test Suite', () => {
       assert.strictEqual(res.status, 201);
       assert.strictEqual(res.body.accepted, true);
       assert.strictEqual(res.body.key.id, 'msg-text-123');
+
+      ZapoManager.getActive = originalGetActive;
+    });
+
+    test('POST /message/sendText/:instanceName -> supports Evolution textMessage and WAHA-style custom preview', async () => {
+      const originalGetActive = ZapoManager.getActive;
+      let sentContent: any;
+
+      const tinyPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=';
+      const mockClient = {
+        sessionId: mockInstanceName,
+        profile: {
+          getLidsByPhoneNumbers: async () => []
+        },
+        message: {
+          send: async (_jid: string, content: any) => {
+            sentContent = content;
+            return { id: 'msg-preview-123' };
+          }
+        }
+      };
+
+      ZapoManager.getActive = () => ({ client: mockClient } as any);
+
+      const res = await request(app)
+        .post(`/message/sendText/${mockInstanceName}`)
+        .set('apikey', mockApiKey)
+        .send({
+          number: '5555999999999',
+          textMessage: {
+            text: 'Produto em oferta https://example.com/produto'
+          },
+          linkPreview: true,
+          linkPreviewHighQuality: true,
+          preview: {
+            url: 'https://example.com/produto',
+            title: 'Produto em oferta',
+            description: 'R$1.449',
+            image: {
+              data: tinyPngBase64
+            }
+          }
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(sentContent.type, 'text');
+      assert.strictEqual(sentContent.text, 'Produto em oferta https://example.com/produto');
+      assert.strictEqual(sentContent.linkPreview.matchedText, 'https://example.com/produto');
+      assert.strictEqual(sentContent.linkPreview.title, 'Produto em oferta');
+      assert.strictEqual(sentContent.linkPreview.description, 'R$1.449');
+      assert.strictEqual(sentContent.linkPreview.previewType, proto.Message.ExtendedTextMessage.PreviewType.IMAGE);
+      assert.ok(sentContent.linkPreview.thumbnail.bytes instanceof Uint8Array);
+      assert.strictEqual(sentContent.linkPreview.thumbnail.width, 640);
+      assert.strictEqual(sentContent.linkPreview.thumbnail.height, 640);
 
       ZapoManager.getActive = originalGetActive;
     });

@@ -5,6 +5,7 @@ import multer from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import sharp from 'sharp';
 import { prisma } from '../lib/prisma';
 import { checkStrictInstanceApiKey } from '../middleware/auth';
 
@@ -44,6 +45,137 @@ function formatJid(num: string): string {
 
 // Cache local em memória para evitar requisições repetidas ao WhatsApp (por sessão e número)
 const resolvedJidCache = new Map<string, string>();
+
+type LinkPreviewImageInput = {
+  url?: string;
+  data?: string;
+};
+
+type LinkPreviewInput = {
+  url?: string;
+  title?: string;
+  description?: string;
+  image?: LinkPreviewImageInput;
+};
+
+async function fetchBuffer(url: string): Promise<Buffer> {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; ZapoManager/1.0)'
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to download link preview image: ${url} (HTTP ${response.status})`);
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
+async function buildLinkPreviewThumbnail(image?: LinkPreviewImageInput): Promise<{ bytes: Uint8Array; width: number; height: number } | undefined> {
+  if (!image) return undefined;
+
+  let input: Buffer | undefined;
+  if (typeof image.url === 'string' && image.url.trim()) {
+    input = await fetchBuffer(image.url.trim());
+  } else if (typeof image.data === 'string' && image.data.trim()) {
+    const base64 = image.data.includes(',') ? image.data.split(',').pop()! : image.data;
+    input = Buffer.from(base64, 'base64');
+  }
+
+  if (!input) return undefined;
+
+  const bytes = await sharp(input)
+    .resize(640, 640, { fit: 'contain', background: 'white' })
+    .flatten({ background: 'white' })
+    .jpeg({ quality: 86 })
+    .toBuffer();
+
+  return { bytes, width: 640, height: 640 };
+}
+
+async function buildSendTextContent(body: any): Promise<any> {
+  const textInput = body.textMessage?.text ?? body.text;
+  const preview: LinkPreviewInput | undefined = body.preview;
+  const hasPreviewOverride = preview && typeof preview === 'object';
+
+  if (typeof textInput === 'object' && textInput !== null) {
+    return normalizeLinkPreviewContent(textInput);
+  }
+
+  if (hasPreviewOverride) {
+    const thumbnail = await buildLinkPreviewThumbnail(preview.image);
+    return normalizeLinkPreviewContent({
+      type: 'text',
+      text: textInput,
+      linkPreview: {
+        matchedText: preview.url,
+        title: preview.title,
+        description: preview.description,
+        ...(thumbnail ? { thumbnail } : {}),
+      },
+    });
+  }
+
+  if (body.linkPreview !== undefined) {
+    return {
+      type: 'text',
+      text: textInput,
+      linkPreview: body.linkPreview,
+    };
+  }
+
+  return textInput;
+}
+
+function sanitizeMessageLog(content: any): string {
+  if (typeof content === 'string') return content;
+  return JSON.stringify(content, (key, value) => {
+    if (key === 'bytes' && (value instanceof Uint8Array || Buffer.isBuffer(value))) {
+      return `[${value.byteLength} bytes]`;
+    }
+    return value;
+  });
+}
+
+function normalizeLinkPreviewContent(content: any): any {
+  if (
+    typeof content !== 'object'
+    || content === null
+    || typeof content.linkPreview !== 'object'
+    || content.linkPreview === null
+    || typeof content.linkPreview.thumbnail !== 'object'
+    || content.linkPreview.thumbnail === null
+  ) {
+    return content;
+  }
+
+  const thumbnail = content.linkPreview.thumbnail;
+  let bytes = thumbnail.bytes;
+  if (Array.isArray(bytes)) {
+    bytes = Uint8Array.from(bytes);
+  } else if (typeof bytes === 'string') {
+    bytes = Buffer.from(bytes, 'base64');
+  }
+
+  if (Buffer.isBuffer(bytes)) {
+    bytes = new Uint8Array(bytes);
+  }
+
+  if (!(bytes instanceof Uint8Array)) {
+    return content;
+  }
+
+  return {
+    ...content,
+    linkPreview: {
+      ...content.linkPreview,
+      previewType: content.linkPreview.previewType ?? proto.Message.ExtendedTextMessage.PreviewType.IMAGE,
+      thumbnail: {
+        ...thumbnail,
+        bytes,
+      },
+    },
+  };
+}
 
 // Helper para resolver dinamicamente o JID correto no WhatsApp (tratando o 9 extra brasileiro)
 async function resolveJid(client: any, num: string): Promise<string> {
@@ -186,7 +318,8 @@ router.post('/sendWhatsAppAudio/:instanceName', checkStrictInstanceApiKey, async
 router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
-    const { number, text, options } = req.body;
+    const { number, options } = req.body;
+    const text = req.body.textMessage?.text ?? req.body.text;
 
     if (!number || !text) {
       return res.status(400).json({ error: 'number and text are required' });
@@ -198,20 +331,12 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
     }
 
     const jid = await resolveJid(active.client, number);
-    const content = typeof text === 'object' && text !== null
-      ? text
-      : req.body.linkPreview !== undefined
-        ? {
-            type: 'text',
-            text,
-            linkPreview: req.body.linkPreview,
-          }
-        : text;
+    const content = await buildSendTextContent(req.body);
     const linkPreviewRequested = typeof content === 'object' && content !== null && 'linkPreview' in content;
     if (linkPreviewRequested) {
       console.log(`[MessageRoutes] sendText linkPreview requested for ${instanceName}`);
     }
-    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=text, to=${jid}, content=${typeof content === 'string' ? content : JSON.stringify(content)}`);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=text, to=${jid}, content=${sanitizeMessageLog(content)}`);
     const sentMsg = await active.client.message.send(jid, content, options);
     console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=text, to=${jid}, id=${sentMsg.id}`);
 

@@ -92,6 +92,21 @@ test.describe('Zapo Manager frontend controls - mocked API', () => {
       const last = requests.at(-1)!;
       expect(last.url).toContain(expected.endpoint);
       expect(last.payload).toMatchObject({ number: targetNumber });
+      if (expected.tab === 'Link Preview') {
+        expect(last.payload).toMatchObject({
+          textMessage: {
+            text: expect.stringContaining('https://meli.la/2MU3MXd'),
+          },
+          linkPreview: true,
+          linkPreviewHighQuality: true,
+          preview: {
+            url: 'https://meli.la/2MU3MXd',
+            image: {
+              url: 'https://httpbin.org/image/jpeg',
+            },
+          },
+        });
+      }
 
       if (expected !== expectedTabs.at(-1)) {
         await page.locator('button[title="Testar mensagens interativas"]').click();

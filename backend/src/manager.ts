@@ -677,6 +677,10 @@ export class ZapoManager {
         // full conversation history (not just RECENT) when enabled in settings.
         requireFullSync: settings.syncFullHistory ?? false,
       },
+      linkPreview: {
+        enabled: true,
+        uploadHqThumbnail: true,
+      },
       deviceBrowser: process.env.SESSION_DEVICE_BROWSER || 'chrome',
       ...(process.env.SESSION_DEVICE_OS && { deviceOsDisplayName: process.env.SESSION_DEVICE_OS }),
       ...(proxy && { proxy }),

@@ -32,13 +32,17 @@ const TEMPLATES: Record<TabKey, Record<string, unknown>> = {
     text: "Olá! Este é um teste de envio de mensagem de texto.",
   },
   linkPreview: {
-    text: {
-      type: "text",
+    textMessage: {
       text: "*Freezer Horizontal Electrolux 95L Inverter Bivolt Uma Porta Branco (HB100) Bivolt*\n\nR$1.449\n\nhttps://meli.la/2MU3MXd",
-      linkPreview: {
-        title: "Freezer Horizontal Electrolux 95L Inverter Bivolt",
-        description: "R$1.449",
-        image: "https://httpbin.org/image/jpeg",
+    },
+    linkPreview: true,
+    linkPreviewHighQuality: true,
+    preview: {
+      url: "https://meli.la/2MU3MXd",
+      title: "Freezer Horizontal Electrolux 95L Inverter Bivolt",
+      description: "R$1.449",
+      image: {
+        url: "https://httpbin.org/image/jpeg",
       },
     },
   },
@@ -182,13 +186,11 @@ export function TestInteractiveModal({ instance, open, onOpenChange }: TestInter
     payload.number = target;
     if (tab === "text") {
       payload.text = textMessage;
-    } else if (tab === "linkPreview") {
-      if (typeof payload.text === "object" && payload.text !== null) {
-        payload.text = {
-          ...(payload.text as Record<string, unknown>),
-          linkPreview: (payload.text as Record<string, unknown>).linkPreview ?? true,
-        };
+      if (linkPreview) {
+        payload.linkPreview = true;
       }
+    } else if (tab === "linkPreview") {
+      payload.linkPreview = payload.linkPreview ?? true;
     }
 
     try {

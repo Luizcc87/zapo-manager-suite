@@ -6,6 +6,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-12
 
+### Link preview com thumbnail no envio de texto
+
+**Backend**
+- `backend/src/routes/message.routes.ts`: normaliza `linkPreview.thumbnail.bytes` recebido por JSON para `Uint8Array`/base64 antes de chamar `zapo-js`, preservando o caminho oficial de `thumbnail-link`.
+- `backend/src/routes/message.routes.ts`: aceita `textMessage.text` no formato Evolution API v2 e `preview`/`linkPreviewHighQuality` no estilo WAHA para preview customizado com `image.url` ou `image.data`.
+- `backend/src/manager.ts`: habilita explicitamente `linkPreview.enabled` e `uploadHqThumbnail` nas opções do `WaClient`.
+- `docs/openapi.yaml`: documentado o contrato compatível com Evolution/Uazapi e a extensão WAHA-like de custom preview.
+
 ### Suite Playwright de UI real com backend em janela própria
 
 **Testes**
