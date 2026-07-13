@@ -13,7 +13,22 @@
 set -e
 
 IMAGE="lc1868/zapo-manager"
-ZAPO_JS_VERSION="$(node -e "const lock=require('./backend/package-lock.json'); const pkg=require('./backend/package.json'); const version=lock.packages?.['node_modules/zapo-js']?.version || lock.dependencies?.['zapo-js']?.version || (pkg.dependencies?.['zapo-js'] || '').replace(/^[^0-9]*/, ''); if (!version) process.exit(1); process.stdout.write(version);")"
+ZAPO_JS_VERSION="$(
+  awk '
+    /"node_modules\/zapo-js":/ { found=1; next }
+    found && /"version":/ {
+      gsub(/[",]/, "", $2);
+      print $2;
+      exit
+    }
+  ' backend/package-lock.json
+)"
+
+if [ -z "$ZAPO_JS_VERSION" ]; then
+  echo "[build-push] Could not resolve zapo-js version from backend/package-lock.json" >&2
+  exit 1
+fi
+
 TAG="${1:-zapo-js-$ZAPO_JS_VERSION}"
 
 echo "[build-push] Building $IMAGE:$TAG for linux/amd64 + linux/arm64..."
