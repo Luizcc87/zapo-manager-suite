@@ -4,6 +4,16 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
+## [Unreleased] — 2026-07-20
+
+### Upgrade Zapo-JS para v1.6.0
+
+**Backend**
+- `backend/package.json`: Atualizado `zapo-js` para `^1.6.0` (expondo as novas capacidades `client.message.upload()` e `WaMediaCrypto`).
+
+**Infra**
+- `docker-compose.yml`: Rebaixada a imagem PostgreSQL local de `postgres:18-alpine` para `postgres:16-alpine` para manter compatibilidade simples de inicialização de volumes locais de desenvolvimento sem problemas de formato de diretório.
+
 ## [Unreleased] — 2026-07-12
 
 ### Link preview com thumbnail no envio de texto
