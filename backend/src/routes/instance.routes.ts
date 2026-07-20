@@ -388,7 +388,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
 router.delete('/logout/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
-    await ZapoManager.disconnectClient(instanceName);
+    await ZapoManager.logoutClient(instanceName);
     return res.status(200).json({ status: 'success', message: 'Instance logged out' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

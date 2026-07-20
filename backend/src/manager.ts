@@ -810,6 +810,12 @@ export class ZapoManager {
         const isLogout = (event as any).isLogout || (event as any).reason === 'stream_error_device_removed';
         if (isLogout) {
           console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Desconexão permanente (logout/device_removed). Limpando recursos.`);
+          prisma.instance.update({
+            where: { instanceName },
+            data: { ownerJid: '', profileName: '', profilePicUrl: '' }
+          }).catch(err => {
+            console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao limpar ownerJid no banco:`, err.message);
+          });
           ZapoManager.disconnectClient(instanceName, requestId).catch(err => {
             console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao desconectar no evento de close:`, err.message);
           });
@@ -1012,6 +1018,31 @@ export class ZapoManager {
     }
 
     return activeData;
+  }
+
+  static async logoutClient(instanceName: string, requestId?: string) {
+    const trace = requestId ? `requestId=${requestId} | ` : '';
+    console.log(`[ZapoManager] [Logout] ${trace}logoutClient start instanceName=${instanceName}`);
+    const data = activeClients.get(instanceName);
+    if (data) {
+      try {
+        if (typeof (data.client as any).logout === 'function') {
+          await (data.client as any).logout();
+        } else {
+          await data.client.disconnect();
+        }
+      } catch (e) {}
+    }
+    await prisma.instance.update({
+      where: { instanceName },
+      data: {
+        status: 'disconnected',
+        ownerJid: '',
+        profileName: '',
+        profilePicUrl: ''
+      }
+    });
+    await this.disconnectClient(instanceName, requestId);
   }
 
   static async disconnectClient(instanceName: string, requestId?: string) {
