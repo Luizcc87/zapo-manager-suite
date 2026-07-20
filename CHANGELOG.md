@@ -6,6 +6,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-20
 
+## [1.6.5] — 2026-07-20
+
+### Fix: Scrollbar e Overflow no DialogContent
+
+**Frontend**
+- `frontend/src/pages/instance/DashboardInstance/GoQrCodeModal.tsx`: Movido o comportamento de `overflowY: "auto"` e limites de altura para o container pai `DialogContent` do Radix UI, prevenindo o overflow vertical e o bug de clipping da tela fora da viewport do navegador.
+
 ## [1.6.4] — 2026-07-20
 
 ### Fix: CSS Inline no Modal do QR e Logs Verbosos

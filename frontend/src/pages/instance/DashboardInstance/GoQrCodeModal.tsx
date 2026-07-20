@@ -200,12 +200,12 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
         style={{
           display: "flex",
           flexDirection: "column",
-          maxHeight: "85vh",
-          height: "auto",
-          overflow: "hidden"
+          maxHeight: "90vh",
+          overflowY: "auto",
+          boxSizing: "border-box"
         }}
       >
-        <DialogHeader className="flex-shrink-0">
+        <DialogHeader className="flex-shrink-0 mb-4">
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5 text-primary" />
             {t("qrCode.title")}
@@ -216,7 +216,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
         </DialogHeader>
 
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0">
+        <div className="space-y-4 pr-1">
           {/* QR Code area — hidden once pairing code is received */}
           {!pairingCode && (
             <div className="flex justify-center">
