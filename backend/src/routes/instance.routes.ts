@@ -194,12 +194,13 @@ router.post('/register/confirmCode', checkGlobalApiKey, async (req: Request, res
 router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
+    const phoneNumber = req.query.number as string | undefined;
     
     // Inicia a conexão se não estiver iniciada
     let active = ZapoManager.getActive(instanceName);
     if (!active) {
       try {
-        active = await ZapoManager.connectClient(instanceName);
+        active = await ZapoManager.connectClient(instanceName, phoneNumber);
       } catch (err: any) {
         console.warn(`[ZapoRouter] Falha ao iniciar cliente ${instanceName}:`, err.message);
         return res.status(200).json({
@@ -209,9 +210,39 @@ router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, r
           error: err.message
         });
       }
+    } else if (phoneNumber && !active.pairingCode) {
+      // Se a instância já estiver ativa mas não tiver gerado o código de pareamento, solicita agora
+      try {
+        console.log(`[ZapoRouter] Solicitando código de pareamento para instância ativa ${instanceName} com o número ${phoneNumber}`);
+        const code = await active.client.auth.requestPairingCode(phoneNumber);
+        active.pairingCode = code;
+        active.qrCode = undefined;
+      } catch (err: any) {
+        console.error(`[ZapoRouter] Erro ao solicitar código de pareamento para instância ativa:`, err.message);
+      }
     }
+
     if (!active) {
       return res.status(500).json({ error: 'Failed to initialize active instance client' });
+    }
+
+    // Se foi solicitado o número, aguarda até 10 segundos para obter o código de pareamento
+    if (phoneNumber) {
+      let attempts = 0;
+      while (!active.pairingCode && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+      }
+    }
+
+    // Se tiver código de pareamento em cache, retorna ele
+    if (active.pairingCode) {
+      return res.status(200).json({
+        pairingCode: active.pairingCode,
+        code: active.pairingCode,
+        count: 0,
+        status: 'connecting'
+      });
     }
 
     // Se tiver QR code em cache, retorna ele

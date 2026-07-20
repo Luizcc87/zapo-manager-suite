@@ -17,6 +17,7 @@ const activeClients = new Map<string, {
   redisClient?: any;
   poller?: any;
   qrCode?: string;
+  pairingCode?: string;
   lockInterval?: NodeJS.Timeout;
   messageStatus?: Map<string, any>;
 }>();
@@ -614,7 +615,7 @@ export class ZapoManager {
     return instance;
   }
 
-  static async connectClient(instanceName: string, requestId?: string) {
+  static async connectClient(instanceName: string, phoneNumber?: string, requestId?: string) {
     const trace = requestId ? `requestId=${requestId} | ` : '';
     const attachTrace = (payload: any) => requestId ? { ...payload, requestId } : payload;
     const emitSocket = (event: string, payload: any) => {
@@ -708,9 +709,26 @@ export class ZapoManager {
       client, pgStore, redisClient, poller,
       qrCode: undefined as string | undefined,
       qrCount: 0,
+      pairingCode: undefined as string | undefined,
       lockInterval: undefined as any,
       messageStatus: new Map<string, any>()
     };
+
+    client.on('auth_pairing_required', async () => {
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Evento auth_pairing_required disparado.`);
+      if (phoneNumber) {
+        try {
+          console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Solicitando código de pareamento para o número: ${phoneNumber}`);
+          const code = await client.auth.requestPairingCode(phoneNumber);
+          activeData.pairingCode = code;
+          console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Código de pareamento gerado com sucesso: ${code}`);
+          ZapoManager.sendWebhook(instanceName, 'connection.update', attachTrace({ status: 'connecting', pairingCode: code }));
+          emitSocket('connection.update', { instance: instanceName, data: attachTrace({ status: 'connecting', pairingCode: code }) });
+        } catch (err: any) {
+          console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Falha ao gerar código de pareamento para ${phoneNumber}:`, err.message);
+        }
+      }
+    });
 
     activeData.lockInterval = setInterval(async () => {
       const renewed = await renewLock(instanceName, CONTAINER_ID);
