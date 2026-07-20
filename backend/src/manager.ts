@@ -816,6 +816,9 @@ export class ZapoManager {
           }).catch(err => {
             console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao limpar ownerJid no banco:`, err.message);
           });
+          ZapoManager.clearSessionStore(instanceName).catch(err => {
+            console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao limpar session store no banco:`, err.message);
+          });
           ZapoManager.disconnectClient(instanceName, requestId).catch(err => {
             console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Erro ao desconectar no evento de close:`, err.message);
           });
@@ -1020,6 +1023,27 @@ export class ZapoManager {
     return activeData;
   }
 
+  static async clearSessionStore(instanceName: string) {
+    const { store, pgStore, redisClient } = await buildStore(instanceName);
+    try {
+      const session = store.session(instanceName);
+      if (typeof session.auth?.clear === 'function') {
+        await session.auth.clear();
+        console.log(`[ZapoManager] [clearSessionStore] Credentials cleared for ${instanceName}`);
+      } else if (typeof session.clear === 'function') {
+        await session.clear();
+        console.log(`[ZapoManager] [clearSessionStore] Session cleared for ${instanceName}`);
+      }
+      await session.destroy();
+    } catch (e: any) {
+      console.error(`[ZapoManager] [clearSessionStore] Erro ao limpar store:`, e.message);
+    } finally {
+      if (redisClient) { try { await redisClient.quit(); } catch (e) {} }
+      if (pgStore) { try { await pgStore.destroy(); } catch (e) {} }
+      try { await store.destroy(); } catch (e) {}
+    }
+  }
+
   static async logoutClient(instanceName: string, requestId?: string) {
     const trace = requestId ? `requestId=${requestId} | ` : '';
     console.log(`[ZapoManager] [Logout] ${trace}logoutClient start instanceName=${instanceName}`);
@@ -1042,6 +1066,7 @@ export class ZapoManager {
         profilePicUrl: ''
       }
     });
+    await this.clearSessionStore(instanceName);
     await this.disconnectClient(instanceName, requestId);
   }
 

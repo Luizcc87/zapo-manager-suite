@@ -10,8 +10,8 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 **Backend**
 - `backend/package.json`: Atualizado `zapo-js` para `^1.6.0` (expondo as novas capacidades `client.message.upload()` e `WaMediaCrypto`).
-- `backend/src/manager.ts`: Limpeza de `ownerJid`, `profileName` e `profilePicUrl` no banco quando ocorre uma desconexão por logout (`isLogout: true`), permitindo que instâncias desemparelhadas voltem para o fluxo de QR code em vez de entrarem em loop de reconexão. Exposto método `logoutClient` que faz o logout e a limpeza.
-- `backend/src/routes/instance.routes.ts`: Rota de `/logout` atualizada para invocar `ZapoManager.logoutClient` a fim de garantir a limpeza dos campos de autenticação no banco.
+- `backend/src/manager.ts`: Limpeza de `ownerJid`, `profileName` e `profilePicUrl` no banco quando ocorre uma desconexão por logout (`isLogout: true`), permitindo que instâncias desemparelhadas voltem para o fluxo de QR code em vez de entrarem em loop de reconexão. Exposto método `logoutClient` e o helper `clearSessionStore` que realizam a limpeza e removem os tokens/credentials de autenticação persistidos no banco de dados e Redis.
+- `backend/src/routes/instance.routes.ts`: Rota de `/logout` atualizada para invocar `ZapoManager.logoutClient` a fim de garantir a limpeza dos campos de autenticação no banco e no Redis.
 
 **Infra**
 - `docker-compose.yml`: Rebaixada a imagem PostgreSQL local de `postgres:18-alpine` para `postgres:16-alpine` para manter compatibilidade simples de inicialização de volumes locais de desenvolvimento sem problemas de formato de diretório.
