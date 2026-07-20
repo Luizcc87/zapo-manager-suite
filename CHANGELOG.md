@@ -6,6 +6,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-20
 
+## [1.6.7] — 2026-07-20
+
+### Fix: Interceptação de auth_qr para Pareamento por Código
+
+**Backend**
+- `backend/src/manager.ts`: Criado o helper `handlePairing` e associado tanto ao evento `auth_pairing_required` quanto ao evento `auth_qr`. Quando um `phoneNumber` é fornecido para conexão, o backend intercepta o evento de emissão de QR Code e força a geração ativa do código de pareamento via `client.auth.requestPairingCode(phoneNumber)`. Isso contorna a limitação da biblioteca `zapo-js`/Baileys que ia direto para o fluxo de QR code em vez de emitir o evento de pairing requerido.
+
 ## [1.6.6] — 2026-07-20
 
 ### Fix: Unificação do Modal de Conexão no Dashboard

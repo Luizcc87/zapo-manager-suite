@@ -714,11 +714,10 @@ export class ZapoManager {
       messageStatus: new Map<string, any>()
     };
 
-    client.on('auth_pairing_required', async () => {
-      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Evento auth_pairing_required disparado.`);
-      if (phoneNumber) {
+    const handlePairing = async () => {
+      if (phoneNumber && !activeData.pairingCode) {
         try {
-          console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Solicitando código de pareamento para o número: ${phoneNumber}`);
+          console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Gerando pairing code de forma ativa para o número: ${phoneNumber}`);
           const code = await client.auth.requestPairingCode(phoneNumber);
           activeData.pairingCode = code;
           console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Código de pareamento gerado com sucesso: ${code}`);
@@ -728,13 +727,18 @@ export class ZapoManager {
           console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Falha ao gerar código de pareamento para ${phoneNumber}:`, err.message);
         }
       }
+    };
+
+    client.on('auth_pairing_required', async () => {
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Evento auth_pairing_required disparado.`);
+      await handlePairing();
     });
 
     activeData.lockInterval = setInterval(async () => {
       const renewed = await renewLock(instanceName, CONTAINER_ID);
       if (!renewed) {
         console.error(`[ZapoManager] [Connect] ${trace}[${instanceName}] Perda do Lock de concorrência! Desconectando.`);
-    await ZapoManager.disconnectClient(instanceName, requestId);
+        await ZapoManager.disconnectClient(instanceName, requestId);
       }
     }, LOCK_RENEW);
 
@@ -772,6 +776,12 @@ export class ZapoManager {
     // ── Auth & Connection ─────────────────────────────────────────────────────
 
     client.on('auth_qr', async ({ qr }) => {
+      if (phoneNumber) {
+        console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] auth_qr disparado, mas phoneNumber (${phoneNumber}) está presente. Interceptando em favor de pairing code.`);
+        await handlePairing();
+        return;
+      }
+
       activeData.qrCount += 1;
       console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] QR Code recebido (${activeData.qrCount}/${QR_LIMIT}).`);
 
