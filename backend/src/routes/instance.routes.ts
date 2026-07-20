@@ -211,14 +211,15 @@ router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, r
         });
       }
     } else if (phoneNumber && !active.pairingCode) {
-      // Se a instância já estiver ativa mas não tiver gerado o código de pareamento, solicita agora
+      // Se a instância já estiver ativa em modo QR mas não tiver gerado o código de pareamento,
+      // desconecta e reconecta passando o phoneNumber para ativar o fluxo de pairing code corretamente
       try {
-        console.log(`[ZapoRouter] Solicitando código de pareamento para instância ativa ${instanceName} com o número ${phoneNumber}`);
-        const code = await active.client.auth.requestPairingCode(phoneNumber);
-        active.pairingCode = code;
-        active.qrCode = undefined;
+        console.log(`[ZapoRouter] Reiniciando instância ${instanceName} para gerar código de pareamento para o número ${phoneNumber}`);
+        await ZapoManager.disconnectClient(instanceName);
+        active = await ZapoManager.connectClient(instanceName, phoneNumber);
       } catch (err: any) {
-        console.error(`[ZapoRouter] Erro ao solicitar código de pareamento para instância ativa:`, err.message);
+        console.error(`[ZapoRouter] Erro ao reiniciar instância para pairing code:`, err.message);
+        return res.status(500).json({ error: err.message });
       }
     }
 
@@ -226,10 +227,10 @@ router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, r
       return res.status(500).json({ error: 'Failed to initialize active instance client' });
     }
 
-    // Se foi solicitado o número, aguarda até 10 segundos para obter o código de pareamento
+    // Se foi solicitado o número, aguarda até 12 segundos para obter o código de pareamento
     if (phoneNumber) {
       let attempts = 0;
-      while (!active.pairingCode && attempts < 50) {
+      while (!active.pairingCode && attempts < 60) {
         await new Promise(resolve => setTimeout(resolve, 200));
         attempts++;
       }

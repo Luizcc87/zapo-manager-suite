@@ -6,7 +6,17 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-20
 
-## [1.6.1] — 2026-07-20
+## [1.6.2] — 2026-07-20
+
+### Fix: Código de Pareamento infinito e Overflow do Modal QR
+
+**Backend**
+- `backend/src/routes/instance.routes.ts`: Corrigido fluxo de geração de código de pareamento. Quando a instância já estava ativa em modo QR aguardando escaneamento, a chamada `requestPairingCode` não retornava código (a janela `auth_pairing_required` já havia passado). Agora a rota desconecta e reconecta a instância com `phoneNumber`, forçando o SDK a emitir `auth_pairing_required` novamente e gerar o código. Janela de polling ampliada de 10s para 12s.
+
+**Frontend**
+- `frontend/src/pages/instance/DashboardInstance/GoQrCodeModal.tsx`: Adicionado `max-h-[90vh] overflow-y-auto` ao `DialogContent` para prevenir overflow vertical em viewports menores. Seção "Como escanear" convertida para `<details>` colapsável reduzindo a altura padrão do modal.
+
+
 
 ### Conexão via Código de Pareamento (Phone Number Link) e Fix de Logout
 

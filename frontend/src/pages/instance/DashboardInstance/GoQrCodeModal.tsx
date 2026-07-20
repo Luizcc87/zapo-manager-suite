@@ -136,7 +136,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5 text-primary" />
@@ -170,8 +170,8 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
             )}
           </div>
 
-          <div className="rounded-lg bg-muted p-4">
-            <p className="text-sm font-medium">{t("qrCode.howTo.title")}</p>
+          <details className="rounded-lg bg-muted p-4">
+            <summary className="cursor-pointer text-sm font-medium select-none">{t("qrCode.howTo.title")}</summary>
             <ol className="mt-2 space-y-1 text-sm text-muted-foreground">
               <li>1. {t("qrCode.howTo.step1")}</li>
               <li>2. {t("qrCode.howTo.step2")}</li>
@@ -179,7 +179,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
               <li>4. {t("qrCode.howTo.step4")}</li>
               <li>5. {t("qrCode.howTo.step5")}</li>
             </ol>
-          </div>
+          </details>
 
           <div className="space-y-2 border-t border-border pt-4">
             <Label htmlFor="pairing-phone" className="flex items-center gap-2 text-sm">
