@@ -1,7 +1,6 @@
 # Reconnection
-Source: https://zapo.to/en/guides/reconnection
 
-zapo does not auto-reconnect by design — follow this pattern to detect dropped sessions, rebuild the client, and resume without duplicate connections.
+> zapo does not auto-reconnect by design — follow this pattern to detect dropped sessions, rebuild the client, and resume without duplicate connections.
 
 <Warning>
   `WaClient` does **not** reconnect automatically. This is a deliberate design choice: reconnection policy (backoff, max retries, alerting) belongs to your application. You listen for `connection: close` and decide what to do.
@@ -125,4 +124,3 @@ process.on('SIGINT', async () => {
 ```
 
 This flushes pending write-behind data and closes the socket without unlinking the device.
-
