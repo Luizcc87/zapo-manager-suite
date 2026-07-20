@@ -6,6 +6,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-20
 
+## [1.6.6] — 2026-07-20
+
+### Fix: Unificação do Modal de Conexão no Dashboard
+
+**Frontend**
+- `frontend/src/pages/instance/DashboardInstance/index.tsx`: Removido os diálogos redundantes (antigo QR e antigo pareamento do Radix UI/Shadcn) que eram exibidos quando `isGo` era falso. Agora o dashboard sempre utiliza o `GoQrCodeModal` robusto unificado. Isso ativa os logs verbosos e o fluxo fixado de CSS/pareamento também para instâncias locais/não-Go.
+
 ## [1.6.5] — 2026-07-20
 
 ### Fix: Scrollbar e Overflow no DialogContent

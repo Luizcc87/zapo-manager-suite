@@ -3,7 +3,6 @@ import { Alert, AlertTitle } from "@evoapi/design-system/alert";
 import { Avatar, AvatarImage } from "@evoapi/design-system/avatar";
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@evoapi/design-system/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CircleUser, Copy, Globe, LogOut, MessageCircle, Power, QrCode, RefreshCw, Send, Smartphone, ShieldAlert, UsersRound } from "lucide-react";
 import { copyToClipboard } from "@/utils/copy-to-clipboard";
 
@@ -23,13 +22,11 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 );
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import QRCode from "react-qr-code";
 import { toast } from "react-toastify";
 
 import { BaseHeader } from "@/components/base-header";
 import { InstanceStatus } from "@/components/instance-status";
 import { InstanceToken } from "@/components/instance-token";
-import { useTheme } from "@/components/theme-provider";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 import { useInstance } from "@/contexts/InstanceContext";
@@ -49,17 +46,13 @@ import { useQueryClient } from "@tanstack/react-query";
 function DashboardInstance() {
   const { t, i18n } = useTranslation();
   const numberFormatter = new Intl.NumberFormat(i18n.language);
-  const [qrCode, setQRCode] = useState<string | null>(null);
-  const [pairingCode, setPairingCode] = useState("");
   const [goQrOpen, setGoQrOpen] = useState(false);
   const [goSendOpen, setGoSendOpen] = useState(false);
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [primaryRegOpen, setPrimaryRegOpen] = useState(false);
   const token = getToken(TOKEN_ID.TOKEN);
   const isGo = getProvider() === "go";
-  const { theme } = useTheme();
 
-  const { connect, logout, restart, syncProfile } = useManageInstance();
+  const { logout, restart, syncProfile } = useManageInstance();
   const { instance, reloadInstance } = useInstance();
   const queryClient = useQueryClient();
 
@@ -74,24 +67,6 @@ function DashboardInstance() {
       localStorage.setItem(TOKEN_ID.INSTANCE_TOKEN, instance.token);
     }
   }, [instance]);
-
-  // Auto-refresh QR code every 20 seconds while the dialog is open.
-  // WhatsApp QR codes expire in ~20 seconds; this keeps them valid silently.
-  useEffect(() => {
-    if (!qrDialogOpen || !instance || !token) return;
-
-    const refreshQR = async () => {
-      try {
-        const data = await connect({ instanceName: instance.name, token });
-        if (data?.code) setQRCode(data.code);
-      } catch (error) {
-        console.error("Error auto-refreshing QR code:", error);
-      }
-    };
-
-    const interval = setInterval(refreshQR, 20000);
-    return () => clearInterval(interval);
-  }, [qrDialogOpen]);
 
   // Escuta Socket para os eventos de Companions e Alertas de Segurança (Bloco C)
   useEffect(() => {
@@ -184,29 +159,6 @@ function DashboardInstance() {
     }
   };
 
-  const handleConnect = async (instanceName: string, wantPairing: boolean) => {
-    try {
-      setQRCode(null);
-      if (!token) return console.error("Token not found.");
-
-      if (wantPairing) {
-        const data = await connect({ instanceName, token, number: instance?.number });
-        setPairingCode(data.pairingCode);
-      } else {
-        const data = await connect({ instanceName, token });
-        setQRCode(data.code);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  };
-
-  const closeQRCodePopup = async () => {
-    setQRCode(null);
-    setPairingCode("");
-    await reloadInstance();
-  };
-
   const stats = useMemo(
     () => ({
       contacts: instance?._count?.Contact || 0,
@@ -216,7 +168,6 @@ function DashboardInstance() {
     [instance],
   );
 
-  const qrCodeColor = useMemo(() => (theme === "dark" ? "#fff" : theme === "light" ? "#000" : "#189d68"), [theme]);
   const formatOwnerJid = (ownerJid: string) => ownerJid.split("@")[0].split(":")[0];
 
   if (!instance) return <LoadingSpinner />;
@@ -431,97 +382,28 @@ function DashboardInstance() {
                   }
                 </AlertTitle>
 
-                {isGo ? (
-                  <>
-                    <Button onClick={() => setGoQrOpen(true)}>
-                      <QrCode className="mr-2 h-4 w-4" />
-                      {t("instance.dashboard.button.qrcode.label")}
-                    </Button>
-                    <GoQrCodeModal open={goQrOpen} onOpenChange={setGoQrOpen} />
-                  </>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {instanceType === "mobile" && (
-                      <>
-                        <Button onClick={() => setPrimaryRegOpen(true)} variant="outline">
-                          <Smartphone className="mr-2 h-4 w-4" />
-                          {t("primaryRegistration.button", { defaultValue: "Registrar via SMS/Voz" })}
-                        </Button>
-                        <PrimaryRegistrationDialog
-                          open={primaryRegOpen}
-                          onOpenChange={setPrimaryRegOpen}
-                          resetTable={handleReload}
-                          defaultInstanceName={instance.name}
-                        />
-                      </>
-                    )}
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => setGoQrOpen(true)}>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    {t("instance.dashboard.button.qrcode.label")}
+                  </Button>
+                  <GoQrCodeModal open={goQrOpen} onOpenChange={setGoQrOpen} />
 
-                    <Dialog
-                      open={qrDialogOpen}
-                      onOpenChange={(open) => {
-                        setQrDialogOpen(open);
-                        if (!open) closeQRCodePopup();
-                      }}
-                    >
-                      <DialogTrigger
-                        onClick={() => {
-                          setQrDialogOpen(true);
-                          handleConnect(instance.name, false);
-                        }}
-                        asChild
-                      >
-                        <Button>
-                          <QrCode className="mr-2 h-4 w-4" />
-                          {t("instance.dashboard.button.qrcode.label")}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent aria-describedby={undefined}>
-                        <DialogHeader>
-                          <DialogTitle>{t("instance.dashboard.button.qrcode.title")}</DialogTitle>
-                        </DialogHeader>
-                        <div className="flex flex-col items-center gap-3 py-4">
-                          {qrCode ? (
-                            <>
-                              <QRCode value={qrCode} size={256} bgColor="transparent" fgColor={qrCodeColor} className="rounded-sm" />
-                              <p className="text-xs text-muted-foreground animate-pulse">
-                                {t("instance.dashboard.qrcode.autoRefresh", { defaultValue: "QR Code atualiza automaticamente a cada 20 segundos" })}
-                              </p>
-                            </>
-                          ) : (
-                            <LoadingSpinner />
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    {instance.number && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" onClick={() => handleConnect(instance.name, true)}>
-                            {t("instance.dashboard.button.pairingCode.label")}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent onCloseAutoFocus={closeQRCodePopup}>
-                          <DialogHeader>
-                            <DialogTitle>{t("instance.dashboard.button.pairingCode.label")}</DialogTitle>
-                            <DialogDescription>
-                              {pairingCode ? (
-                                <div className="py-3">
-                                  <p className="text-center font-semibold">{t("instance.dashboard.button.pairingCode.title")}</p>
-                                  <p className="mt-2 text-center font-mono text-2xl tracking-widest">
-                                    {pairingCode.substring(0, 4)}-{pairingCode.substring(4, 8)}
-                                  </p>
-                                </div>
-                              ) : (
-                                <LoadingSpinner />
-                              )}
-                            </DialogDescription>
-                          </DialogHeader>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
-                )}
+                  {!isGo && instanceType === "mobile" && (
+                    <>
+                      <Button onClick={() => setPrimaryRegOpen(true)} variant="outline">
+                        <Smartphone className="mr-2 h-4 w-4" />
+                        {t("primaryRegistration.button", { defaultValue: "Registrar via SMS/Voz" })}
+                      </Button>
+                      <PrimaryRegistrationDialog
+                        open={primaryRegOpen}
+                        onOpenChange={setPrimaryRegOpen}
+                        resetTable={handleReload}
+                        defaultInstanceName={instance.name}
+                      />
+                    </>
+                  )}
+                </div>
               </Alert>
             )}
           </CardContent>
