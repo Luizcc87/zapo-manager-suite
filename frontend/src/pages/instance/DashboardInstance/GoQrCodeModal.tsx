@@ -104,11 +104,15 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
 
   // Trigger fullConnect exactly once when modal opens (not on reconnected instances)
   useEffect(() => {
+    LOG("Modal mounted/updated. Open status:", open, "Connected status:", connected);
     if (!open || connected) {
       connectCalledRef.current = false;
       return;
     }
-    if (connectCalledRef.current) return;
+    if (connectCalledRef.current) {
+      LOG("fullConnect already invoked for this session, skipping duplicate execution.");
+      return;
+    }
     connectCalledRef.current = true;
     LOG("useEffect[open=true] — calling fullConnect()");
     fullConnect();
@@ -118,6 +122,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
   // Poll connection status every 3s while modal is open and not connected
   useEffect(() => {
     if (!open || connected) return;
+    LOG("Starting 3s status polling interval...");
     const timer = setInterval(() => {
       pollRefresh().catch((err) => ERR("Poll failed:", err));
     }, 3000);
@@ -125,7 +130,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
   }, [open, connected, pollRefresh]);
 
   const handleRefresh = async () => {
-    LOG("handleRefresh() triggered");
+    LOG("handleRefresh() triggered manual refresh");
     try {
       await fullConnect();
       toast.success(t("qrCode.toast.refreshSuccess"));
@@ -143,9 +148,13 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
     onOpenChange(false);
   };
 
-  if (!instance) return null;
+  if (!instance) {
+    LOG("No instance loaded in context, rendering null");
+    return null;
+  }
 
   if (connected) {
+    LOG("Instance is connected! Showing success dialog screen.");
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
@@ -181,18 +190,20 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
     );
   }
 
+  LOG("Rendering active setup modal (QR / Pairing Code screen). Base64 exists:", !!base64, "Pairing code:", pairingCode);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/*
-        Layout: DialogContent acts as a flex column with max height.
-        Header + buttons are flex-shrink-0 (never scroll away).
-        The middle content scrolls if it overflows.
-        NOTE: The base DialogContent uses `grid` — we override to `flex flex-col` here.
-      */}
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-md !flex !flex-col !grid-none gap-0 p-6"
-        style={{ maxHeight: "85vh" }}
+        className="sm:max-w-md gap-0 p-6"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "85vh",
+          height: "auto",
+          overflow: "hidden"
+        }}
       >
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">

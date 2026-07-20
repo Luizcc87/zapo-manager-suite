@@ -6,15 +6,28 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-20
 
+## [1.6.4] — 2026-07-20
+
+### Fix: CSS Inline no Modal do QR e Logs Verbosos
+
+**Frontend**
+- `frontend/src/pages/instance/DashboardInstance/GoQrCodeModal.tsx`: Substituídos os seletores de classe do Tailwind (`!flex`, `!flex-col`) por CSS inline nativo (`display: "flex"`, `flexDirection: "column"`, `maxHeight: "85vh"`, `overflow: "hidden"`) no wrapper principal do Radix UI. Isso força o navegador a respeitar a altura máxima mesmo em frameworks css restritivos.
+- Adicionados logs verbosos detalhados no console do navegador (`[GoQrCodeModal]`) para rastrear o fluxo exato de ações de montagem do modal, polling de status e geração do código de pareamento.
+
+## [1.6.3] — 2026-07-20
+
+### Fix: Bypass de Mutation no Pareamento e Grid do Dialog
+
+**Frontend**
+- `frontend/src/pages/instance/DashboardInstance/GoQrCodeModal.tsx`: Bypass da mutation do React Query ao requisitar o código de pareamento, usando Axios diretamente para evitar conflito com a mutation ativa do QR code.
+- Correção de overflow do Dialog ajustando a ordem dos elementos flex-shrink e flex-1.
+
 ## [1.6.2] — 2026-07-20
 
 ### Fix: Código de Pareamento infinito e Overflow do Modal QR
 
 **Backend**
 - `backend/src/routes/instance.routes.ts`: Corrigido fluxo de geração de código de pareamento. Quando a instância já estava ativa em modo QR aguardando escaneamento, a chamada `requestPairingCode` não retornava código (a janela `auth_pairing_required` já havia passado). Agora a rota desconecta e reconecta a instância com `phoneNumber`, forçando o SDK a emitir `auth_pairing_required` novamente e gerar o código. Janela de polling ampliada de 10s para 12s.
-
-**Frontend**
-- `frontend/src/pages/instance/DashboardInstance/GoQrCodeModal.tsx`: Adicionado `max-h-[90vh] overflow-y-auto` ao `DialogContent` para prevenir overflow vertical em viewports menores. Seção "Como escanear" convertida para `<details>` colapsável reduzindo a altura padrão do modal.
 
 
 
