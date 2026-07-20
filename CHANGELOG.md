@@ -15,6 +15,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `backend/src/manager.ts`: Adicionado suporte a `phoneNumber` no método `connectClient` e escuta ao evento `auth_pairing_required` para requisitar o código de pareamento de 8 dígitos através do SDK.
 - `backend/src/routes/instance.routes.ts`: Rota de `/logout` atualizada para invocar `ZapoManager.logoutClient` a fim de garantir a limpeza dos campos de autenticação no banco e no Redis.
 - `backend/src/routes/instance.routes.ts`: Rota `GET /connect/:instanceName` estendida para suportar o parâmetro query `number` e retornar `{ pairingCode }`. Incluída lógica de espera de até 10 segundos para retorno do código.
+- `backend/src/routes/instance.routes.ts`: Retorna o número de telefone da instância (`number`) incondicionalmente no endpoint `/fetchInstances` (mesmo com a instância desconectada), extraído do `registeredPhone`, `ownerJid` ou dos dígitos do próprio nome da instância (como `DC-555596773757`), permitindo que a interface do frontend renderize o botão de "Conectar com código de pareamento" para instâncias mobile/desconectadas.
 
 ### Upgrade Zapo-JS para v1.6.0
 

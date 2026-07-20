@@ -366,7 +366,9 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
       }
 
       // Fallback dinâmico para preencher registeredPhone de instâncias antigas migradas
-      const fallbackNumber = inst.registeredPhone || (ownerJid ? ownerJid.split('@')[0].split(':')[0] : '');
+      const nameDigits = inst.instanceName.replace(/[^0-9]/g, '');
+      const namePhone = nameDigits.length >= 10 ? nameDigits : '';
+      const fallbackNumber = inst.registeredPhone || (ownerJid ? ownerJid.split('@')[0].split(':')[0] : '') || namePhone;
 
       return {
         id: inst.id,
@@ -383,7 +385,7 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         profileName: inst.profileName || inst.instanceName,
         profilePicUrl: inst.profilePicUrl || '',
         integration: 'WHATSAPP-BAILEYS',
-        number: isMockConnected ? fallbackNumber : '',
+        number: fallbackNumber,
         businessId: '',
         token: inst.apiKey,
         clientName: 'evolution',
