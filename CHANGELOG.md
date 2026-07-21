@@ -8,10 +8,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [1.6.8] — 2026-07-21
 
-### Fix: Race Condition no Fluxo de Pairing Code (auth_qr vs auth_pairing_required)
+### Fix: Bug Arquitetural no Fluxo de Pairing Code — connect route bloqueante
 
 **Backend**
-- `backend/src/manager.ts`: Removida a chamada `handlePairing()` dentro do handler `auth_qr` quando `phoneNumber` está presente. O evento `auth_qr` disparava **antes** de o socket WebSocket estar pronto para aceitar `requestPairingCode()`, causando falha silenciosa e retorno do QR code bruto (`{"code":"2@..."}`) em vez do código de 8 caracteres (`{"pairingCode":"ABCD-1234"}`). O handler correto `auth_pairing_required → handlePairing()` já existia e agora é o único ponto de chamada — conforme a documentação da zapo-js.
+- `backend/src/routes/instance.routes.ts`: Corrigido bug arquitetural crítico na rota `GET /connect/:instanceName`. A rota fazia `await ZapoManager.connectClient()` no fluxo de pairing code, mas `client.connect()` (zapo-js) **só resolve após autenticação completa** — ficando travado indefinidamente aguardando o usuário digitar o código. O polling de `pairingCode` nunca executava. Fix: disconnect + reconnect agora são fire-and-forget; a rota aguarda apenas o `activeData` aparecer no Map interno (registrado antes do `await client.connect()`), e depois faz polling de `pairingCode` com re-leitura do Map a cada iteração.
+- `backend/src/manager.ts`: Restaurada a chamada `handlePairing()` no handler `auth_qr`. Validado via fonte zapo-js (`WaPairingFlow.js:130` + `WaClientFactory.js:346`): `auth_pairing_required` dispara apenas em **refresh de código expirado**, não na primeira conexão — o `auth_qr` é o gatilho correto para chamar `requestPairingCode()`, pois indica que o socket WS completou o handshake Noise e está pronto.
+
+**Commits:** `5f31427`
 
 ## [1.6.7] — 2026-07-20
 

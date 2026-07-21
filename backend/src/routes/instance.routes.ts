@@ -195,31 +195,58 @@ router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, r
   try {
     const { instanceName } = req.params;
     const phoneNumber = req.query.number as string | undefined;
-    
+
     // Inicia a conexão se não estiver iniciada
     let active = ZapoManager.getActive(instanceName);
     if (!active) {
-      try {
-        active = await ZapoManager.connectClient(instanceName, phoneNumber);
-      } catch (err: any) {
-        console.warn(`[ZapoRouter] Falha ao iniciar cliente ${instanceName}:`, err.message);
-        return res.status(200).json({
-          code: '',
-          count: 0,
-          status: 'disconnected',
-          error: err.message
-        });
+      // Primeira conexão: fire-and-forget para não bloquear (client.connect() só
+      // resolve após autenticação completa, portanto não podemos await aqui).
+      ZapoManager.connectClient(instanceName, phoneNumber).catch((err: any) => {
+        console.warn(`[ZapoRouter] [Connect] Falha na inicialização de ${instanceName}:`, err.message);
+      });
+
+      // Aguarda até 5s para o activeData aparecer no Map (registrado logo no início
+      // de connectClient, antes do await client.connect()).
+      let waitMs = 0;
+      while (!ZapoManager.getActive(instanceName) && waitMs < 5000) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitMs += 100;
+      }
+      active = ZapoManager.getActive(instanceName);
+      if (!active) {
+        console.warn(`[ZapoRouter] [Connect] activeData não disponível após 5s para ${instanceName}`);
+        return res.status(200).json({ code: '', count: 0, status: 'disconnected' });
       }
     } else if (phoneNumber && !active.pairingCode) {
-      // Se a instância já estiver ativa em modo QR mas não tiver gerado o código de pareamento,
-      // desconecta e reconecta passando o phoneNumber para ativar o fluxo de pairing code corretamente
-      try {
-        console.log(`[ZapoRouter] Reiniciando instância ${instanceName} para gerar código de pareamento para o número ${phoneNumber}`);
-        await ZapoManager.disconnectClient(instanceName);
-        active = await ZapoManager.connectClient(instanceName, phoneNumber);
-      } catch (err: any) {
-        console.error(`[ZapoRouter] Erro ao reiniciar instância para pairing code:`, err.message);
-        return res.status(500).json({ error: err.message });
+      // A instância já está ativa (provavelmente em modo QR) mas sem pairing code.
+      // Precisa reiniciar para ativar o fluxo de pairing code.
+      // IMPORTANTE: connectClient() fica bloqueado até autenticação completa —
+      // por isso o reconnect é fire-and-forget aqui também.
+      console.log(`[ZapoRouter] [Connect] Reiniciando ${instanceName} para pairing code (número: ${phoneNumber})`);
+      ZapoManager.disconnectClient(instanceName)
+        .then(() => ZapoManager.connectClient(instanceName, phoneNumber))
+        .catch((err: any) => {
+          console.error(`[ZapoRouter] [Connect] Erro ao reiniciar para pairing code:`, err.message);
+        });
+
+      // Aguarda o activeData do reconnect aparecer no Map (deve ser quase imediato
+      // pois connectClient seta activeClients antes do await client.connect()).
+      let waitMs = 0;
+      while (ZapoManager.getActive(instanceName) !== undefined && waitMs < 3000) {
+        // Espera o disconnect limpar o entry antes de reaparecer
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitMs += 100;
+        if (!ZapoManager.getActive(instanceName)) break;
+      }
+      // Agora aguarda o novo activeData aparecer
+      waitMs = 0;
+      while (!ZapoManager.getActive(instanceName) && waitMs < 5000) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitMs += 100;
+      }
+      active = ZapoManager.getActive(instanceName);
+      if (!active) {
+        return res.status(200).json({ code: '', count: 0, status: 'disconnected' });
       }
     }
 
@@ -233,8 +260,13 @@ router.get('/connect/:instanceName', checkInstanceApiKey, async (req: Request, r
       while (!active.pairingCode && attempts < 60) {
         await new Promise(resolve => setTimeout(resolve, 200));
         attempts++;
+        // Re-lê o active do Map a cada iteração (pode ter sido substituído pelo reconnect)
+        active = ZapoManager.getActive(instanceName) ?? active;
       }
     }
+
+    // Re-lê o active final do Map (garante referência atualizada após possível reconnect)
+    active = ZapoManager.getActive(instanceName) ?? active;
 
     // Se tiver código de pareamento em cache, retorna ele
     if (active.pairingCode) {

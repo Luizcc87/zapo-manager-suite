@@ -777,11 +777,11 @@ export class ZapoManager {
 
     client.on('auth_qr', async ({ qr }) => {
       if (phoneNumber) {
-        // Modo pairing code: ignora o QR silenciosamente.
-        // O código será gerado via auth_pairing_required → handlePairing().
-        // Chamar requestPairingCode() aqui causava race condition pois o socket
-        // ainda não está no estado correto quando auth_qr dispara.
-        console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] auth_qr recebido em modo pairing code — ignorando QR, aguardando auth_pairing_required.`);
+        // Modo pairing code: intercepta o auth_qr e gera o pairing code em vez
+        // de repassar o QR para o frontend. O auth_qr dispara quando o socket WS
+        // está pronto para aceitar requestPairingCode().
+        console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] auth_qr disparado com phoneNumber presente — gerando pairing code em vez de QR.`);
+        await handlePairing();
         return;
       }
 
