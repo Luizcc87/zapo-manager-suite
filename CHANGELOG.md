@@ -4,7 +4,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
-## [Unreleased] — 2026-07-20
+## [Unreleased] — 2026-07-21
+
+## [1.6.8] — 2026-07-21
+
+### Fix: Race Condition no Fluxo de Pairing Code (auth_qr vs auth_pairing_required)
+
+**Backend**
+- `backend/src/manager.ts`: Removida a chamada `handlePairing()` dentro do handler `auth_qr` quando `phoneNumber` está presente. O evento `auth_qr` disparava **antes** de o socket WebSocket estar pronto para aceitar `requestPairingCode()`, causando falha silenciosa e retorno do QR code bruto (`{"code":"2@..."}`) em vez do código de 8 caracteres (`{"pairingCode":"ABCD-1234"}`). O handler correto `auth_pairing_required → handlePairing()` já existia e agora é o único ponto de chamada — conforme a documentação da zapo-js.
 
 ## [1.6.7] — 2026-07-20
 
