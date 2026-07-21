@@ -119,6 +119,21 @@ Ao realizar modificações no backend, siga estritamente estas diretrizes de tip
 *   **JID sem o '9' extra**: No Brasil, contas antigas utilizam o formato JID sem o dígito `9` (ex: `555599703107@s.whatsapp.net`). Se as mensagens de texto ou interativas retornarem sucesso mas não forem entregues, valide se o JID correto na rede do WhatsApp não omite o `9` extra de celular.
 *   **Cache de JID (`resolvedJidCache`)**: O helper `resolveJid` utiliza um cache em memória (`Map`) para evitar consultas repetidas à rede do WhatsApp. A primeira mensagem para um número inédito faz o lookup no WhatsApp e armazena o resultado; envios subsequentes lêem o JID resolvido instantaneamente do cache em `O(1)`.
 
+### 6. Fluxo de Pairing Code (Código de 8 Caracteres) — Invariantes Arquiteturais
+
+*   **`client.connect()` é bloqueante até autenticação completa.** Nunca faça `await ZapoManager.connectClient()` numa rota HTTP de pairing code — a promise só resolve após o usuário digitar o código no celular. Use fire-and-forget e aguarde apenas o `activeData` aparecer no `activeClients` Map (registrado *antes* do `await client.connect()` interno).
+*   **Evento correto para chamar `requestPairingCode()`:** o handler `auth_qr`. Ele dispara quando o handshake Noise do servidor conclui (`handlePairDevice` → `qrFlow.setRefs()`). O evento `auth_pairing_required` só dispara em **refresh de código expirado** (`WaPairingFlow.handleLinkCodeNotification` → `LINK_CODE_STAGE_REFRESH_CODE`), **não** na primeira conexão.
+*   **Mapeamento de eventos zapo-js** (fonte: `WaClientFactory.js:344-346` + `WaPairingFlow.js:130`):
+
+    | Evento | Quando dispara | Uso correto |
+    |---|---|---|
+    | `auth_qr` | Servidor enviou `pair-device` com refs | Chamar `requestPairingCode()` se phoneNumber presente; exibir QR caso contrário |
+    | `auth_pairing_code` | Servidor confirmou o código | Logging / telemetria |
+    | `auth_pairing_required` | Código expirou (refresh) | `handlePairing()` como fallback de renovação |
+    | `auth_paired` | Pareamento concluído | Persistir estado, fechar modal |
+
+*   **Polling na rota:** re-ler `ZapoManager.getActive(instanceName)` a cada iteração — o `active` pode ser substituído por um reconnect assíncrono durante o polling.
+
 ---
 
 ## 🧪 Testes Automatizados (Playwright)

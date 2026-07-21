@@ -1,6 +1,6 @@
 ---
 name: project-zapo-manager
-description: "Contexto do projeto zapo-manager — stack, arquitetura, estado atual (atualizado 2026-06-22)"
+description: "Contexto do projeto zapo-manager — stack, arquitetura, estado atual (atualizado 2026-07-21)"
 metadata: 
   node_type: memory
   type: project
@@ -22,7 +22,7 @@ Fork do Evolution Manager v2. Painel web para gerenciar instâncias WhatsApp via
 - **Mobile/Companion** (TCP nativo via zapo-js) — `mobileTransport=true`, `ownerJid` vazio → pareamento QR/código; `ownerJid` preenchido → reconecta TCP
 - **Primário** (SMS/OTP via Baileys) — `mobileTransport=true`, `registeredPhone` preenchido
 
-**Features implementadas (estado 2026-06-22):**
+**Features implementadas (estado 2026-07-21):**
 - Registro primário SMS/OTP (Fases 1–5 concluídas, ver `project_primary_registration.md`)
 - Proxy por instância (HTTP/HTTPS/SOCKS4/SOCKS5) com sticky session, status visual, substituição IP
 - Sincronização de perfil (foto + nome) automática e manual
@@ -31,6 +31,7 @@ Fork do Evolution Manager v2. Painel web para gerenciar instâncias WhatsApp via
 - Helper `resolveJid` com cache em memória para números BR com/sem dígito 9
 - Sistema de locks Redis para Docker Swarm (replicas: 1, stop-first)
 - QR code limit (QRCODE_LIMIT, padrão 5)
+- **Pairing Code (código de 8 chars) funcional (v1.6.8)** — fluxo: fire-and-forget `connectClient` na rota HTTP, polling de `activeData` no Map, `requestPairingCode()` chamado no `auth_qr` (gatilho correto — `auth_pairing_required` só dispara em refresh de código expirado)
 - Scalar API Reference em `/api-docs` + `openapi.yaml`
 - Suíte de testes Playwright (zapo.spec.ts, zapo-settings-webhook.spec.ts, zapo-primary-registration.spec.ts)
 - Sincronização completa de histórico (`requireFullSync` + `history_sync_chunk` listener)

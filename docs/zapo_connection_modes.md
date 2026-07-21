@@ -39,6 +39,7 @@ Este é o método mais comum utilizado pela maioria das APIs de WhatsApp (como B
 
 * **Como funciona:** O painel exibe um QR Code. Você abre o WhatsApp no seu celular físico, vai em *Aparelhos Conectados* e escaneia o código.
 * **O que acontece no seu celular:** Nada muda. O seu celular continua sendo o dono principal da conta. O Zapo roda como uma sessão secundária autorizada (vinculada).
+* **Alternativa — Código de Pareamento:** Em vez de escanear o QR, você pode digitar um **código de 8 caracteres** (`ABCD-1234`) diretamente no celular em *Aparelhos Conectados → Conectar com número de telefone*. No painel, informe o número no campo de telefone e clique em **Gerar Código** antes de escanear o QR. O código expira em ~60 segundos; se expirar, feche e reabra o modal para gerar um novo.
 
 ---
 
