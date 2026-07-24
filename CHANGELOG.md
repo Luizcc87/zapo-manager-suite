@@ -4,7 +4,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
-## [Unreleased] — 2026-07-21
+## [Unreleased] — 2026-07-24
+
+## [1.6.9] — 2026-07-24
+
+### Chore: Atualização de dependências upstream (zapo-js v1.6.1 e @zapo-js/store-redis v1.1.0)
+
+**Backend**
+- `backend/package.json`: Atualizado `zapo-js` para `1.6.1` e `@zapo-js/store-redis` para `1.1.0`.
+- Validadas correções de transporte e estabilidade de conexões no `WaClient`. Compilação estática de tipos OK.
 
 ## [1.6.8] — 2026-07-21
 
