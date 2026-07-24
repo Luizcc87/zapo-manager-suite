@@ -51,6 +51,24 @@ O WhatsApp pune conexões simultâneas de uma mesma sessão com banimento do nú
 
 ---
 
+## 🛡️ Arquitetura de Proxy & Segurança Anti-Vazamento (Strict Proxy Guard)
+
+Para garantir o anonimato e proteção de IP das instâncias, a aplicação aplica uma política de **zero-trust / leak-proof**:
+
+1. **Strict Proxy Enforcement (Proibição de Fallback):**
+   - Quando uma instância possui `proxyConfig.enabled === true`, o sistema **NUNCA** faz fallback para conexão direta com o IP nativo da VPS.
+   - Se o pré-teste de conectividade do proxy falhar (ex: `HTTP 407`, `HTTP 402`, timeout de rede ou host/porta ausentes), a conexão da instância é abortada imediatamente, o lock no Redis é liberado e uma exceção é lançada.
+
+2. **Compatibilidade de Autenticação com Provedores (Webshare / Backconnect):**
+   - **Usernames Dedicados / IPs Alocados:** Credenciais como `fpawtgcq-14` ou `fpawtgcq-9` representam proxies diretos com IP estático alocado. **Não** se deve injetar automaticamente o `instanceName` no campo `session` do proxy, pois a adulteração da string do usuário causa rejeição `HTTP 407 (Proxy Authentication Required)`.
+   - **Session IDs em Proxies Backbone:** Quando configurados explicitamente pelo usuário, os Session IDs para manter IPs fixos devem ser exclusivamente **numéricos** (ex: `1234`).
+   - **Rotação Natural:** Quando o campo `session` fica em branco no painel, o proxy funciona em modo nativo sem alterar a credencial enviada ao provedor.
+
+3. **Hot-Reload de Configuração:**
+   - Alterações salvas na UI (`POST /proxy/set/:instanceName`) testam a conectividade do proxy e, se a instância estiver rodando ativamente, forçam a desconexão e reconexão automática com a nova configuração.
+
+---
+
 ## 📦 Gestão de Versões do WhatsApp
 
 O sistema lida com **dois espaços de versão independentes**. Confundi-los causa falhas silenciosas difíceis de diagnosticar.
