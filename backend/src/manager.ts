@@ -663,6 +663,23 @@ export class ZapoManager {
 
     if (proxy) {
       console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Proxy ativo: ${proxyConfig.protocol}://${proxyConfig.host}:${proxyConfig.port}`);
+      
+      // Valida a integridade da conexão do proxy antes de estabelecer o cliente.
+      // Em conformidade com a política de segurança, NUNCA é feito fallback para a rede direta caso o proxy falhe.
+      const proxyTest = await testProxyConnectivity(proxyConfig);
+      this.proxyStatusCache.set(instanceName, {
+        connected: proxyTest.connected,
+        error: proxyTest.error,
+        details: proxyTest.details
+      });
+
+      if (!proxyTest.connected) {
+        console.error(`[ZapoManager] [Connect] ❌ [${instanceName}] BLOQUEIO DE CONEXÃO: O proxy configurado está inacessível ou falhou na autenticação/pagamento!`);
+        console.error(`[ZapoManager] [Connect] 🛑 [${instanceName}] Motivo: ${proxyTest.details || proxyTest.error}`);
+        console.error(`[ZapoManager] [Connect] 🔒 [${instanceName}] POLÍTICA DE SEGURANÇA: Para proteger a identidade e o IP da instância, O ZAPO-MANAGER NUNCA FAZ FALLBACK PARA A REDE DIRETA SEM PROXY.`);
+        await releaseLock(instanceName, CONTAINER_ID);
+        throw new Error(`Conexão cancelada. Falha no proxy: ${proxyTest.details || proxyTest.error}. O sistema não fará fallback sem proxy por razões de segurança.`);
+      }
     }
 
     const clientOptions: any = {

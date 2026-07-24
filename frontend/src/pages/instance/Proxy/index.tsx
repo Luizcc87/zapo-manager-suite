@@ -90,8 +90,16 @@ function ProxyStatusPanel({ instanceName }: { instanceName: string }) {
       <div className="space-y-2 text-sm">
         <StatusRow label={t("proxy.status.connection")}>
           {(status as ProxyStatusResponse).connected ? (
-            <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
+            <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 font-medium">
               {t("proxy.status.connected")}
+            </Badge>
+          ) : (status as ProxyStatusResponse).details?.includes("402") ? (
+            <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 font-semibold animate-pulse">
+              Pagamento Requerido (402)
+            </Badge>
+          ) : (status as ProxyStatusResponse).details?.includes("407") ? (
+            <Badge className="bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 font-semibold">
+              Autenticação Requerida (407)
             </Badge>
           ) : (
             <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
@@ -119,11 +127,22 @@ function ProxyStatusPanel({ instanceName }: { instanceName: string }) {
         )}
 
         {status.error && (
-          <div className="rounded-md bg-red-500/10 px-3 py-2 text-xs text-red-500 break-all space-y-1">
+          <div className="rounded-md bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400 break-all space-y-1">
             <div className="font-semibold">{status.error}</div>
-            {status.details && <div className="text-[10px] opacity-80">{status.details}</div>}
+            {status.details && <div className="text-xs font-mono text-red-300">{status.details}</div>}
           </div>
         )}
+
+        {/* Aviso de Segurança de Strict Proxy Enforcement (Sem Fallback) */}
+        <div className="mt-2 rounded-md bg-purple-950/40 border border-purple-800/40 p-2.5 text-xs text-purple-200/90 space-y-1">
+          <div className="flex items-center gap-1.5 font-semibold text-purple-300">
+            <Shield className="h-3.5 w-3.5 text-purple-400 flex-shrink-0" />
+            <span>Proteção Estrita de IP (Strict Proxy Mode)</span>
+          </div>
+          <p className="text-[11px] text-purple-300/80 leading-relaxed">
+            Com o proxy ativado, todo o tráfego da instância é canalizado obrigatoriamente através deste servidor. Em caso de falha ou expiração do proxy, a conexão é bloqueada e <strong>NUNCA faz fallback para o IP direto da VPS</strong> para garantir total privacidade e segurança.
+          </p>
+        </div>
       </div>
     </div>
   );

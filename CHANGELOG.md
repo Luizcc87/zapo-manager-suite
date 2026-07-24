@@ -6,6 +6,18 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-24
 
+## [1.6.10] — 2026-07-24
+
+### Feat: Validação Estrita de Proxy e Alertas de Falha de Pagamento/Autenticação
+
+**Backend**
+- `backend/src/manager.ts`: Adicionada verificação prévia obrigatoria da conectividade via proxy antes de iniciar o `WaClient.connect()`. Se o proxy retornar falha (ex: `402 Payment Required` ou `407 Auth`), a conexão é abortada com erro claro no console e o lock é liberado. **Garantia de segurança**: O Zapo-Manager NUNCA faz fallback para a rede direta sem proxy quando a configuração está ativada.
+
+**Frontend**
+- `frontend/src/pages/instance/Proxy/index.tsx`:
+  - Adicionados Badges animados com destaque visual para erros `Pagamento Requerido (402)` e `Autenticação Requerida (407)`.
+  - Inserido banner explicativo de *Proteção Estrita de IP (Strict Proxy Mode)* informando explicitamente que o sistema não faz fallback sem proxy para proteger a privacidade.
+
 ## [1.6.9] — 2026-07-24
 
 ### Chore: Atualização de dependências upstream (zapo-js v1.6.1 e @zapo-js/store-redis v1.1.0)
