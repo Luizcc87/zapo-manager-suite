@@ -390,8 +390,8 @@
       },
       "session": {
         "label": "Session fixe",
-        "description": "ID de session pour IP fixe. Vide = nom de l'instance",
-        "placeholder": "auto"
+        "description": "ID numérique de session pour IP fixe (ex : 1234). Vide = rotation d'IP",
+        "placeholder": "optionnel (ex : 1234)"
       }
     },
     "button": {

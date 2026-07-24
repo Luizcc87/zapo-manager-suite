@@ -433,8 +433,8 @@
       },
       "session": {
         "label": "Sticky session",
-        "description": "Session ID for fixed IP. Empty = instance name",
-        "placeholder": "auto"
+        "description": "Numeric session ID for sticky IP (e.g. 1234). Empty = IP rotation",
+        "placeholder": "optional (e.g. 1234)"
       }
     },
     "button": {

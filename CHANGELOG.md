@@ -6,6 +6,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-24
 
+## [1.6.16] — 2026-07-24
+
+### Frontend UI: Atualização da Legenda e Placeholder de Sessão Proxy (Webshare Docs)
+
+**Frontend**
+- `frontend/src/translate/languages/pt-BR.json`, `en-US.json`, `fr-FR.json`: Atualizada a legenda do campo "Sessão Fixa" de `"Vazio = nome da instância"` para `"ID numérico de sessão para IP fixo (ex: 1234). Vazio = rotação de IP"` e placeholder de `"auto"` para `"opcional (ex: 1234)"`, em total conformidade com a documentação oficial da Webshare.
+
 ## [1.6.15] — 2026-07-24
 
 ### Security: Validação Rígida Anti-Vazamento de IP (Strict Proxy Guard & Hot Reload)

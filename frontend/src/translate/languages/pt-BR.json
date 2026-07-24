@@ -391,8 +391,8 @@
       },
       "session": {
         "label": "Sessão fixa",
-        "description": "ID de sessão para IP fixo. Vazio = nome da instância",
-        "placeholder": "auto"
+        "description": "ID numérico de sessão para IP fixo (ex: 1234). Vazio = rotação de IP",
+        "placeholder": "opcional (ex: 1234)"
       }
     },
     "button": {
