@@ -6,6 +6,16 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-24
 
+## [1.6.15] — 2026-07-24
+
+### Security: Validação Rígida Anti-Vazamento de IP (Strict Proxy Guard & Hot Reload)
+
+**Backend**
+- `backend/src/manager.ts`: Adicionada trava de segurança estrita (*Strict Proxy Guard*). Se o proxy estiver habilitado (`enabled: true`) na instância:
+  1. O sistema verifica se Host e Porta estão presentes; se não estiverem, aborta a inicialização com erro explícito de segurança em vez de tentar conexão sem proxy.
+  2. Executa pré-teste de conectividade via proxy; se falhar por qualquer motivo (407, 402, timeout, etc.), a conexão da instância é cancelada sumariamente e o lock é liberado, impedindo vazamento de IP nativo da VPS.
+- `backend/src/routes/config.routes.ts`: Adicionado *Hot Reload* no `POST /proxy/set/:instanceName`. Se a configuração de proxy for alterada/salva enquanto a instância estiver em execução, o cliente ativo é automaticamente desconectado e reiniciado usando o novo proxy.
+
 ## [1.6.14] — 2026-07-24
 
 ### Fix: Causa Raiz Real do HTTP 407 — Auto-Injeção do instanceName como Session

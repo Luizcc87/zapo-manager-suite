@@ -123,6 +123,17 @@ router.post('/proxy/set/:instanceName', checkInstanceApiKey, async (req: Request
       where: { instanceName: req.params.instanceName },
       data: { proxyConfig: data },
     });
+
+    // Se a instância estiver rodando ativamente, desconecta para aplicar o novo proxy imediatamente
+    const active = ZapoManager.getActive(req.params.instanceName);
+    if (active) {
+      console.log(`[ZapoRouter] Configurações de proxy alteradas para ${req.params.instanceName}. Reiniciando conexão para aplicar novo proxy...`);
+      ZapoManager.deleteClient(req.params.instanceName).catch(() => {});
+      ZapoManager.connectClient(req.params.instanceName).catch(err => {
+        console.error(`[ZapoRouter] Erro ao reconectar ${req.params.instanceName} pós alteração de proxy:`, err.message);
+      });
+    }
+
     return res.json(data);
   } catch (err: any) {
     return res.status(500).json({

@@ -667,9 +667,16 @@ export class ZapoManager {
 
     const settings = (instance.settingsConfig as any) ?? {};
     const rawProxy = (instance.proxyConfig as any) ?? {};
-    // Do NOT auto-inject instanceName as session: Webshare session IDs must be
-    // numeric and user-configured. Using instanceName (e.g. "DC-555596773757")
-    // as session causes HTTP 407 regardless of valid credentials.
+    // Strict Proxy Guard: se proxy está marcado como habilitado, validação rigorosa pré-conexão.
+    const isProxyEnabled = Boolean(rawProxy?.enabled);
+    if (isProxyEnabled) {
+      if (!rawProxy.host || !rawProxy.port) {
+        console.error(`[ZapoManager] [Connect] ❌ [${instanceName}] BLOQUEIO DE SEGURANÇA: Proxy está ATIVADO, mas host/porta estão incompletos.`);
+        await releaseLock(instanceName, CONTAINER_ID);
+        throw new Error(`Conexão bloqueada por segurança. Proxy está ativado nas configurações da instância ${instanceName}, porém Host/Porta não foram definidos.`);
+      }
+    }
+
     const proxyConfig = rawProxy;
     const logger = new ConsoleLogger('info');
     const { store, pgStore, redisClient, poller } = await buildStore(instanceName, { syncFullHistory: settings.syncFullHistory ?? false });
@@ -681,7 +688,13 @@ export class ZapoManager {
       delete proxy.ws;
     }
 
-    if (proxy) {
+    if (isProxyEnabled) {
+      if (!proxy) {
+        console.error(`[ZapoManager] [Connect] ❌ [${instanceName}] BLOQUEIO DE SEGURANÇA: Falha ao construir o agente do proxy.`);
+        await releaseLock(instanceName, CONTAINER_ID);
+        throw new Error(`Conexão bloqueada por segurança. Não foi possível construir a configuração do proxy para a instância ${instanceName}.`);
+      }
+
       console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Proxy ativo: ${proxyConfig.protocol}://${proxyConfig.host}:${proxyConfig.port}`);
       
       // Valida a integridade da conexão do proxy antes de estabelecer o cliente.
