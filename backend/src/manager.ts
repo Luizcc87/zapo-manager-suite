@@ -174,7 +174,9 @@ export async function testProxyConnectivity(cfg: any): Promise<{
   if (effectiveUser) {
     if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase().replace(/[^a-z]/g, '')}`;
     if (cfg.session && cfg.session !== 'none' && cfg.session !== 'disabled') {
-      const cleanSession = (cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '');
+      // Webshare (and most backconnect providers) limit the session suffix to 8 chars.
+      // Longer suffixes cause HTTP 407 even with valid credentials.
+      const cleanSession = (cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
       if (cleanSession && !effectiveUser.endsWith(`-${cleanSession}`)) {
         effectiveUser += `-${cleanSession}`;
       }
@@ -264,7 +266,10 @@ function buildProxy(cfg: any): Record<string, any> | undefined {
   if (effectiveUser) {
     if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase().replace(/[^a-z]/g, '')}`;
     if (cfg.session && cfg.session !== 'none' && cfg.session !== 'disabled') {
-      effectiveUser += `-${(cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+      // Webshare (and most backconnect providers) limit the session suffix to 8 chars.
+      // Longer suffixes cause HTTP 407 even with valid credentials.
+      const cleanSession = (cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
+      if (cleanSession) effectiveUser += `-${cleanSession}`;
     }
   }
 

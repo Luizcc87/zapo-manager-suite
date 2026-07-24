@@ -6,6 +6,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-24
 
+## [1.6.12] — 2026-07-24
+
+### Fix: Truncagem do Sufixo de Sessão do Proxy para 8 Chars (Webshare HTTP 407)
+
+**Backend**
+- `backend/src/manager.ts`: Descoberto que o Webshare (e a maioria dos provedores backconnect) rejeita sufixos de sessão com mais de 8 caracteres com HTTP 407 — independente das credenciais estarem corretas. Sufixos gerados a partir de nomes como `DC-555596773757` produziam `dc555596773757` (14 chars) ou `lccmobile` (9 chars). Agora o sufixo é truncado para `.slice(0, 8)` garantindo que nunca exceda o limite. Correção aplicada em `testProxyConnectivity` e `buildProxy`.
+
+**Resultado esperado**: Sessões agora geram sufixos como `fpawtgcq-14-dc555596` e `fpawtgcq-9-lccmobil` (≤8 chars) que o Webshare aceita.
+
 ## [1.6.11] — 2026-07-24
 
 ### Fix: Sanitização do Sufixo de Sessão do Proxy (Evita HTTP 407 no Webshare)
