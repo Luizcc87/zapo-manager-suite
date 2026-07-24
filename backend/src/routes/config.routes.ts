@@ -146,9 +146,9 @@ router.get('/proxy/status/:instanceName', checkInstanceApiKey, async (req: Reque
 
     const protocol = cfg.protocol || 'http';
     const proxyUrl = `${protocol}://${cfg.host}:${cfg.port}`;
-    const proxyConfig = cfg.enabled && cfg.username && !cfg.session
-      ? { ...cfg, session: req.params.instanceName }
-      : cfg;
+    // Do NOT auto-inject instanceName as session: Webshare session IDs must be
+    // numeric and user-configured. Using instanceName causes HTTP 407.
+    const proxyConfig = cfg;
 
     const result = await testProxyConnectivity(proxyConfig);
     ZapoManager.proxyStatusCache.set(req.params.instanceName, {

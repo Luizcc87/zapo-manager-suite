@@ -667,12 +667,10 @@ export class ZapoManager {
 
     const settings = (instance.settingsConfig as any) ?? {};
     const rawProxy = (instance.proxyConfig as any) ?? {};
-    // Auto-inject sticky session per instance when not explicitly set.
-    // Prevents IP rotation between reconnections — WhatsApp treats mid-session
-    // IP changes as suspicious and may trigger security challenges.
-    const proxyConfig = rawProxy.enabled && rawProxy.username && !rawProxy.session
-      ? { ...rawProxy, session: instanceName }
-      : rawProxy;
+    // Do NOT auto-inject instanceName as session: Webshare session IDs must be
+    // numeric and user-configured. Using instanceName (e.g. "DC-555596773757")
+    // as session causes HTTP 407 regardless of valid credentials.
+    const proxyConfig = rawProxy;
     const logger = new ConsoleLogger('info');
     const { store, pgStore, redisClient, poller } = await buildStore(instanceName, { syncFullHistory: settings.syncFullHistory ?? false });
     const proxy = buildProxy(proxyConfig);

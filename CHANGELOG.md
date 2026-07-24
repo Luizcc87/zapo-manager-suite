@@ -6,6 +6,21 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-24
 
+## [1.6.14] — 2026-07-24
+
+### Fix: Causa Raiz Real do HTTP 407 — Auto-Injeção do instanceName como Session
+
+**Backend**
+- `backend/src/manager.ts` e `backend/src/routes/config.routes.ts`: Identificada a causa raiz definitiva do erro HTTP 407. Havia uma lógica de "auto-inject sticky session" que, quando o campo `session` não era configurado pelo usuário, injetava automaticamente o `instanceName` (ex: `DC-555596773757`) como valor de session. Isso gerava `effectiveUser=fpawtgcq-14-555596773757` — um sufixo não-numérico que o Webshare rejeita com 407.
+
+**Prova do log:**
+```
+POST /proxy/set → session=none → effectiveUser=fpawtgcq-14 → ✅ 200 OK
+GET /proxy/status → session=DC-555596773757 → effectiveUser=fpawtgcq-14-555596773757 → ❌ 407
+```
+
+**Correção:** Removida a injeção automática do `instanceName` em ambos os arquivos. Conforme a doc do Webshare, session ID deve ser numérico e configurado explicitamente pelo usuário. Sem session configurada, o proxy funciona com rotação natural (comportamento correto).
+
 ## [1.6.13] — 2026-07-24
 
 ### Fix: Session ID Numérico para Proxy Webshare (Root Cause Definitivo do HTTP 407)
