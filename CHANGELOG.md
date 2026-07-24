@@ -6,6 +6,22 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-24
 
+## [1.6.13] — 2026-07-24
+
+### Fix: Session ID Numérico para Proxy Webshare (Root Cause Definitivo do HTTP 407)
+
+**Backend**
+- `backend/src/manager.ts`: A doc oficial do Webshare (`apidocs.webshare.io/proxy-connection`) especifica explicitamente que o Session ID **deve ser numérico** — formato `{username}-{country}-1234`. Qualquer string alfanumérica como `dc555596` ou `lccmobile` é rejeitada com HTTP 407, mesmo com credenciais válidas. As versões anteriores (v1.6.11 e v1.6.12) estavam sanitizando/truncando strings alfanuméricas incorretamente.
+
+**Estratégia correta implementada:**
+- Se o valor de session contém dígitos → usa apenas os dígitos (`DC-555596773757` → `555596773757`)
+- Se não contém dígitos (`LCC-Mobile`) → gera hash numérico deterministico via soma de char codes (`lccmobile` → `795`)
+- Aplicado em `testProxyConnectivity` e `buildProxy`
+
+**Resultado por instância:**
+- `DC-555596773757` → `fpawtgcq-14-555596773757` ✅
+- `LCC-Mobile` → `fpawtgcq-9-795` ✅
+
 ## [1.6.12] — 2026-07-24
 
 ### Fix: Truncagem do Sufixo de Sessão do Proxy para 8 Chars (Webshare HTTP 407)

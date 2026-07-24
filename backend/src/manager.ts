@@ -174,11 +174,18 @@ export async function testProxyConnectivity(cfg: any): Promise<{
   if (effectiveUser) {
     if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase().replace(/[^a-z]/g, '')}`;
     if (cfg.session && cfg.session !== 'none' && cfg.session !== 'disabled') {
-      // Webshare (and most backconnect providers) limit the session suffix to 8 chars.
-      // Longer suffixes cause HTTP 407 even with valid credentials.
-      const cleanSession = (cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
-      if (cleanSession && !effectiveUser.endsWith(`-${cleanSession}`)) {
-        effectiveUser += `-${cleanSession}`;
+      // Webshare session IDs MUST be numeric (e.g. 1234).
+      // Per docs: {username}-{country}-{session_id} where session_id is a number.
+      // Alphanumeric strings cause HTTP 407 regardless of credential validity.
+      // Strategy: extract digits from the session string; if none exist, derive a
+      // deterministic numeric hash (sum of char codes) from the sanitized name.
+      const raw = (cfg.session as string).replace(/[^a-z0-9]/gi, '');
+      const digitsOnly = raw.replace(/[^0-9]/g, '');
+      const numericSession = digitsOnly.length > 0
+        ? digitsOnly
+        : String(Array.from(raw.toLowerCase()).reduce((acc, c) => acc + c.charCodeAt(0), 0));
+      if (numericSession && !effectiveUser.endsWith(`-${numericSession}`)) {
+        effectiveUser += `-${numericSession}`;
       }
     }
   }
@@ -266,10 +273,17 @@ function buildProxy(cfg: any): Record<string, any> | undefined {
   if (effectiveUser) {
     if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase().replace(/[^a-z]/g, '')}`;
     if (cfg.session && cfg.session !== 'none' && cfg.session !== 'disabled') {
-      // Webshare (and most backconnect providers) limit the session suffix to 8 chars.
-      // Longer suffixes cause HTTP 407 even with valid credentials.
-      const cleanSession = (cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
-      if (cleanSession) effectiveUser += `-${cleanSession}`;
+      // Webshare session IDs MUST be numeric (e.g. 1234).
+      // Per docs: {username}-{country}-{session_id} where session_id is a number.
+      // Alphanumeric strings cause HTTP 407 regardless of credential validity.
+      // Strategy: extract digits from the session string; if none exist, derive a
+      // deterministic numeric hash (sum of char codes) from the sanitized name.
+      const raw = (cfg.session as string).replace(/[^a-z0-9]/gi, '');
+      const digitsOnly = raw.replace(/[^0-9]/g, '');
+      const numericSession = digitsOnly.length > 0
+        ? digitsOnly
+        : String(Array.from(raw.toLowerCase()).reduce((acc, c) => acc + c.charCodeAt(0), 0));
+      if (numericSession) effectiveUser += `-${numericSession}`;
     }
   }
 
