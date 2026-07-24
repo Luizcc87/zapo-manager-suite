@@ -145,9 +145,12 @@ router.get('/proxy/status/:instanceName', checkInstanceApiKey, async (req: Reque
     }
 
     const protocol = cfg.protocol || 'http';
-    const proxyUrl = `${protocol}://${cfg.host}:${cfg.port}`; // no credentials
+    const proxyUrl = `${protocol}://${cfg.host}:${cfg.port}`;
+    const proxyConfig = cfg.enabled && cfg.username && !cfg.session
+      ? { ...cfg, session: req.params.instanceName }
+      : cfg;
 
-    const result = await testProxyConnectivity(cfg);
+    const result = await testProxyConnectivity(proxyConfig);
     ZapoManager.proxyStatusCache.set(req.params.instanceName, {
       connected: result.connected,
       error: result.error,

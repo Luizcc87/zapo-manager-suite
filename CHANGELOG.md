@@ -6,6 +6,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-24
 
+## [1.6.11] — 2026-07-24
+
+### Fix: Sanitização do Sufixo de Sessão do Proxy (Evita HTTP 407 no Webshare)
+
+**Backend**
+- `backend/src/manager.ts`: Corrigida a formatação do sufixo de `session` no username do proxy. Nomes de instâncias com hífen ou caracteres não-alfanuméricos (ex: `LCC-Mobile` ou `DC-555596773757`) estavam gerando sufixos como `fpawtgcq-9-lccmobile` ou `fpawtgcq-14-dc555596773757` que eram rejeitados com HTTP 407 pelos servidores de autenticação do Webshare.
+- `backend/src/routes/config.routes.ts`: Alinhada a rota `/proxy/status` para injetar e testar a mesma sessão sanitizada em conformidade com o `connectClient`.
+
 ## [1.6.10] — 2026-07-24
 
 ### Feat: Validação Estrita de Proxy e Alertas de Falha de Pagamento/Autenticação

@@ -174,7 +174,10 @@ export async function testProxyConnectivity(cfg: any): Promise<{
   if (effectiveUser) {
     if (cfg.country) effectiveUser += `-${(cfg.country as string).toLowerCase().replace(/[^a-z]/g, '')}`;
     if (cfg.session && cfg.session !== 'none' && cfg.session !== 'disabled') {
-      effectiveUser += `-${(cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+      const cleanSession = (cfg.session as string).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cleanSession && !effectiveUser.endsWith(`-${cleanSession}`)) {
+        effectiveUser += `-${cleanSession}`;
+      }
     }
   }
   const auth = effectiveUser && cfg.password
