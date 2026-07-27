@@ -246,23 +246,32 @@ Leitura prática para o projeto local:
 ### Backend (npm)
 
 | Ação | Comando |
-
-## Resumo dos comandos do dia a dia
-
-### Frontend (subtree)
-
-| Ação | Comando |
-|---|---|
-| Configurar remote oficial (se necessário) | `git remote add upstream-frontend https://github.com/evolution-foundation/evolution-manager-v2.git` |
-| Buscar atualizações upstream | `git fetch upstream-frontend` |
-| Mesclar atualizações com squash | `git subtree pull --prefix=frontend upstream-frontend main --squash` |
-| Ver o que mudou no upstream | `git log master..upstream-frontend/main --oneline` |
-
-### Backend (npm)
-
-| Ação | Comando |
 |---|---|
 | Ver o que está desatualizado | `cd backend && npm outdated` |
 | Atualizar pacotes zapo | `npm update zapo-js @zapo-js/*` |
 | Usar commit específico do GitHub | `npm install github:vinikjkkj/zapo#<ref>` |
-| Comparar release tag com o estado local | `git log --oneline --decorate v1.2.0..v1.2.1` |
+| Comparar release tag com o estado local | `git log --oneline --decorate v1.6.16..v1.6.17` |
+
+---
+
+## 3. Publicação de Release no Monorepo (GitHub & Docker Hub)
+
+Após concluir a triagem, atualização de código, `CHANGELOG.md` e testes, execute a publicação da nova release:
+
+### 1. Criar Tag e Push no Git
+```bash
+git tag v1.6.17
+git push origin master v1.6.17
+```
+
+### 2. Publicar Imagem Multi-arch no Docker Hub
+```bash
+bash scripts/build-push.sh v1.6.17
+```
+
+### 3. Criar Release no GitHub
+Via GitHub CLI:
+```bash
+gh release create v1.6.17 --title "v1.6.17 — Upgrade Zapo-JS v1.6.2 & Sidebar Version Fix" --notes-file tmp/release-v1.6.17-notes.md
+```
+Ou manualmente no navegador: `https://github.com/Luizcc87/zapo-manager-suite/releases/new?tag=v1.6.17`
