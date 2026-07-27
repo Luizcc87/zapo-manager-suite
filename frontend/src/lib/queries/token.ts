@@ -15,6 +15,7 @@ export enum TOKEN_ID {
   FACEBOOK_USER_TOKEN = "facebookUserToken",
   CLIENT_NAME = "clientName",
   PROVIDER = "provider",
+  ZAPO_VERSION = "zapoVersion",
 }
 
 interface SaveCredentialsParams {
@@ -26,6 +27,7 @@ interface SaveCredentialsParams {
   facebookUserToken?: string;
   clientName?: string;
   provider?: Provider;
+  zapoVersion?: string;
 }
 
 export const saveToken = async (params: SaveCredentialsParams) => {
@@ -41,6 +43,7 @@ export const saveToken = async (params: SaveCredentialsParams) => {
   if (params.facebookUserToken) localStorage.setItem(TOKEN_ID.FACEBOOK_USER_TOKEN, params.facebookUserToken);
   if (params.clientName) localStorage.setItem(TOKEN_ID.CLIENT_NAME, params.clientName);
   if (params.provider) localStorage.setItem(TOKEN_ID.PROVIDER, params.provider);
+  if (params.zapoVersion) localStorage.setItem(TOKEN_ID.ZAPO_VERSION, params.zapoVersion);
 };
 
 export const logout = () => {
@@ -52,6 +55,7 @@ export const logout = () => {
   localStorage.removeItem(TOKEN_ID.FACEBOOK_USER_TOKEN);
   localStorage.removeItem(TOKEN_ID.CLIENT_NAME);
   localStorage.removeItem(TOKEN_ID.PROVIDER);
+  localStorage.removeItem(TOKEN_ID.ZAPO_VERSION);
 };
 
 export const getToken = (token: TOKEN_ID) => {

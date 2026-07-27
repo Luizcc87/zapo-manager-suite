@@ -51,7 +51,7 @@ function SidebarShell({ children, footer }: { children: React.ReactNode; footer?
   const url = getToken(TOKEN_ID.API_URL);
   const provider = getProvider();
   const { data: serverInfo } = useVerifyServer({ url, enabled: provider !== "go" });
-  const zapoVersion = serverInfo?.zapoVersion;
+  const zapoVersion = serverInfo?.zapoVersion || getToken(TOKEN_ID.ZAPO_VERSION);
 
   return (
     <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-56 border-r border-sidebar-border">

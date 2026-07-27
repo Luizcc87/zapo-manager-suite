@@ -95,6 +95,7 @@ function Login() {
         url: data.serverUrl,
         token: data.apiKey,
         provider: detectedProvider,
+        zapoVersion: server.zapoVersion,
       });
       navigate("/manager/");
     } finally {
