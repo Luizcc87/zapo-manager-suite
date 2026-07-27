@@ -6,6 +6,22 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-27
 
+### UI: indicador de runtime do backend e fake-server
+
+**Backend / Frontend**
+- `backend/src/main.ts`: Adicionada rota pública `GET /runtime/status` com estado do backend e modo fake-server (`chatSocketUrls`, `tcpUrl`, fonte env/runtime file).
+- `frontend/src/components/backend-runtime-status.tsx`: Novo badge no header autenticado indicando `Producao`, `Fake server` ou `Offline`.
+- `frontend/src/lib/queries/runtime/fetchRuntimeStatus.ts`: Consulta com polling leve para manter o indicador atualizado.
+
+### Testes: camada smoke fake offline com FakeWaServer
+
+**Backend / Testes**
+- `backend/package.json`: Adicionado `@zapo-js/fake-server` como devDependency compatível com `zapo-js@1.6.2`.
+- `backend/src/manager.ts`: Adicionado suporte de teste para `chatSocketUrls`, `testHooks.noiseRootCa` e `mobileTransport.tcpUrl` via env vars ou `.tmp/zapo-fake-server.json`, preservando endpoints de produção por padrão.
+- `tests/helpers/fake-server-setup.ts` e `tests/zapo-smoke-fake.spec.ts`: Nova suite Playwright offline para validar pairing, envio/recebimento de mensagens, logout/reconnect e companion hosting contra `FakeWaServer`.
+- `package.json` e `.agents/skills/zapo-manager-test-runner`: Novo comando `test:manager:smoke:fake` e modo `-Mode fake`.
+- `docs/TESTING.md` e `docs/zapo/manager-local-tests.md`: Documentada a camada `smoke-fake` e as variáveis/runtime file de injeção fake.
+
 ## [1.6.17] — 2026-07-27
 
 ### Chore: Upgrade Zapo-JS para v1.6.2 (Fix no Store & Lifecycle)

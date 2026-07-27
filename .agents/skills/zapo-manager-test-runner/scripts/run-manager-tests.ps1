@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('api', 'ui', 'ui-real', 'all', 'real')]
+  [ValidateSet('api', 'ui', 'ui-real', 'all', 'fake', 'real')]
   [string]$Mode = 'all',
 
   [string]$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
@@ -16,6 +16,7 @@ $commands = switch ($Mode) {
   'ui'   { @('test:manager:ui') }
   'ui-real' { @('test:manager:ui:real') }
   'all'  { @('test:manager') }
+  'fake' { @('test:manager:smoke:fake') }
   'real' { @('test:smoke:real') }
 }
 

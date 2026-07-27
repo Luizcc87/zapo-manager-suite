@@ -38,6 +38,9 @@ Os testes utilizam variáveis de ambiente para customizar os comportamentos ou p
 |---|---|---|---|
 | `GLOBAL_API_KEY` | `global_key` | Chave de API Global para autenticar no backend. | Sempre (padrão assumido se ausente) |
 | `PLAYWRIGHT_BASE_URL` | `http://127.0.0.1:8080` | URL do servidor backend para as chamadas de teste. | Sempre (padrão assumido se ausente) |
+| `ZAPO_TEST_SOCKET_URLS` | — | Sobrescreve os WebSockets do `WaClient`; a suite `smoke-fake` usa `.tmp/zapo-fake-server.json` automaticamente. | Smoke fake |
+| `ZAPO_TEST_NOISE_ROOT_CA_PUBLIC_KEY_HEX` / `ZAPO_TEST_NOISE_ROOT_CA_SERIAL` | — | CA raiz fake para validar certificados Noise autoassinados do `FakeWaServer`. | Smoke fake |
+| `ZAPO_TEST_TCP_URL` | — | URL TCP fake para transporte mobile/primary em testes offline. | Smoke fake |
 | `TEST_CONNECTED_INSTANCE` | — | Nome de uma instância que já esteja conectada para testes de envio de mensagens reais. | Testes de fumaça reais (`zapo-smoke-real.spec.ts`) |
 | `TEST_PRIMARY_PHONE` | — | Número do WhatsApp em formato completo (DDI + DDD + número) a ser registrado via OTP. | Suite B de Registro Primário |
 | `TEST_OTP_CODE` | — | Código OTP de 6 dígitos recebido por SMS/Voz para o número de teste. | Teste de Happy Path da Suite B do Registro Primário |
@@ -52,6 +55,7 @@ Os testes utilizam variáveis de ambiente para customizar os comportamentos ou p
 | [zapo-mobile.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo-mobile.spec.ts) | Criação de instâncias com transporte móvel. | Nenhum (CI-Safe) |
 | [zapo-settings-webhook.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo-settings-webhook.spec.ts) | Persistência e busca de configurações de comportamento e webhooks. | Nenhum (CI-Safe) |
 | [zapo-primary-registration.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo-primary-registration.spec.ts) | Validações e fluxo de Registro Primário via SMS OTP. | **Suite A:** Nenhuma.<br>**Suite B:** `TEST_PRIMARY_PHONE` e `TEST_OTP_CODE`. |
+| [zapo-smoke-fake.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo-smoke-fake.spec.ts) | Smoke offline com `@zapo-js/fake-server`: pairing, mensagens, logout/reconnect e companion hosting. | Nenhum servidor WhatsApp real; Postgres/Redis locais. |
 | [zapo-smoke-real.spec.ts](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/tests/zapo-smoke-real.spec.ts) | Teste de fumaça real de envio de mensagens em lote. | Requer `TEST_CONNECTED_INSTANCE`. |
 
 ---

@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useFetchInstance } from "@/lib/queries/instance/fetchInstance";
 import { logout } from "@/lib/queries/token";
 
+import { BackendRuntimeStatus } from "./backend-runtime-status";
 import { LanguageToggle } from "./language-toggle";
 import { ModeToggle } from "./mode-toggle";
 
@@ -35,6 +36,7 @@ function Header({ instanceId }: { instanceId?: string }) {
             <span className="text-sm font-medium text-sidebar-foreground">{instance.profileName || instance.name}</span>
           </div>
         )}
+        <BackendRuntimeStatus />
         <LanguageToggle />
         <ModeToggle />
         <Button

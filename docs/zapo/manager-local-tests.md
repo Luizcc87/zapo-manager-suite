@@ -9,6 +9,7 @@ Esta estrutura separa tres camadas para validar o Manager sem misturar testes se
 | API offline | `npm run test:manager:api` | Endpoints Express, auth, configuracoes, webhook, proxy, chat, contato, companions/e-mail e payloads interativos ate o estado desconectado |
 | UI mockada | `npm run test:manager:ui` | Botoes e funcoes visiveis do frontend com API mockada no Playwright |
 | UI real, backend real | `npm run test:manager:ui:real` | Navegacao real do frontend contra Express/Prisma/Postgres/Redis sem mock de rede, sem dependere de WhatsApp conectado |
+| Smoke fake offline | `npm run test:manager:smoke:fake` | Fluxos ponta-a-ponta com `WaClient` real contra `@zapo-js/fake-server`, sem servidores do WhatsApp e sem numeros reais |
 | Smoke real opt-in | `npm run test:smoke:real` | Fluxos reais ja existentes, usando uma instancia conectada quando configurada |
 
 ## Skill BMAD local
@@ -19,7 +20,7 @@ A skill local `.agents/skills/zapo-manager-test-runner` encapsula este gate para
 powershell -ExecutionPolicy Bypass -File .agents/skills/zapo-manager-test-runner/scripts/run-manager-tests.ps1 -Mode all
 ```
 
-Modos aceitos: `api`, `ui`, `ui-real`, `all` e `real`. O modo `ui-real` usa backend real visivel em terminal proprio; o modo `real` continua opt-in e deve ser usado apenas com uma instancia de teste conectada.
+Modos aceitos: `api`, `ui`, `ui-real`, `all`, `fake` e `real`. O modo `fake` inicia o `FakeWaServer` localmente e injeta as URLs/CA via `.tmp/zapo-fake-server.json`. O modo `ui-real` usa backend real visivel em terminal proprio; o modo `real` continua opt-in e deve ser usado apenas com uma instancia de teste conectada.
 
 ## Arquivos
 
@@ -33,6 +34,7 @@ Modos aceitos: `api`, `ui`, `ui-real`, `all` e `real`. O modo `ui-real` usa back
 ```powershell
 npm run test:manager:api
 npm run test:manager:ui
+npm run test:manager:smoke:fake
 npm run test:manager
 ```
 
@@ -55,6 +57,18 @@ npm run test:manager:ui:real
 
 O backend deve ser iniciado em janela propria quando possivel, para manter logs visiveis ao desenvolvedor. A suite nao faz envio real nem depende de instancia WhatsApp conectada; se uma tela exigir conexao aberta, o teste deve pular esse ramo explicitamente.
 
+### UI manual contra FakeWaServer
+
+Para testar a UI do Manager sem servidores reais do WhatsApp, abra tres terminais:
+
+```powershell
+npm run fake:server
+npm run dev:backend
+npm run dev:frontend
+```
+
+O comando `fake:server` grava `.tmp/zapo-fake-server.json` com `chatSocketUrls`, `tcpUrl` e `noiseRootCa`. O backend le esse arquivo durante `connectClient`, entao instancias criadas/conectadas pela UI apontam para o `FakeWaServer`. Pare o fake server com `Ctrl+C` para remover o arquivo runtime.
+
 Os configs Playwright de suporte agora ficam em `tests/playwright/`:
 
 - `tests/playwright/manager-ui.config.ts`
@@ -67,4 +81,4 @@ Os docs `docs/zapo/use-with-ai.md` e `docs/zapo/dev-tools.md` descrevem dois rec
 - Docs MCP (`https://zapo.to/mcp`) para agentes consultarem a documentacao atual.
 - `@zapo-js/fake-server` para testes de protocolo WhatsApp offline com `WaClient` real.
 
-A estrutura acima cobre o Manager local. Quando precisarmos validar handshake, pairing, Signal, media upload/download ou eventos reais do `WaClient` sem WhatsApp externo, a proxima camada deve ser uma suite dedicada com `@zapo-js/fake-server` no backend, separada dos testes de contrato HTTP/UI.
+A camada `smoke-fake` cobre handshake, pairing, Signal e eventos reais do `WaClient` sem WhatsApp externo. O backend le o arquivo `.tmp/zapo-fake-server.json` no momento de `connectClient` para aplicar `chatSocketUrls`, `testHooks.noiseRootCa` e `mobileTransport.tcpUrl` quando a suite fake esta ativa.

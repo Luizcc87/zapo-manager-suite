@@ -44,6 +44,38 @@ function getZapoLibVersion(): string {
   }
 }
 
+function getFakeServerRuntimeStatus() {
+  const envUrls = process.env.ZAPO_TEST_SOCKET_URLS
+    ?.split(',')
+    .map((url) => url.trim())
+    .filter(Boolean) ?? [];
+  const runtimeFile = process.env.ZAPO_TEST_FAKE_SERVER_INFO_FILE || path.resolve(process.cwd(), '..', '.tmp', 'zapo-fake-server.json');
+  let fileConfig: any = null;
+
+  if (existsSync(runtimeFile)) {
+    try {
+      fileConfig = JSON.parse(readFileSync(runtimeFile, 'utf8'));
+    } catch {
+      fileConfig = null;
+    }
+  }
+
+  const chatSocketUrls = envUrls.length ? envUrls : fileConfig?.chatSocketUrls ?? [];
+  const tcpUrl = process.env.ZAPO_TEST_TCP_URL || fileConfig?.tcpUrl || null;
+  const noiseRootCaConfigured = Boolean(
+    process.env.ZAPO_TEST_NOISE_ROOT_CA_PUBLIC_KEY_HEX
+      || fileConfig?.noiseRootCa?.publicKeyHex
+  );
+
+  return {
+    enabled: chatSocketUrls.length > 0 || Boolean(tcpUrl),
+    source: envUrls.length || process.env.ZAPO_TEST_TCP_URL ? 'env' : fileConfig ? 'runtime-file' : 'default',
+    chatSocketUrls,
+    tcpUrl,
+    noiseRootCaConfigured,
+  };
+}
+
 // Centraliza a leitura do arquivo .env buscando na pasta atual (backend) ou subindo para a raiz
 const localEnv = path.resolve(process.cwd(), '.env');
 const parentEnv = path.resolve(process.cwd(), '../.env');
@@ -136,7 +168,19 @@ app.get('/', (req, res, next) => {
     version: '2.0.0',
     clientName: 'zapo-manager',
     zapoVersion: getZapoLibVersion(),
-    defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US'
+    defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
+    fakeServer: getFakeServerRuntimeStatus()
+  });
+});
+
+app.get('/runtime/status', (_req, res) => {
+  res.json({
+    ok: true,
+    clientName: 'zapo-manager',
+    version: '2.0.0',
+    zapoVersion: getZapoLibVersion(),
+    defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
+    fakeServer: getFakeServerRuntimeStatus()
   });
 });
 

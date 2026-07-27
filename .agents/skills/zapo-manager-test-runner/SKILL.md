@@ -19,6 +19,7 @@ This skill runs the local Zapo Manager validation suite as an operator-facing qu
 - Use `npm run test:manager` for the full local gate.
 - Use `npm run test:manager:api` for backend endpoint coverage.
 - Use `npm run test:manager:ui` for frontend button/function coverage with mocked API.
+- Use `npm run test:manager:smoke:fake` for fake-server smoke coverage against `@zapo-js/fake-server`, fully offline and without real WhatsApp numbers.
 - Use `npm run test:smoke:real` only when the user explicitly asks for real smoke tests or confirms a connected test instance.
 - Do not start real WhatsApp sends from the offline-safe API/UI gate.
 
@@ -30,7 +31,7 @@ Use `scripts/run-manager-tests.ps1` instead of retyping commands when PowerShell
 powershell -ExecutionPolicy Bypass -File "{skill-root}/scripts/run-manager-tests.ps1" -Mode all -ProjectRoot "{project-root}"
 ```
 
-Choose `-Mode api`, `-Mode ui`, `-Mode ui-real`, `-Mode all`, or `-Mode real` from the user's request. If the script is unavailable, run the matching npm command directly from `{project-root}`.
+Choose `-Mode api`, `-Mode ui`, `-Mode ui-real`, `-Mode all`, `-Mode fake`, or `-Mode real` from the user's request. If the script is unavailable, run the matching npm command directly from `{project-root}`.
 
 `ui-real` assumes a backend process visible in its own terminal window and validates the UI against the live Express/Prisma/Postgres/Redis stack without mocking HTTP. Do not use it for WhatsApp sends or pairing flows.
 

@@ -70,6 +70,57 @@ async function releaseLock(instanceName: string, containerId: string): Promise<v
 
 const CONTAINER_ID = process.env.HOSTNAME || Math.random().toString(36).substring(7);
 
+type FakeServerRuntimeConfig = {
+  chatSocketUrls?: readonly string[];
+  noiseRootCa?: {
+    publicKey: Uint8Array;
+    serial: number;
+  };
+  tcpUrl?: string;
+};
+
+function hexToBytes(hex: string): Uint8Array {
+  return Uint8Array.from(Buffer.from(hex, 'hex'));
+}
+
+function readFakeServerRuntimeConfig(): FakeServerRuntimeConfig | null {
+  const envUrls = process.env.ZAPO_TEST_SOCKET_URLS
+    ?.split(',')
+    .map((url) => url.trim())
+    .filter(Boolean);
+  const envCaPublicKey = process.env.ZAPO_TEST_NOISE_ROOT_CA_PUBLIC_KEY_HEX;
+  const envCaSerial = process.env.ZAPO_TEST_NOISE_ROOT_CA_SERIAL;
+  const envTcpUrl = process.env.ZAPO_TEST_TCP_URL;
+
+  let fileConfig: any = null;
+  const configFile = process.env.ZAPO_TEST_FAKE_SERVER_INFO_FILE || path.resolve(process.cwd(), '..', '.tmp', 'zapo-fake-server.json');
+  if (fs.existsSync(configFile)) {
+    try {
+      fileConfig = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+    } catch (error: any) {
+      console.warn(`[ZapoManager] [FakeServer] Ignorando config fake inválida em ${configFile}: ${error.message}`);
+    }
+  }
+
+  const chatSocketUrls = envUrls?.length ? envUrls : fileConfig?.chatSocketUrls;
+  const publicKeyHex = envCaPublicKey || fileConfig?.noiseRootCa?.publicKeyHex;
+  const serial = envCaSerial || fileConfig?.noiseRootCa?.serial;
+  const tcpUrl = envTcpUrl || fileConfig?.tcpUrl;
+
+  if (!chatSocketUrls?.length && !publicKeyHex && !tcpUrl) return null;
+
+  return {
+    ...(chatSocketUrls?.length && { chatSocketUrls }),
+    ...(publicKeyHex && serial !== undefined && {
+      noiseRootCa: {
+        publicKey: hexToBytes(publicKeyHex),
+        serial: Number(serial),
+      },
+    }),
+    ...(tcpUrl && { tcpUrl }),
+  };
+}
+
 async function buildStore(
   instanceName: string,
   opts: { syncFullHistory?: boolean } = {}
@@ -715,6 +766,8 @@ export class ZapoManager {
       }
     }
 
+    const fakeServerConfig = readFakeServerRuntimeConfig();
+
     const clientOptions: any = {
       store,
       sessionId: instanceName,
@@ -735,12 +788,19 @@ export class ZapoManager {
       deviceBrowser: process.env.SESSION_DEVICE_BROWSER || 'chrome',
       ...(process.env.SESSION_DEVICE_OS && { deviceOsDisplayName: process.env.SESSION_DEVICE_OS }),
       ...(proxy && { proxy }),
+      ...(fakeServerConfig?.chatSocketUrls && { chatSocketUrls: fakeServerConfig.chatSocketUrls }),
+      ...(fakeServerConfig?.noiseRootCa && { testHooks: { noiseRootCa: fakeServerConfig.noiseRootCa } }),
     };
+
+    if (fakeServerConfig?.chatSocketUrls?.length) {
+      console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Usando FakeWaServer chatSocketUrls=${fakeServerConfig.chatSocketUrls.join(',')}`);
+    }
 
     const hasCredentials = !!instance.ownerJid;
     if (instance.mobileTransport && hasCredentials) {
       clientOptions.mobileTransport = {
-        deviceInfo: instance.deviceInfo || getMobileDevice()
+        deviceInfo: instance.deviceInfo || getMobileDevice(),
+        ...(fakeServerConfig?.tcpUrl && { tcpUrl: fakeServerConfig.tcpUrl })
       };
       // A3: Persistence adapter para o companion host epoch.
       // Garante que rawId + currentKeyIndex sobrevivam a restarts, evitando
