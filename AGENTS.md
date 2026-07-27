@@ -206,7 +206,8 @@ O projeto utiliza a metodologia **BMAD (Build More, Architect Dreams)** para esp
 *   **Memória Compartilhada (`_bmad/scripts/memlog.py`):** Centraliza o log de progresso cognitivo dos agentes de forma unificada.
 *   **Novas Ferramentas:** Use `bmad-forge-idea` para validação socrática de conceitos iniciais, e `bmad-architecture` para o design arquitetural.
 *   **BMAD Loop:** O módulo `bmad-loop` está instalado para runs automatizados com resolução de escalations e triagem de deferred work.
-*   **Testes do Manager:** Use a skill local `.agents/skills/zapo-manager-test-runner` para rodar `test:manager:api`, `test:manager:ui` e `test:manager` sem misturar smoke real de WhatsApp.
+*   **Testes do Manager:** Use a skill local `.agents/skills/zapo-manager-test-runner` para rodar `test:manager:api`, `test:manager:ui`, `test:manager:smoke:fake` e `test:manager` sem misturar smoke real de WhatsApp.
+*   **Fake Server Offline:** Para validações offline ponta-a-ponta com `WaClient` real, use `npm run test:manager:smoke:fake` ou o modo da skill `-Mode fake`. A suíte inicia `@zapo-js/fake-server`, grava `.tmp/zapo-fake-server.json` e o backend injeta `chatSocketUrls`, `testHooks.noiseRootCa` e `mobileTransport.tcpUrl` em `connectClient`. Para teste manual pela UI, rode `npm run fake:server` antes de `npm run dev`; o badge do header deve indicar `Online - Fake server`.
 
 Para mais detalhes e o guia completo, consulte [docs/BMAD_METHOD.md](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/docs/BMAD_METHOD.md).
 

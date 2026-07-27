@@ -1,6 +1,6 @@
 ---
 name: zapo-manager-test-runner
-description: Runs Zapo Manager local test suites. Use when user says "rodar testes do manager", "validar endpoints do manager", "validar botoes do frontend manager", or asks to run the local API/UI manager tests.
+description: Runs Zapo Manager local test suites. Use when user says "rodar testes do manager", "validar endpoints do manager", "validar botoes do frontend manager", "smoke fake", "fake-server", or asks to run the local API/UI/fake-server manager tests.
 ---
 
 # Zapo Manager Test Runner

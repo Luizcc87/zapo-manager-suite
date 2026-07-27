@@ -6,6 +6,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased] — 2026-07-27
 
+### Docs: orientação de agentes para fake-server
+
+**Docs / Agentes**
+- `AGENTS.md`: Documentado o uso do `@zapo-js/fake-server` para agentes, incluindo `test:manager:smoke:fake`, `-Mode fake`, `.tmp/zapo-fake-server.json` e fluxo manual `npm run fake:server` antes de `npm run dev`.
+- `.agents/skills/zapo-manager-test-runner/SKILL.md`: Atualizada a descrição para ser descoberta por pedidos `smoke fake` e `fake-server`.
+- `.gitignore`: Ignora `skills-lock.json`, lockfile local de instalação de skills que não pertence aos artefatos versionados do projeto.
+
 ### UI: indicador de runtime do backend e fake-server
 
 **Backend / Frontend**
