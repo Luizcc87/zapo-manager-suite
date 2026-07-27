@@ -51,25 +51,6 @@ export const interactivePayloads = {
       text: 'Mensagem local de teste',
     },
   },
-  linkPreview: {
-    endpoint: 'sendText',
-    payload: {
-      number: targetNumber,
-      textMessage: {
-        text: 'https://example.com',
-      },
-      linkPreview: true,
-      linkPreviewHighQuality: true,
-      preview: {
-        url: 'https://example.com',
-        title: 'Example Domain',
-        description: 'Preview customizado',
-        image: {
-          url: 'https://httpbin.org/image/jpeg',
-        },
-      },
-    },
-  },
   buttonsReply: {
     endpoint: 'sendButtons',
     payload: {

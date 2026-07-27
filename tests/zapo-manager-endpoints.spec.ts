@@ -215,4 +215,32 @@ test.describe('Zapo Manager endpoint contract - offline-safe', () => {
     });
     expect(missingCode.status()).toBe(400);
   });
+
+  test('store v1.6.2 compatibility - handles logout, re-acquire, and delete lifecycle safely', async ({ request }) => {
+    // 1. Create a dedicated temporary instance to exercise logout & session destroy
+    const tempInstance = await createTestInstance(request, 'store-lifecycle');
+
+    // 2. Perform logout (triggers clearSessionStore + session.destroy())
+    const logoutRes = await request.delete(`/instance/logout/${tempInstance.name}`, {
+      headers: { apikey: tempInstance.token },
+    });
+    expect(logoutRes.status()).toBe(200);
+
+    // 3. Verify instance status after logout
+    const fetchRes = await request.get(`/instance/fetchInstances?instanceName=${encodeURIComponent(tempInstance.name)}`, {
+      headers: { apikey: GLOBAL_API_KEY },
+    });
+    expect(fetchRes.status()).toBe(200);
+    const instances = await fetchRes.json();
+    expect(instances).toHaveLength(1);
+    expect(instances[0].connectionStatus).toBe('close');
+    expect(instances[0].ownerJid).toBeFalsy();
+
+    // 4. Delete instance (triggers disconnectClient + store.destroy())
+    const deleteRes = await request.delete(`/instance/delete/${tempInstance.name}`, {
+      headers: { apikey: GLOBAL_API_KEY },
+    });
+    expect(deleteRes.status()).toBe(200);
+  });
 });
+

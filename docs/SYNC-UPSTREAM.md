@@ -200,6 +200,17 @@ Quando sair uma nova tag no upstream, use este checklist antes de tocar no backe
 3. Conferir se o comportamento já existe no repo local antes de implementar.
 4. Se a mudança tocar contrato público, atualizar `CHANGELOG.md` e `docs/openapi.yaml`.
 
+#### Release `v1.6.2` do Zapo
+
+Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.6.2`
+
+Mudanças relevantes:
+
+- `fix(store): reacquirable session after destroy + non-terminal destroyCaches`
+  - Impacto provável: fluxo de `logoutClient` e `clearSessionStore` em `backend/src/manager.ts`. Permite re-adquirir a sessão sem recriar o objeto de store e impede o encerramento terminal no `destroyCaches`.
+- `feat(fake-server)`: interop e sessão no servidor de testes do upstream (PRs #210, #211, #213)
+  - Impacto local: nenhum no runtime oficial do backend (recurso interno de testes do `zapo-js`).
+
 #### Release `v1.2.0` do Zapo
 
 Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.2.0`

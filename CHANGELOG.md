@@ -4,7 +4,21 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ---
 
-## [Unreleased] — 2026-07-24
+## [Unreleased] — 2026-07-27
+
+## [1.6.17] — 2026-07-27
+
+### Chore: Upgrade Zapo-JS para v1.6.2 (Fix no Store & Lifecycle)
+
+**Backend**
+- `backend/package.json`: Atualizada dependência `zapo-js` para `^1.6.2`.
+- `zapo-js` v1.6.2 traz correção crítica no módulo de store: permissão de re-aquisição de sessões ativas destruídas via `session.destroy()` e comportamento não-terminal no método `destroyCaches()`. Melhora a estabilidade no fluxo de logout, reutilização e desconexão de instâncias em `manager.ts`.
+- `backend/src/routes/config.routes.ts`: Corrigido comportamento do `POST /proxy/set/:instanceName` para desconectar o cliente ativo apenas quando `proxyConfig.enabled === true`, evitando a reinicialização desnecessária da instância durante chamadas normais de configuração.
+
+**Testes**
+- `tests/zapo-manager-endpoints.spec.ts`: Adicionado teste unitário e de contrato offline-safe `store v1.6.2 compatibility` validando o ciclo de vida completo de logout, verificação de estado zerado e exclusão da instância.
+
+---
 
 ## [1.6.16] — 2026-07-24
 
