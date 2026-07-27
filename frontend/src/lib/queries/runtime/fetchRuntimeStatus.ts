@@ -8,6 +8,7 @@ export type RuntimeStatus = {
   clientName: string;
   version: string;
   zapoVersion?: string;
+  runtimeEnvironment?: "production" | "development" | string;
   fakeServer?: {
     enabled: boolean;
     source: "env" | "runtime-file" | "default" | string;

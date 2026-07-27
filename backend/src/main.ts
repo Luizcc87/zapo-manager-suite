@@ -76,6 +76,17 @@ function getFakeServerRuntimeStatus() {
   };
 }
 
+function getRuntimeEnvironment(req: express.Request) {
+  const configured = process.env.ZAPO_RUNTIME_ENV || process.env.NODE_ENV || '';
+  const host = req.get('host') || '';
+  const isLocalHost = /(^localhost|^127\.0\.0\.1|^\[::1\])(:\d+)?$/i.test(host);
+
+  if (configured === 'production') return 'production';
+  if (configured === 'development' || configured === 'dev') return 'development';
+  if (isLocalHost) return 'development';
+  return 'production';
+}
+
 // Centraliza a leitura do arquivo .env buscando na pasta atual (backend) ou subindo para a raiz
 const localEnv = path.resolve(process.cwd(), '.env');
 const parentEnv = path.resolve(process.cwd(), '../.env');
@@ -169,17 +180,19 @@ app.get('/', (req, res, next) => {
     clientName: 'zapo-manager',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
+    runtimeEnvironment: getRuntimeEnvironment(req),
     fakeServer: getFakeServerRuntimeStatus()
   });
 });
 
-app.get('/runtime/status', (_req, res) => {
+app.get('/runtime/status', (req, res) => {
   res.json({
     ok: true,
     clientName: 'zapo-manager',
     version: '2.0.0',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
+    runtimeEnvironment: getRuntimeEnvironment(req),
     fakeServer: getFakeServerRuntimeStatus()
   });
 });

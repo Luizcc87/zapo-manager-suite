@@ -97,7 +97,7 @@ for (let p = 8080; p <= 8089; p++) await killPort(p);
 await new Promise(resolve => {
   const killer = spawn('powershell', [
     '-Command',
-    `Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} -and $_.Id -ne ${process.ppid} } | Stop-Process -Force`
+    `Get-CimInstance Win32_Process -Filter "name = 'node.exe'" | Where-Object { $_.ProcessId -ne ${process.pid} -and $_.ProcessId -ne ${process.ppid} -and $_.CommandLine -notlike '*scripts/start-fake-wa-server.mjs*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`
   ], { stdio: 'ignore', shell: false });
   killer.on('exit', resolve);
   killer.on('error', resolve);

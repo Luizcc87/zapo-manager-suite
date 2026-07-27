@@ -69,6 +69,8 @@ npm run dev:frontend
 
 O comando `fake:server` grava `.tmp/zapo-fake-server.json` com `chatSocketUrls`, `tcpUrl` e `noiseRootCa`. O backend le esse arquivo durante `connectClient`, entao instancias criadas/conectadas pela UI apontam para o `FakeWaServer`. Pare o fake server com `Ctrl+C` para remover o arquivo runtime.
 
+O script raiz `npm run dev` preserva o processo `scripts/start-fake-wa-server.mjs` ao limpar processos Node antigos no Windows. Se o badge do header mostrar `Online - Producao`, confirme se o terminal do `fake:server` ainda esta rodando e se `.tmp/zapo-fake-server.json` existe.
+
 Os configs Playwright de suporte agora ficam em `tests/playwright/`:
 
 - `tests/playwright/manager-ui.config.ts`

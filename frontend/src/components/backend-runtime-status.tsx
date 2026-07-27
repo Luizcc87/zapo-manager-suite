@@ -29,10 +29,17 @@ export function BackendRuntimeStatus() {
     );
   }
 
-  const label = fakeEnabled ? "Online - Fake server" : "Online - Producao";
+  const isDevelopment = data.runtimeEnvironment === "development";
+  const label = fakeEnabled
+    ? "Online - Fake server"
+    : isDevelopment
+      ? "Online - Dev local"
+      : "Online - Producao";
   const tooltip = fakeEnabled
     ? `Backend conectado em modo fake-server (${data.fakeServer?.source}). WS: ${data.fakeServer?.chatSocketUrls?.[0] ?? "n/a"}`
-    : `Backend conectado em modo normal. Zapo: ${data.zapoVersion ?? "unknown"}`;
+    : isDevelopment
+      ? `Backend conectado em modo dev local, sem fake-server. Zapo: ${data.zapoVersion ?? "unknown"}`
+      : `Backend conectado em modo producao. Zapo: ${data.zapoVersion ?? "unknown"}`;
 
   return (
     <TooltipWrapper content={tooltip}>

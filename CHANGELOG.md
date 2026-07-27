@@ -10,7 +10,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 **Backend / Frontend**
 - `backend/src/main.ts`: Adicionada rota pública `GET /runtime/status` com estado do backend e modo fake-server (`chatSocketUrls`, `tcpUrl`, fonte env/runtime file).
-- `frontend/src/components/backend-runtime-status.tsx`: Novo badge no header autenticado indicando `Producao`, `Fake server` ou `Offline`.
+- `frontend/src/components/backend-runtime-status.tsx`: Novo badge no header autenticado indicando `Producao`, `Dev local`, `Fake server` ou `Offline`.
 - `frontend/src/lib/queries/runtime/fetchRuntimeStatus.ts`: Consulta com polling leve para manter o indicador atualizado.
 
 ### Testes: camada smoke fake offline com FakeWaServer
