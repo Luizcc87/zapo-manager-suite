@@ -130,9 +130,24 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const quietHttpGetPaths = [
+  '/runtime/status',
+  '/instance/fetchInstances',
+  '/instance/events',
+  '/instance/events-summary',
+  '/notification/channels',
+];
+
+function shouldLogHttpRequest(req: express.Request): boolean {
+  if (req.method !== 'GET') return true;
+  return !quietHttpGetPaths.some((path) => req.path === path || req.path.startsWith(`${path}/`));
+}
+
 // Log de requisições simples
 app.use((req, res, next) => {
-  console.log(`[HTTP] ${req.method} ${req.path}`);
+  if (shouldLogHttpRequest(req)) {
+    console.log(`[HTTP] ${req.method} ${req.path}`);
+  }
   next();
 });
 
@@ -177,7 +192,7 @@ app.get('/', (req, res, next) => {
     return next();
   }
   res.json({
-    version: process.env.APP_VERSION || '1.6.19',
+    version: process.env.APP_VERSION || '1.6.20',
     clientName: 'zapo-manager',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
@@ -190,7 +205,7 @@ app.get('/runtime/status', (req, res) => {
   res.json({
     ok: true,
     clientName: 'zapo-manager',
-    version: process.env.APP_VERSION || '1.6.19',
+    version: process.env.APP_VERSION || '1.6.20',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
     runtimeEnvironment: getRuntimeEnvironment(req),

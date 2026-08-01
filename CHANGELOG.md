@@ -2,6 +2,14 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
+## [v1.6.20] — 2026-08-01
+
+### Operação: redução de ruído nos logs HTTP
+
+**Backend / Docs**
+- `backend/src/main.ts` e `backend/src/routes/instance.routes.ts`: Reduzido ruído no terminal do container filtrando logs de polling GET recorrente (`/runtime/status`, `/instance/fetchInstances`, eventos e canais de notificação), mantendo logs para ações mutáveis e rotas não silenciosas.
+- `.env.example`, `backend/src/main.ts`, `frontend/src/config/app-config.ts` e `docs/WHITE-LABEL.md`: Atualizada versão padrão da suíte para `1.6.20`.
+
 ## [v1.6.19] — 2026-08-01
 
 ### Observabilidade: sinais operacionais da instância e alertas Telegram

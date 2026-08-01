@@ -9,7 +9,7 @@ Este documento especifica a arquitetura e as variáveis para personalização vi
 Toda a personalização de marca e exibição de versão é centralizada em dois arquivos principais:
 
 1. **`frontend/src/config/app-config.ts`**: Define os valores padrão de marca, URLs, logos e descrições.
-2. **`frontend/src/hooks/useAppConfig.ts`**: Hook React que unifica as configurações locais com as informações dinâmicas retornadas pelo backend (`GET /`), calculando a tag de versão padronizada (`v1.6.19 (Zapo: v1.6.2)`).
+2. **`frontend/src/hooks/useAppConfig.ts`**: Hook React que unifica as configurações locais com as informações dinâmicas retornadas pelo backend (`GET /`), calculando a tag de versão padronizada (`v1.6.20 (Zapo: v1.6.2)`).
 
 Todas as páginas principais ([Home.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/Home.tsx), [Login/index.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/pages/Login/index.tsx) e [sidebar.tsx](file:///d:/Projetos%20Dev/Outros/apis-whatsapp-doc-testes/zapo-manager/frontend/src/components/sidebar.tsx)) consomem este hook, garantindo exibição 100% sincronizada sem redundâncias de código.
 
@@ -22,7 +22,7 @@ Todas as páginas principais ([Home.tsx](file:///d:/Projetos%20Dev/Outros/apis-w
 | Variável | Padrão | Descrição |
 |---|---|---|
 | `VITE_APP_NAME` | `Zapo Manager` | Nome da aplicação exibido na Home, Login e Sidebar. |
-| `VITE_APP_VERSION` | `1.6.19` | Versão da release oficial da suíte. |
+| `VITE_APP_VERSION` | `1.6.20` | Versão da release oficial da suíte. |
 | `VITE_APP_DESCRIPTION` | `Painel de gerenciamento para a Zapo API` | Subtítulo exibido na tela inicial. |
 | `VITE_APP_LOGO_DARK` | `/assets/images/zapo-manager-logo.svg` | Caminho/URL da logo para tema escuro. |
 | `VITE_APP_LOGO_LIGHT` | `/assets/images/zapo-manager-logo-light.svg` | Caminho/URL da logo para tema claro. |
@@ -34,7 +34,7 @@ Todas as páginas principais ([Home.tsx](file:///d:/Projetos%20Dev/Outros/apis-w
 
 | Variável | Padrão | Descrição |
 |---|---|---|
-| `APP_VERSION` | `1.6.19` | Versão exposta em `GET /` e `GET /runtime/status`. |
+| `APP_VERSION` | `1.6.20` | Versão exposta em `GET /` e `GET /runtime/status`. |
 
 ---
 

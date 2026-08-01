@@ -373,14 +373,12 @@ router.post('/syncProfile/:instanceName', checkInstanceApiKey, async (req: Reque
 router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceId, instanceName } = req.query;
-    console.log(`[ZapoRouter] GET /fetchInstances - query params:`, { instanceId, instanceName });
     const where = instanceId
       ? { id: instanceId as string }
       : instanceName
       ? { instanceName: instanceName as string }
       : undefined;
     const dbInstances = await prisma.instance.findMany({ where });
-    console.log(`[ZapoRouter] GET /fetchInstances - found ${dbInstances.length} instances:`, dbInstances.map(i => i.instanceName));
 
     // Otimização: groupBy para contagem de chats e mensagens por instância (evita N+1 queries)
     const countWhere = instanceId
