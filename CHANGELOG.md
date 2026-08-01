@@ -2,7 +2,7 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
-## [Unreleased] — 2026-08-01
+## [v1.6.18] — 2026-08-01
 
 ### Sync Upstream & Upgrades (Evolution Manager v2 & Baileys 7.0.0-rc14)
 
