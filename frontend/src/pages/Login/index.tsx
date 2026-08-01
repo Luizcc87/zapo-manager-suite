@@ -11,13 +11,13 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { Form, FormSelect } from "@/components/ui/form";
-import { useTheme } from "@/components/theme-provider";
 
 import { verifyCreds } from "@/lib/queries/auth/verifyCreds";
 import { verifyGoServer } from "@/lib/queries/auth/verifyGoServer";
 import { verifyServer } from "@/lib/queries/auth/verifyServer";
 import { checkLicenseStatus, initRegister } from "@/lib/queries/license/license";
 import { DEFAULT_PROVIDER, logout, saveToken } from "@/lib/queries/token";
+import { useTheme } from "@/components/theme-provider";
 
 const loginSchema = z.object({
   provider: z.enum(["api", "go", "zapo"]).default(DEFAULT_PROVIDER),
@@ -29,20 +29,26 @@ type LoginSchema = z.infer<typeof loginSchema>;
 function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { theme } = useTheme();
   const [loginError, setLoginError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const logoSrc =
-    theme === "dark"
-      ? "https://evolution-api.com/files/evo/evolution-logo-white.svg"
-      : "https://evolution-api.com/files/evo/evolution-logo.svg";
+  const { theme } = useTheme();
+  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
+
+  const defaultServerUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_EVOLUTION_API_URL || (
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && window.location.port !== "8080"
+      ? `${window.location.protocol}//${window.location.hostname}:8080`
+      : window.location.protocol + "//" + window.location.host
+  );
+
+  const defaultApiKey = import.meta.env.VITE_API_KEY || import.meta.env.VITE_EVOLUTION_API_KEY || "";
 
   const loginForm = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       provider: DEFAULT_PROVIDER,
-      serverUrl: window.location.protocol + "//" + window.location.host,
-      apiKey: "",
+      serverUrl: defaultServerUrl,
+      apiKey: defaultApiKey,
     },
   });
 
@@ -51,33 +57,6 @@ function Login() {
     setLoginError("");
     try {
       const cleanUrl = data.serverUrl.replace(/\/+$/, "");
-
-      // 1. License gate FIRST — same flow evolution-go-manager uses.
-      // Only attempts the check on the API provider; the GO branch keeps its own flow.
-      if (data.provider === "api") {
-        try {
-          const lic = await checkLicenseStatus(cleanUrl, data.apiKey);
-          if (lic.status !== "active") {
-            const callbackUrl = `${window.location.origin}/manager/license/callback`;
-            const reg = await initRegister(callbackUrl, cleanUrl, data.apiKey);
-
-            if (!reg.register_url) {
-              const msg = reg.message || t("license.registerFailed");
-              setLoginError(msg);
-              return;
-            }
-
-            // Save credentials so the callback page knows where to call /license/activate.
-            saveToken({ url: cleanUrl, token: data.apiKey, provider: "api" });
-            window.location.href = reg.register_url;
-            return;
-          }
-        } catch (err) {
-          // If /license/* itself is unreachable, fall through to the normal login flow —
-          // older Evolution API builds without the licensing module behave this way.
-          console.warn("[license] status check skipped:", err);
-        }
-      }
 
       if (data.provider === "go") {
         const ok = await verifyGoServer({ url: cleanUrl, token: data.apiKey });
@@ -91,6 +70,27 @@ function Login() {
         saveToken({ url: cleanUrl, token: data.apiKey, provider: "go" });
         navigate("/manager/");
         return;
+      }
+
+      // Check license if provider is api/zapo
+      try {
+        const lic = await checkLicenseStatus(cleanUrl, data.apiKey);
+        if (lic.status !== "active") {
+          const callbackUrl = `${window.location.origin}/manager/license/callback`;
+          const reg = await initRegister(callbackUrl, cleanUrl, data.apiKey);
+
+          if (!reg.register_url) {
+            const msg = reg.message || t("license.registerFailed");
+            setLoginError(msg);
+            return;
+          }
+
+          saveToken({ url: cleanUrl, token: data.apiKey, provider: "api" });
+          window.location.href = reg.register_url;
+          return;
+        }
+      } catch (err) {
+        // Fallback for Zapo / non-license backends
       }
 
       const server = await verifyServer({ url: data.serverUrl });
@@ -131,7 +131,7 @@ function Login() {
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-t from-primary/20 via-background/95 to-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center text-center">
-          <img src={logoSrc} alt="Evolution API" className="mb-3 h-10" />
+          <img src={logoSrc} alt="Zapo Manager" className="mb-3 h-10" />
           <p className="text-sm text-muted-foreground">{t("login.description")}</p>
         </div>
 
@@ -173,7 +173,7 @@ function Login() {
                 <Input
                   id="login-serverUrl"
                   type="text"
-                  placeholder={window.location.origin}
+                  placeholder={defaultServerUrl}
                   disabled={submitting}
                   {...loginForm.register("serverUrl")}
                 />
@@ -210,9 +210,9 @@ function Login() {
 
         <div className="text-center text-xs text-muted-foreground">
           <p>
-            © {new Date().getFullYear()} Evolution API ·{" "}
-            <a href="https://docs.evolutionfoundation.com.br/" target="_blank" rel="noreferrer" className="underline hover:text-primary">
-              Documentação
+            © {new Date().getFullYear()} Zapo Manager ·{" "}
+            <a href="https://github.com/Luizcc87/zapo-manager-suite" target="_blank" rel="noreferrer" className="underline hover:text-primary">
+              GitHub
             </a>
           </p>
         </div>

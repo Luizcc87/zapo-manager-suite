@@ -1,15 +1,17 @@
 import { Button } from "@evoapi/design-system/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@evoapi/design-system/card";
 import { Badge } from "@evoapi/design-system/badge";
-import { ArrowRight, Github, Globe, Mail, Shield } from "lucide-react";
+import { ArrowRight, Github, Globe, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
+import { useTheme } from "@/components/theme-provider";
 
 export default function Home() {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
 
   const handleGoToManager = () => {
     navigate("/manager");
@@ -21,8 +23,8 @@ export default function Home() {
       <header className="flex items-center justify-between px-4 py-2">
         <div className="flex items-center">
           <img
-            src={theme === "dark" ? "https://evolution-api.com/files/evo/evolution-logo-white.svg" : "https://evolution-api.com/files/evo/evolution-logo.svg"}
-            alt="Evolution API Logo"
+            src={logoSrc}
+            alt="Zapo Manager"
             className="h-8"
           />
         </div>
@@ -38,16 +40,13 @@ export default function Home() {
           <div className="text-center mb-12">
             <div className="flex items-center justify-center mb-6">
               <img
-                src={theme === "dark" ? "https://evolution-api.com/files/evo/evolution-logo-white.svg" : "https://evolution-api.com/files/evo/evolution-logo.svg"}
-                alt="Evolution Manager Logo"
-                className="h-10"
+                src={logoSrc}
+                alt="Zapo Manager"
+                className="h-12"
               />
             </div>
-            <h1 className="text-4xl font-bold text-foreground mb-4">
-              Evolution Manager v2
-            </h1>
             <p className="text-xl text-muted-foreground mb-6">
-              Modern web interface for Evolution API management
+              Painel de gerenciamento para a Zapo API
             </p>
             <Badge variant="secondary" className="text-sm px-3 py-1">
               Version 2.0.0
@@ -59,10 +58,10 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary" />
-                Welcome to Evolution Manager
+                Bem-vindo ao Zapo Manager
               </CardTitle>
               <CardDescription>
-                A powerful, modern dashboard for managing your WhatsApp API instances with Evolution API
+                Painel completo para gerenciar instâncias WhatsApp via Zapo API — TCP nativo, baixo risco de ban
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -84,47 +83,36 @@ export default function Home() {
           {/* Links Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Resources & Support</CardTitle>
+              <CardTitle>Links</CardTitle>
               <CardDescription>
-                Get help, contribute, or learn more about Evolution API
+                Repositórios e recursos do projeto
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 <a
-                  href="https://github.com/evolution-foundation/evolution-manager-v2"
+                  href="https://github.com/Luizcc87/zapo-manager-suite"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-accent transition-colors"
                 >
                   <Github className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <div className="font-medium text-foreground">GitHub</div>
-                    <div className="text-sm text-muted-foreground">Source code</div>
+                    <div className="font-medium text-foreground">Zapo Manager Suite</div>
+                    <div className="text-sm text-muted-foreground">Código fonte desta suíte</div>
                   </div>
                 </a>
 
                 <a
-                  href="https://evolutionfoundation.com.br"
+                  href="https://github.com/vinikjkkj/zapo"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-accent transition-colors"
                 >
                   <Globe className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <div className="font-medium text-foreground">Website</div>
-                    <div className="text-sm text-muted-foreground">Official site</div>
-                  </div>
-                </a>
-
-                <a
-                  href="mailto:suporte@evofoundation.com.br"
-                  className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-accent transition-colors"
-                >
-                  <Mail className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium text-foreground">Contact</div>
-                    <div className="text-sm text-muted-foreground">Get support</div>
+                    <div className="font-medium text-foreground">Zapo API</div>
+                    <div className="text-sm text-muted-foreground">Biblioteca WhatsApp TCP nativo</div>
                   </div>
                 </a>
               </div>
@@ -133,7 +121,7 @@ export default function Home() {
 
           {/* Footer */}
           <div className="text-center mt-12 text-sm text-muted-foreground">
-            <p>© 2025 Evolution API. Licensed under Apache 2.0 with Evolution API custom conditions.</p>
+            <p>© {new Date().getFullYear()} Zapo Manager · Apache 2.0 · <a href="https://github.com/Luizcc87" target="_blank" rel="noreferrer" className="underline hover:text-primary">github.com/Luizcc87</a></p>
           </div>
         </div>
       </div>
