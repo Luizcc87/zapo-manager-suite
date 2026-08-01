@@ -15,13 +15,13 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation, useParams } from "react-router-dom";
 
-import { useTheme } from "@/components/theme-provider";
 import { useInstance } from "@/contexts/InstanceContext";
 
 import { FEATURES, FeatureKey, isFeatureEnabled } from "@/lib/provider/features";
 import { cn } from "@/lib/utils";
-import { useVerifyServer } from "@/lib/queries/auth/verifyServer";
-import { getProvider, getToken, TOKEN_ID } from "@/lib/queries/token";
+import { getToken, TOKEN_ID } from "@/lib/queries/token";
+
+import { useAppConfig } from "@/hooks/useAppConfig";
 
 const GATED_IDS = new Set<string>(Object.keys(FEATURES));
 const isGated = (id: string): id is FeatureKey => GATED_IDS.has(id);
@@ -45,19 +45,12 @@ type Menu = MenuLeaf | MenuGroup;
 
 function SidebarShell({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
   const currentYear = new Date().getFullYear();
-  const { theme } = useTheme();
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
-
-  const url = getToken(TOKEN_ID.API_URL);
-  const provider = getProvider();
-  const { data: serverInfo } = useVerifyServer({ url, enabled: provider !== "go" });
-  const zapoVersion = serverInfo?.zapoVersion || getToken(TOKEN_ID.ZAPO_VERSION);
+  const { appName, logoSrc, fullVersionTag } = useAppConfig();
 
   return (
     <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-56 border-r border-sidebar-border">
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <img src={logoSrc} alt="Evolution API" className="h-7" />
+        <img src={logoSrc} alt={appName} className="h-7" />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
@@ -71,10 +64,8 @@ function SidebarShell({ children, footer }: { children: React.ReactNode; footer?
       )}
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="text-sm font-medium text-primary">Zapo Manager</div>
-        {zapoVersion && (
-          <div className="text-xs text-muted-foreground mt-0.5">Zapo: v{zapoVersion}</div>
-        )}
+        <div className="text-sm font-medium text-primary">{appName}</div>
+        <div className="text-xs text-muted-foreground mt-0.5">{fullVersionTag}</div>
         <div className="mt-1 text-xs text-muted-foreground">© {currentYear} All rights reserved</div>
       </div>
     </aside>
@@ -116,15 +107,15 @@ function NavItem({ to, icon: Icon, label, isExternal }: { to: string; icon?: typ
 }
 
 function ExternalLinks() {
+  const { githubUrl, docsUrl, apiDocsUrl } = useAppConfig();
   const apiUrl = getToken(TOKEN_ID.API_URL) || "";
-  // Se houver uma API URL configurada, aponta para ela, caso contrário usa o caminho relativo local
-  const docsUrl = apiUrl ? `${apiUrl.replace(/\/$/, "")}/api-docs` : "/api-docs";
+  const dynamicApiDocs = apiUrl ? `${apiUrl.replace(/\/$/, "")}/api-docs` : apiDocsUrl;
 
   return (
     <>
-      <NavItem to={docsUrl} icon={FileCode} label="API Docs (Swagger)" isExternal />
-      <NavItem to="https://github.com/Luizcc87/zapo-manager-suite" icon={FileQuestion} label="GitHub" isExternal />
-      <NavItem to="https://github.com/vinikjkkj/zapo" icon={CircleHelp} label="Zapo API" isExternal />
+      <NavItem to={dynamicApiDocs} icon={FileCode} label="API Docs (Swagger)" isExternal />
+      <NavItem to={githubUrl} icon={FileQuestion} label="GitHub" isExternal />
+      <NavItem to={docsUrl} icon={CircleHelp} label="Zapo API" isExternal />
     </>
   );
 }

@@ -7,10 +7,9 @@ Registro cronológico reverso de implementações e alterações relevantes.
 ### Sync Upstream & Upgrades (Evolution Manager v2 & Baileys 7.0.0-rc14)
 
 **Frontend / Backend / Docs**
-- `frontend/`: Realizado `git subtree pull` sincronizando 10 novos commits do repositório oficial `evolution-foundation/evolution-manager-v2` (melhorias em license-flow, visual, branding e suporte a integrações).
-- `frontend/src/pages/Home.tsx` & `Login/index.tsx`: Restauradas a identidade visual, logos SVG (`zapo-manager-logo.svg`), textos, links e comportamentos padrão do **Zapo Manager** (ex: fallback automático da URL do servidor para porta `:8080` local).
-- `frontend/src/pages/Dashboard/NewInstance.tsx`: Adicionada a opção de canal **`Zapo (zapo-js TCP Nativo)`** como padrão de integração, exibindo alternador de `mobileTransport` quando selecionado.
-- `frontend/src/components/sidebar.tsx`: Conflitos resolvidos preservando as marcações e customizações locais de Zapo Manager, links de API docs/GitHub, flags de `mobileTransport` e formulário de `proxy`.
+- `frontend/src/config/app-config.ts` & `hooks/useAppConfig.ts`: Criados módulo e hook de configuração centralizada para **White-Label e Versionamento Unificado**. Permite alterar nome da marca (`VITE_APP_NAME`), versão (`VITE_APP_VERSION`), logos (`VITE_APP_LOGO_DARK/LIGHT`), URLs e descrições via variáveis de ambiente ou arquivo central.
+- `frontend/src/pages/Home.tsx`, `Login/index.tsx` & `sidebar.tsx`: Unificadas as exibições de versão e marcações consumindo o hook `useAppConfig()` (exibindo `v1.6.17 (Zapo: v1.6.2)` em todas as telas de forma 100% sincronizada).
+- `backend/src/main.ts`: Atualizada a chave `version` nas rotas `GET /` e `GET /runtime/status` para retornar `1.6.17` alinhado à release oficial da suíte.
 - `backend/package.json`: Atualizada dependência `@whiskeysockets/baileys` para `7.0.0-rc14`.
 - `docs/SYNC-UPSTREAM.md`: Atualizados registros de sincronização e triagem de releases com `zapo-release-triage`.
 - Validação compilação TypeScript no backend (`tsc`) e build de produção Vite no frontend (`npm run build:all`) com 100% de sucesso.

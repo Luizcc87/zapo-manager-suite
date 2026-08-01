@@ -17,7 +17,7 @@ import { verifyGoServer } from "@/lib/queries/auth/verifyGoServer";
 import { verifyServer } from "@/lib/queries/auth/verifyServer";
 import { checkLicenseStatus, initRegister } from "@/lib/queries/license/license";
 import { DEFAULT_PROVIDER, logout, saveToken } from "@/lib/queries/token";
-import { useTheme } from "@/components/theme-provider";
+import { useAppConfig } from "@/hooks/useAppConfig";
 
 const loginSchema = z.object({
   provider: z.enum(["api", "go", "zapo"]).default(DEFAULT_PROVIDER),
@@ -29,11 +29,9 @@ type LoginSchema = z.infer<typeof loginSchema>;
 function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { logoSrc, copyrightOwner, githubUrl } = useAppConfig();
   const [loginError, setLoginError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { theme } = useTheme();
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
 
   const defaultServerUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_EVOLUTION_API_URL || (
     (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && window.location.port !== "8080"
@@ -210,8 +208,8 @@ function Login() {
 
         <div className="text-center text-xs text-muted-foreground">
           <p>
-            © {new Date().getFullYear()} Zapo Manager ·{" "}
-            <a href="https://github.com/Luizcc87/zapo-manager-suite" target="_blank" rel="noreferrer" className="underline hover:text-primary">
+            © {new Date().getFullYear()} {copyrightOwner} ·{" "}
+            <a href={githubUrl} target="_blank" rel="noreferrer" className="underline hover:text-primary">
               GitHub
             </a>
           </p>

@@ -5,13 +5,11 @@ import { ArrowRight, Github, Globe, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
-import { useTheme } from "@/components/theme-provider";
+import { useAppConfig } from "@/hooks/useAppConfig";
 
 export default function Home() {
   const navigate = useNavigate();
-  const { theme } = useTheme();
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
+  const { appName, appDescription, logoSrc, copyrightOwner, githubUrl, fullVersionTag } = useAppConfig();
 
   const handleGoToManager = () => {
     navigate("/manager");
@@ -24,7 +22,7 @@ export default function Home() {
         <div className="flex items-center">
           <img
             src={logoSrc}
-            alt="Zapo Manager"
+            alt={appName}
             className="h-8"
           />
         </div>
@@ -41,15 +39,15 @@ export default function Home() {
             <div className="flex items-center justify-center mb-6">
               <img
                 src={logoSrc}
-                alt="Zapo Manager"
+                alt={appName}
                 className="h-12"
               />
             </div>
             <p className="text-xl text-muted-foreground mb-6">
-              Painel de gerenciamento para a Zapo API
+              {appDescription}
             </p>
             <Badge variant="secondary" className="text-sm px-3 py-1">
-              Version 2.0.0
+              {fullVersionTag}
             </Badge>
           </div>
 
@@ -58,7 +56,7 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-primary" />
-                Bem-vindo ao Zapo Manager
+                Bem-vindo ao {appName}
               </CardTitle>
               <CardDescription>
                 Painel completo para gerenciar instâncias WhatsApp via Zapo API — TCP nativo, baixo risco de ban
@@ -121,7 +119,7 @@ export default function Home() {
 
           {/* Footer */}
           <div className="text-center mt-12 text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} Zapo Manager · Apache 2.0 · <a href="https://github.com/Luizcc87" target="_blank" rel="noreferrer" className="underline hover:text-primary">github.com/Luizcc87</a></p>
+            <p>© {new Date().getFullYear()} {copyrightOwner} · Apache 2.0 · <a href={githubUrl} target="_blank" rel="noreferrer" className="underline hover:text-primary">{githubUrl.replace(/^https?:\/\//, '')}</a></p>
           </div>
         </div>
       </div>
