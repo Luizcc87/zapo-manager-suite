@@ -15,8 +15,9 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation, useParams } from "react-router-dom";
 
-import { useInstance } from "@/contexts/InstanceContext";
 import { useTheme } from "@/components/theme-provider";
+import { useInstance } from "@/contexts/InstanceContext";
+
 import { FEATURES, FeatureKey, isFeatureEnabled } from "@/lib/provider/features";
 import { cn } from "@/lib/utils";
 import { useVerifyServer } from "@/lib/queries/auth/verifyServer";
@@ -56,7 +57,7 @@ function SidebarShell({ children, footer }: { children: React.ReactNode; footer?
   return (
     <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-56 border-r border-sidebar-border">
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <img src={logoSrc} alt="Zapo Manager" className="h-7" />
+        <img src={logoSrc} alt="Evolution API" className="h-7" />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">

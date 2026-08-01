@@ -31,7 +31,7 @@ function Header({ instanceId }: { instanceId?: string }) {
         {instanceId && instance && (
           <div className="mr-2 flex items-center gap-2 rounded-md bg-sidebar-accent/50 px-3 py-1.5">
             <Avatar className="h-6 w-6">
-              <AvatarImage src={instance.profilePicUrl || "/favicon.svg"} alt={instance.name} />
+              <AvatarImage src={instance.profilePicUrl || "/assets/images/evolution-logo.png"} alt={instance.name} />
             </Avatar>
             <span className="text-sm font-medium text-sidebar-foreground">{instance.profileName || instance.name}</span>
           </div>
