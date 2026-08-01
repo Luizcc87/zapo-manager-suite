@@ -296,7 +296,7 @@
     }
   },
   "login": {
-    "title": "Zapo Manager",
+    "title": "Evolution Manager",
     "description": "Please enter your credentials to continue",
     "form": {
       "serverUrl": "Server URL",
@@ -320,7 +320,7 @@
       "name": "Name",
       "integration": {
         "label": "Channel",
-        "baileys": "Zapo",
+        "baileys": "Baileys",
         "whatsapp": "WhatsApp Cloud API",
         "facebook": "Facebook",
         "instagram": "Instagram",

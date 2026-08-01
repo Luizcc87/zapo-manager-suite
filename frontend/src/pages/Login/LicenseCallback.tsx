@@ -26,8 +26,10 @@ function LicenseCallback() {
   const [state, setState] = useState<State>("activating");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
+  const logoSrc =
+    theme === "dark"
+      ? "https://evolution-api.com/files/evo/evolution-logo-white.svg"
+      : "https://evolution-api.com/files/evo/evolution-logo.svg";
 
   const doActivate = useCallback(async () => {
     setState("activating");
@@ -79,7 +81,7 @@ function LicenseCallback() {
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-t from-primary/20 via-background/95 to-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center text-center">
-          <img src={logoSrc} alt="Zapo Manager" className="mb-3 h-10" />
+          <img src={logoSrc} alt="Evolution API" className="mb-3 h-10" />
           <p className="text-sm text-muted-foreground">{t("license.callback.title")}</p>
         </div>
 
