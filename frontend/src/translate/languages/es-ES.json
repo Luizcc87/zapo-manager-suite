@@ -278,6 +278,7 @@
       "name": "Nombre",
       "integration": {
         "label": "Canal",
+        "zapo": "Zapo (zapo-js TCP Nativo)",
         "baileys": "Baileys",
         "whatsapp": "WhatsApp Cloud API",
         "facebook": "Facebook",

@@ -9,7 +9,8 @@ Registro cronológico reverso de implementações e alterações relevantes.
 **Frontend / Backend / Docs**
 - `frontend/`: Realizado `git subtree pull` sincronizando 10 novos commits do repositório oficial `evolution-foundation/evolution-manager-v2` (melhorias em license-flow, visual, branding e suporte a integrações).
 - `frontend/src/pages/Home.tsx` & `Login/index.tsx`: Restauradas a identidade visual, logos SVG (`zapo-manager-logo.svg`), textos, links e comportamentos padrão do **Zapo Manager** (ex: fallback automático da URL do servidor para porta `:8080` local).
-- `frontend/src/components/sidebar.tsx` & `NewInstance.tsx`: Conflitos resolvidos preservando as marcações e customizações locais de Zapo Manager, links de API docs/GitHub, flags de `mobileTransport` e formulário de `proxy`.
+- `frontend/src/pages/Dashboard/NewInstance.tsx`: Adicionada a opção de canal **`Zapo (zapo-js TCP Nativo)`** como padrão de integração, exibindo alternador de `mobileTransport` quando selecionado.
+- `frontend/src/components/sidebar.tsx`: Conflitos resolvidos preservando as marcações e customizações locais de Zapo Manager, links de API docs/GitHub, flags de `mobileTransport` e formulário de `proxy`.
 - `backend/package.json`: Atualizada dependência `@whiskeysockets/baileys` para `7.0.0-rc14`.
 - `docs/SYNC-UPSTREAM.md`: Atualizados registros de sincronização e triagem de releases com `zapo-release-triage`.
 - Validação compilação TypeScript no backend (`tsc`) e build de produção Vite no frontend (`npm run build:all`) com 100% de sucesso.

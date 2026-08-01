@@ -29,7 +29,7 @@ const FormSchema = z.object({
   token: stringOrUndefined,
   number: stringOrUndefined,
   businessId: stringOrUndefined,
-  integration: z.enum(["WHATSAPP-BUSINESS", "WHATSAPP-BAILEYS", "EVOLUTION"]),
+  integration: z.enum(["ZAPO", "WHATSAPP-BAILEYS", "WHATSAPP-BUSINESS", "EVOLUTION"]),
   mobileTransport: z.boolean().default(false),
   proxyEnabled: z.boolean().default(true),
   proxyProtocol: z.string().default("http"),
@@ -53,6 +53,7 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
   const [proxyOpen, setProxyOpen] = useState(false);
 
   const options = [
+    { value: "ZAPO", label: t("instance.form.integration.zapo", { defaultValue: "Zapo (zapo-js TCP Nativo)" }) },
     { value: "WHATSAPP-BAILEYS", label: t("instance.form.integration.baileys") },
     { value: "WHATSAPP-BUSINESS", label: t("instance.form.integration.whatsapp") },
     { value: "EVOLUTION", label: t("instance.form.integration.evolution") },
@@ -62,7 +63,7 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
     resolver: zodResolver(FormSchema),
     defaultValues: {
       name: "",
-      integration: "WHATSAPP-BAILEYS",
+      integration: "ZAPO",
       token: uuidv4().replace("-", "").toUpperCase(),
       number: "",
       businessId: "",
@@ -118,7 +119,7 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
     setProxyOpen(false);
     form.reset({
       name: "",
-      integration: "WHATSAPP-BAILEYS",
+      integration: "ZAPO",
       token: uuidv4().replace("-", "").toLocaleUpperCase(),
       number: "",
       businessId: "",
@@ -154,6 +155,16 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
             <FormInput name="number" label={t("instance.form.number")}>
               <Input type="tel" />
             </FormInput>
+            {(integrationSelected === "ZAPO" || integrationSelected === "WHATSAPP-BAILEYS") && (
+              <div className="flex p-2 items-center justify-between rounded-md border border-sidebar-border bg-sidebar/30">
+                <FormSwitch
+                  name="mobileTransport"
+                  label={t("instance.form.mobileTransport.label", { defaultValue: "Conexão tipo Mobile (Zapo Mobile)" })}
+                  helper={t("instance.form.mobileTransport.description", { defaultValue: "Simula um dispositivo Android nativo TCP. Recomendado para maior estabilidade e evitar banimentos." })}
+                  className="w-full justify-between"
+                />
+              </div>
+            )}
             {integrationSelected === "WHATSAPP-BUSINESS" && (
               <FormInput required name="businessId" label={t("instance.form.businessId")}>
                 <Input />
