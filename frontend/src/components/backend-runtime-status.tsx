@@ -21,10 +21,12 @@ export function BackendRuntimeStatus() {
   if (isError || !data?.ok) {
     return (
       <TooltipWrapper content="Backend indisponivel ou sem resposta em /runtime/status">
-        <Badge variant="destructive" className="hidden items-center gap-1.5 md:inline-flex">
-          <ServerOff className="h-3.5 w-3.5" />
-          Offline
-        </Badge>
+        <span className="hidden items-center md:inline-flex">
+          <Badge variant="destructive" className="items-center gap-1.5">
+            <ServerOff className="h-3.5 w-3.5" />
+            Offline
+          </Badge>
+        </span>
       </TooltipWrapper>
     );
   }
@@ -43,10 +45,12 @@ export function BackendRuntimeStatus() {
 
   return (
     <TooltipWrapper content={tooltip}>
-      <Badge variant={fakeEnabled ? "warning" : "secondary"} className="hidden items-center gap-1.5 md:inline-flex">
-        <Server className="h-3.5 w-3.5" />
-        {label}
-      </Badge>
+      <span className="hidden items-center md:inline-flex">
+        <Badge variant={fakeEnabled ? "warning" : "secondary"} className="items-center gap-1.5">
+          <Server className="h-3.5 w-3.5" />
+          {label}
+        </Badge>
+      </span>
     </TooltipWrapper>
   );
 }
