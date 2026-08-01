@@ -46,6 +46,31 @@ export type Instance = {
   proxyEnabled?: boolean;
   proxyConnected?: boolean;
   proxyError?: string | null;
+  operational?: {
+    contactCount?: number;
+    historyPersistence?: {
+      mode: "database" | "memory";
+      messagesEnabled: boolean;
+      warning?: string | null;
+    };
+    chatStats?: {
+      total?: number;
+      lastUpdatedAt?: string | null;
+      lastRemoteJid?: string | null;
+    };
+    lastActivityAt?: string | null;
+    proxyHealth?: {
+      severity: "ok" | "warning" | "critical";
+      reason?: string | null;
+    };
+    connectionDetails?: {
+      registered?: boolean;
+      hasActiveClient?: boolean;
+      hasQrCode?: boolean;
+      ownerJid?: string | null;
+      lastKnownStatus?: string | null;
+    };
+  };
   Setting: Settings;
   _count?: {
     Message?: number;

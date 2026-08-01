@@ -8,6 +8,7 @@
 
 import { expect, test } from '@playwright/test';
 
+import { prisma } from '../backend/src/lib/prisma';
 import {
   createTestInstance,
   deleteTestInstance,
@@ -24,6 +25,10 @@ test.describe('Zapo Manager endpoint contract - offline-safe', () => {
   });
 
   test.afterAll(async ({ request }) => {
+    if (instance?.name) {
+      await prisma.instanceEvent.deleteMany({ where: { instanceName: instance.name } }).catch(() => {});
+      await prisma.notificationChannel.deleteMany({ where: { instanceName: instance.name } }).catch(() => {});
+    }
     await deleteTestInstance(request, instance?.name);
   });
 
@@ -54,6 +59,30 @@ test.describe('Zapo Manager endpoint contract - offline-safe', () => {
     expect(instances[0].name).toBe(instance.name);
     expect(instances[0].connectionStatus).toBe('close');
     expect(['web', 'mobile', 'primary']).toContain(instances[0].instanceType);
+    expect(instances[0].softwareVersion).toMatch(/^\d+\.\d+\.\d+/);
+    expect(instances[0]._count).toMatchObject({
+      Message: expect.any(Number),
+      Contact: expect.any(Number),
+      Chat: expect.any(Number),
+    });
+    expect(instances[0].operational).toMatchObject({
+      contactCount: expect.any(Number),
+      historyPersistence: {
+        mode: expect.stringMatching(/^(database|memory)$/),
+        messagesEnabled: expect.any(Boolean),
+      },
+      chatStats: {
+        total: instances[0]._count.Chat,
+      },
+      proxyHealth: {
+        severity: expect.stringMatching(/^(ok|warning|critical)$/),
+      },
+      connectionDetails: {
+        registered: expect.any(Boolean),
+        hasActiveClient: expect.any(Boolean),
+        hasQrCode: expect.any(Boolean),
+      },
+    });
 
     const state = await request.get(`/instance/connectionState/${instance.name}`, {
       headers: { apikey: instance.token },
@@ -62,6 +91,99 @@ test.describe('Zapo Manager endpoint contract - offline-safe', () => {
     const stateBody = await state.json();
     expect(stateBody.instance.instanceName).toBe(instance.name);
     expect(stateBody.instance.state).toBe('close');
+
+    const runtimeStats = await request.get(`/instance/runtime-stats/${instance.name}`, {
+      headers: { apikey: instance.token },
+    });
+    expect(runtimeStats.status()).toBe(200);
+    expect(await runtimeStats.json()).toMatchObject({
+      instanceName: instance.name,
+      memoryChats: expect.any(Number),
+      memoryMessages: expect.any(Number),
+      databaseMessages: expect.any(Number),
+      databaseEnabled: expect.any(Boolean),
+    });
+
+    const unauthorizedRuntimeStats = await request.get(`/instance/runtime-stats/${instance.name}`, {
+      headers: { apikey: 'invalid-key' },
+    });
+    expect(unauthorizedRuntimeStats.status()).toBe(401);
+
+    const missingRuntimeStats = await request.get(`/instance/runtime-stats/missing-${instance.name}`, {
+      headers: { apikey: GLOBAL_API_KEY },
+    });
+    expect(missingRuntimeStats.status()).toBe(404);
+
+    const emptyEvents = await request.get(`/instance/events/${instance.name}`, {
+      headers: { apikey: instance.token },
+    });
+    expect(emptyEvents.status()).toBe(200);
+    expect(await emptyEvents.json()).toMatchObject({
+      instanceName: instance.name,
+      events: [],
+    });
+
+    const event = await prisma.instanceEvent.create({
+      data: {
+        instanceName: instance.name,
+        type: 'test.critical',
+        severity: 'critical',
+        title: 'Evento critico de teste',
+        summary: 'Persistencia de evento operacional validada',
+      },
+    });
+
+    const seededEvents = await request.get(`/instance/events/${instance.name}?limit=1`, {
+      headers: { apikey: instance.token },
+    });
+    expect(seededEvents.status()).toBe(200);
+    expect(await seededEvents.json()).toMatchObject({
+      events: [
+        {
+          id: event.id,
+          type: 'test.critical',
+          severity: 'critical',
+          readAt: null,
+        },
+      ],
+    });
+
+    const eventSummary = await request.get(`/instance/events-summary/${instance.name}?days=7`, {
+      headers: { apikey: instance.token },
+    });
+    expect(eventSummary.status()).toBe(200);
+    expect(await eventSummary.json()).toMatchObject({
+      instanceName: instance.name,
+      days: 7,
+      total: expect.any(Number),
+      unreadCount: expect.any(Number),
+      severity: {
+        info: expect.any(Number),
+        warning: expect.any(Number),
+        critical: expect.any(Number),
+      },
+      topTypes: expect.any(Array),
+      lastCritical: {
+        id: event.id,
+        type: 'test.critical',
+      },
+    });
+
+    const unsentSummary = await request.post(`/instance/events-summary/${instance.name}/send`, {
+      headers: { apikey: instance.token },
+      data: { days: 7 },
+    });
+    expect(unsentSummary.status()).toBe(400);
+
+    const markRead = await request.post(`/instance/events/${instance.name}/${event.id}/read`, {
+      headers: { apikey: instance.token },
+    });
+    expect(markRead.status()).toBe(200);
+
+    const missingEvent = await request.post(`/instance/events/${instance.name}/missing-event/read`, {
+      headers: { apikey: instance.token },
+    });
+    expect(missingEvent.status()).toBe(404);
   });
 
   test('settings, webhook, proxy, chat, and contact routes are callable with instance auth', async ({ request }) => {
@@ -111,6 +233,37 @@ test.describe('Zapo Manager endpoint contract - offline-safe', () => {
     });
     expect(proxyStatus.status()).toBe(200);
     expect(await proxyStatus.json()).toMatchObject({ enabled: false, connected: false });
+
+    const createChannel = await request.post(`/notification/channels/${instance.name}`, {
+      headers: { apikey: instance.token },
+      data: {
+        type: 'telegram',
+        name: 'Ops Telegram',
+        enabled: true,
+        config: { botToken: 'secret-bot-token', chatId: '123' },
+        events: ['proxy.test_failed'],
+      },
+    });
+    expect(createChannel.status()).toBe(201);
+    const channel = await createChannel.json();
+    expect(channel).toMatchObject({
+      type: 'telegram',
+      name: 'Ops Telegram',
+      enabled: true,
+      config: { botToken: '********', chatId: '123' },
+      events: ['proxy.test_failed'],
+    });
+
+    const channels = await request.get(`/notification/channels/${instance.name}`, {
+      headers: { apikey: instance.token },
+    });
+    expect(channels.status()).toBe(200);
+    expect((await channels.json()).channels).toHaveLength(1);
+
+    const deleteChannel = await request.delete(`/notification/channels/${instance.name}/${channel.id}`, {
+      headers: { apikey: instance.token },
+    });
+    expect(deleteChannel.status()).toBe(200);
 
     const chats = await request.post(`/chat/findChats/${instance.name}`, {
       headers: { apikey: instance.token },
@@ -243,4 +396,3 @@ test.describe('Zapo Manager endpoint contract - offline-safe', () => {
     expect(deleteRes.status()).toBe(200);
   });
 });
-

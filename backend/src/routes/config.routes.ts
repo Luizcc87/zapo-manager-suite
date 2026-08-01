@@ -3,6 +3,9 @@ import { ProxyAgent } from 'undici';
 import { prisma } from '../lib/prisma';
 import { checkInstanceApiKey } from '../middleware/auth';
 import { ZapoManager, testProxyConnectivity } from '../manager';
+import { recordInstanceEvent } from '../services/instanceEvents';
+import { deleteNotificationChannel, listNotificationChannels, upsertNotificationChannel } from '../services/notificationChannels';
+import { sendTelegramAlert } from '../services/telegramAlerts';
 
 const router = Router();
 
@@ -97,6 +100,68 @@ router.get('/proxy/find/:instanceName', checkInstanceApiKey, async (req: Request
   }
 });
 
+router.get('/notification/channels/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const channels = await listNotificationChannels(req.params.instanceName);
+    return res.json({ instanceName: req.params.instanceName, channels });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/notification/channels/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const channel = await upsertNotificationChannel(req.params.instanceName, undefined, req.body);
+    return res.status(201).json(channel);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/notification/channels/:instanceName/:channelId', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const channel = await upsertNotificationChannel(req.params.instanceName, req.params.channelId, req.body);
+    return res.json(channel);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/notification/channels/:instanceName/:channelId', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const result = await deleteNotificationChannel(req.params.instanceName, req.params.channelId);
+    if (result.count === 0) return res.status(404).json({ error: 'Channel not found' });
+    return res.json({ status: 'success', channelId: req.params.channelId });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/notification/channels/:instanceName/:channelId/test', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const channels = await listNotificationChannels(req.params.instanceName);
+    const channel = channels.find((item) => item.id === req.params.channelId && item.type === 'telegram' && item.enabled);
+    if (!channel) return res.status(404).json({ error: 'Telegram channel not found' });
+
+    const sent = await sendTelegramAlert({
+      instanceName: req.params.instanceName,
+      type: 'operational.summary',
+      severity: 'info',
+      title: 'Teste de notificacao Telegram',
+      summary: `Mensagem de teste enviada pelo Zapo Manager para a instancia ${req.params.instanceName}.`,
+      dedupeKey: `${req.params.instanceName}:notification.test:${Date.now()}`,
+    });
+
+    if (!sent) {
+      return res.status(502).json({ error: 'Telegram test message was not sent' });
+    }
+
+    return res.json({ status: 'sent', channelId: req.params.channelId });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/proxy/set/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const data = { ...DEFAULT_PROXY, ...req.body };
@@ -109,6 +174,22 @@ router.post('/proxy/set/:instanceName', checkInstanceApiKey, async (req: Request
         details: test.details
       });
       if (!test.connected) {
+        recordInstanceEvent({
+          instanceName: req.params.instanceName,
+          type: 'proxy.test_failed',
+          severity: 'critical',
+          title: 'Falha no proxy da instancia',
+          summary: `O teste de conectividade do proxy falhou: ${test.error}`,
+          details: { error: test.error, details: test.details, source: 'proxy.set' },
+        }).catch(() => {});
+        sendTelegramAlert({
+          instanceName: req.params.instanceName,
+          type: 'proxy.test_failed',
+          severity: 'critical',
+          title: 'Falha no proxy da instancia',
+          summary: `O teste de conectividade do proxy falhou: ${test.error}${test.details ? ` (${test.details})` : ''}`,
+          dedupeKey: `${req.params.instanceName}:proxy.test_failed:${test.error || 'unknown'}`,
+        }).catch(() => {});
         return res.status(400).json({
           response: {
             message: `Falha na conexão com o proxy: ${test.error}${test.details ? ` (${test.details})` : ''}`

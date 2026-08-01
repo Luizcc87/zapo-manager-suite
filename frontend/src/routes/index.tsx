@@ -16,6 +16,7 @@ import { Evoai } from "@/pages/instance/Evoai";
 import { EvolutionBot } from "@/pages/instance/EvolutionBot";
 import { Flowise } from "@/pages/instance/Flowise";
 import { N8n } from "@/pages/instance/N8n";
+import { Notifications } from "@/pages/instance/Notifications";
 import { Openai } from "@/pages/instance/Openai";
 import { Proxy } from "@/pages/instance/Proxy";
 import { Rabbitmq } from "@/pages/instance/Rabbitmq";
@@ -292,6 +293,16 @@ const router = createBrowserRouter([
       <ProtectedRoute feature="flowise">
         <InstanceLayout>
           <Flowise />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/notifications",
+    element: (
+      <ProtectedRoute>
+        <InstanceLayout>
+          <Notifications />
         </InstanceLayout>
       </ProtectedRoute>
     ),

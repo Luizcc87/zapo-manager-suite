@@ -19,13 +19,14 @@ import { ZapoManager } from './manager';
 import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
 import { fetchLatestIosWaVersion } from './config/fetchIosWaVersion';
 import { setAppVersion, getCurrentAppVersion, setIosVersion, getCurrentIosVersion } from './config/device';
+import { getInstanceEventsRetentionDays, pruneOldInstanceEvents } from './services/instanceEvents';
 
 const execFileAsync = promisify(execFile);
 
 function getZapoWebVersion(): string {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('zapo-js/spec/version').WA_VERSION ?? 'unknown';
+    return require('zapo-js').WA_VERSION ?? 'unknown';
   } catch { return 'unknown'; }
 }
 
@@ -176,7 +177,7 @@ app.get('/', (req, res, next) => {
     return next();
   }
   res.json({
-    version: process.env.APP_VERSION || '1.6.17',
+    version: process.env.APP_VERSION || '1.6.19',
     clientName: 'zapo-manager',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
@@ -189,7 +190,7 @@ app.get('/runtime/status', (req, res) => {
   res.json({
     ok: true,
     clientName: 'zapo-manager',
-    version: process.env.APP_VERSION || '1.6.17',
+    version: process.env.APP_VERSION || '1.6.19',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
     runtimeEnvironment: getRuntimeEnvironment(req),
@@ -396,6 +397,16 @@ async function bootstrap() {
 
   try {
     await runMigrationsWithRetry();
+
+    const eventRetention = await pruneOldInstanceEvents().catch((err: any) => {
+      console.warn('[Zapo-Manager] Falha ao limpar eventos operacionais antigos:', err.message);
+      return null;
+    });
+    if (eventRetention?.disabled) {
+      console.log('[Zapo-Manager] Retencao de eventos operacionais desativada por INSTANCE_EVENTS_RETENTION_DAYS=0.');
+    } else if (eventRetention) {
+      console.log(`[Zapo-Manager] Retencao de eventos operacionais: ${getInstanceEventsRetentionDays()} dias; removidos=${eventRetention.count}.`);
+    }
 
     console.log(`[Zapo-Manager] WA Web version (zapo-js built-in): ${getZapoWebVersion()}`);
 

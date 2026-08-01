@@ -148,6 +148,7 @@ function InstanceSidebar() {
         children: [
           { id: "settings", title: t("sidebar.settings"), path: "settings" },
           { id: "proxy", title: t("sidebar.proxy"), path: "proxy" },
+          { id: "notifications", title: t("sidebar.notifications", { defaultValue: "Notificações" }), path: "notifications" },
         ],
       },
       {

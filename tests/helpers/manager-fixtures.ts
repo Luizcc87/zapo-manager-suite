@@ -150,6 +150,31 @@ export function makeUiInstance(overrides: Record<string, unknown> = {}) {
     proxyEnabled: true,
     proxyConnected: true,
     proxyError: null,
+    operational: {
+      contactCount: 3,
+      historyPersistence: {
+        mode: 'database',
+        messagesEnabled: true,
+        warning: null,
+      },
+      chatStats: {
+        total: 2,
+        lastUpdatedAt: new Date('2026-01-02T12:30:00.000Z').toISOString(),
+        lastRemoteJid: '5511988887777@s.whatsapp.net',
+      },
+      lastActivityAt: new Date('2026-01-02T12:30:00.000Z').toISOString(),
+      proxyHealth: {
+        severity: 'ok',
+        reason: null,
+      },
+      connectionDetails: {
+        registered: true,
+        hasActiveClient: true,
+        hasQrCode: false,
+        ownerJid: '5511999999999@s.whatsapp.net',
+        lastKnownStatus: 'connected',
+      },
+    },
     Setting: {
       rejectCall: false,
       groupsIgnore: false,
@@ -197,6 +222,145 @@ export async function mockManagerApi(page: Page, instances = [makeUiInstance()])
     const instanceId = url.searchParams.get('instanceId');
     const filtered = instanceId ? instances.filter((instance) => instance.id === instanceId) : instances;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(filtered) });
+  });
+
+  await page.route(`${LOCAL_API_URL}/instance/runtime-stats/**`, async (route) => {
+    const instanceName = route.request().url().split('/').pop() || 'ui-open';
+    const matchedInstance = instances.find((instance) => instance.name === instanceName);
+    const databaseEnabled = (matchedInstance as any)?.operational?.historyPersistence?.messagesEnabled ?? true;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        instanceName,
+        connected: true,
+        memoryChats: 1,
+        memoryMessages: 2,
+        databaseMessages: databaseEnabled ? 2 : 0,
+        databaseEnabled,
+      }),
+    });
+  });
+
+  await page.route(`${LOCAL_API_URL}/instance/events/**`, async (route) => {
+    const instanceName = route.request().url().split('/').filter(Boolean).at(-1) || 'ui-open';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        instanceName,
+        events: [
+          {
+            id: 'ui-event-critical',
+            instanceName,
+            type: 'mobile_account_takeover_notice',
+            severity: 'critical',
+            title: 'Tentativa de takeover detectada',
+            summary: 'Novo dispositivo: Android desconhecido',
+            details: {},
+            readAt: null,
+            createdAt: new Date('2026-01-02T13:30:00.000Z').toISOString(),
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.route(`${LOCAL_API_URL}/instance/events-summary/**`, async (route) => {
+    const instanceName = route.request().url().split('/').filter(Boolean).at(-1)?.split('?')[0] || 'ui-open';
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'sent', instanceName, days: 7 }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        instanceName,
+        days: 7,
+        since: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+        total: 3,
+        unreadCount: 1,
+        severity: {
+          info: 0,
+          warning: 1,
+          critical: 2,
+        },
+        topTypes: [
+          { type: 'mobile_account_takeover_notice', count: 2 },
+          { type: 'connection.disconnected', count: 1 },
+        ],
+        lastCritical: {
+          id: 'ui-event-critical',
+          type: 'mobile_account_takeover_notice',
+          title: 'Tentativa de takeover detectada',
+          summary: 'Novo dispositivo: Android desconhecido',
+          createdAt: new Date('2026-01-02T13:30:00.000Z').toISOString(),
+          readAt: null,
+        },
+      }),
+    });
+  });
+
+  let savedNotificationChannel: any = null;
+  await page.route(`${LOCAL_API_URL}/notification/channels/**`, async (route) => {
+    const method = route.request().method();
+    const parts = route.request().url().split('/').filter(Boolean);
+    const instanceName = parts.at(-1) || 'ui-open';
+
+    if (method === 'POST') {
+      if (parts.at(-1) === 'test') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'sent', channelId: parts.at(-2) || 'ui-telegram-channel' }),
+        });
+        return;
+      }
+
+      const payload = route.request().postDataJSON();
+      savedNotificationChannel = {
+        id: 'ui-telegram-channel',
+        instanceName,
+        type: 'telegram',
+        name: payload.name || 'Telegram',
+        enabled: payload.enabled ?? true,
+        config: {
+          botToken: '********',
+          chatId: payload.config?.chatId || '123',
+        },
+        events: payload.events || [],
+        createdAt: new Date('2026-01-02T13:00:00.000Z').toISOString(),
+        updatedAt: new Date('2026-01-02T13:00:00.000Z').toISOString(),
+      };
+      await route.fulfill({
+        status: parts.length > 0 && parts.at(-2) === 'channels' ? 201 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify(savedNotificationChannel),
+      });
+      return;
+    }
+
+    if (method === 'DELETE') {
+      savedNotificationChannel = null;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'success', channelId: 'ui-telegram-channel' }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ instanceName, channels: savedNotificationChannel ? [savedNotificationChannel] : [] }),
+    });
   });
 
   await page.route(`${LOCAL_API_URL}/message/**`, async (route) => {

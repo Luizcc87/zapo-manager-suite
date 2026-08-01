@@ -25,6 +25,7 @@ export const fetchInstanceGo = async ({ instanceId }: IParams): Promise<FetchIns
 export const useFetchInstanceGo = (props: UseQueryParams<FetchInstanceResponse> & Partial<IParams>) => {
   const { instanceId, enabled, ...rest } = props;
   return useQuery<FetchInstanceResponse>({
+    refetchInterval: 5000,
     ...rest,
     queryKey: queryKey({ instanceId }),
     queryFn: () => fetchInstanceGo({ instanceId: instanceId! }),

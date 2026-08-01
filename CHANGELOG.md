@@ -2,7 +2,40 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
-## [v1.6.18] — 2026-08-01
+## [v1.6.19] — 2026-08-01
+
+### Observabilidade: sinais operacionais da instância e alertas Telegram
+
+**Backend / Frontend / Docs**
+- `backend/src/routes/instance.routes.ts`: `GET /instance/fetchInstances` passa a retornar o namespace aditivo `operational` com contatos reais, persistência do histórico, atividade de chats, saúde do proxy e detalhes de conexão; `_count.Contact` deixa de ser fixo `0`.
+- `backend/prisma/schema.prisma` e `backend/prisma/migrations/20260801000001_add_instance_events/migration.sql`: Novo model/tabela `InstanceEvent` (`wa_instance_events`) para central interna de eventos por instância, com severidade, tipo, resumo, detalhes JSON e estado lido/não lido.
+- `backend/prisma/migrations/20260801000002_add_notification_channels/migration.sql`, `backend/src/services/notificationChannels.ts` e `backend/src/routes/config.routes.ts`: Nova fundação `NotificationChannel` (`wa_notification_channels`) para canais Telegram configuráveis por instância, com respostas mascarando `botToken`.
+- `backend/src/services/instanceEvents.ts`, `backend/src/manager.ts`, `backend/src/routes/config.routes.ts` e `backend/src/routes/instance.routes.ts`: Persistência de eventos críticos de mobile, falha de proxy e desconexões opt-in, além dos endpoints `GET /instance/events/:instanceName` e `POST /instance/events/:instanceName/:eventId/read`.
+- `backend/src/routes/instance.routes.ts` e `backend/src/services/instanceEvents.ts`: Novo endpoint `GET /instance/events-summary/:instanceName` com resumo dos últimos dias por severidade, não lidos, tipos principais e último evento crítico.
+- `backend/src/routes/instance.routes.ts`, `backend/src/services/instanceEvents.ts` e `backend/src/services/telegramAlerts.ts`: Novo envio manual `POST /instance/events-summary/:instanceName/send` para encaminhar o resumo operacional por Telegram sem expor token em payload/log.
+- `backend/src/main.ts` e `backend/src/services/instanceEvents.ts`: Limpeza automática de eventos antigos no startup via `INSTANCE_EVENTS_RETENTION_DAYS` (padrão 30 dias, `0` desativa).
+- `backend/src/services/telegramAlerts.ts`: Novo helper opcional de alertas Telegram via canal da instância ou fallback por env vars, com timeout, deduplicação configurável (`TELEGRAM_ALERT_DEDUPE_SECONDS`), flag separada para alertas de desconexão (`TELEGRAM_ALERT_CONNECTION_EVENTS`) e falha não bloqueante.
+- `backend/src/routes/instance.routes.ts`: Corrigida origem de `softwareVersion` para instâncias Web usando o export público `WA_VERSION` de `zapo-js`, evitando "Versão do WhatsApp Web: Não disponível".
+- `frontend/src/pages/instance/DashboardInstance/OperationalStatsGrid.tsx`: Nova seção local da dashboard para contatos, chats, mensagens, última atividade, histórico e substatus de conexão.
+- `frontend/src/pages/instance/DashboardInstance/OperationalStatsGrid.tsx`: Adicionado card executivo "Proxy" na visão geral da dashboard com estado desativado, conectado, falhou ou verificando.
+- `frontend/src/pages/instance/DashboardInstance/OperationalStatsGrid.tsx`: Card genérico "Histórico" renomeado para "Persistência de mensagens", com descrição ligada ao efeito em restart.
+- `frontend/src/pages/instance/DashboardInstance/index.tsx`: Alertas de proxy passam a exibir causa amigável para motivos consolidados (`proxy_auth_407`, `proxy_payment_402`, `proxy_timeout`, `proxy_config_incomplete`, `proxy_failed`) preservando o código técnico.
+- `frontend/src/pages/instance/DashboardInstance/MobileSecurityAlerts.tsx`: Banners críticos mobile isolados em componente local da dashboard para reduzir conflito com futuras sincronizações do frontend upstream.
+- `frontend/src/pages/instance/DashboardInstance/TechnicalDiagnosticsPanel.tsx` e `frontend/src/pages/instance/DashboardInstance/index.tsx`: Dashboard da instância separada em abas "Visão geral" e "Diagnóstico"; runtime, proxy status e detalhes técnicos ficam fora da visão principal.
+- `frontend/src/pages/instance/DashboardInstance/TechnicalDiagnosticsPanel.tsx`: "Motivo do proxy" passa a exibir "Proxy operacional" quando a severidade está `ok`, evitando estado vazio para proxy saudável.
+- `frontend/src/pages/instance/DashboardInstance/GoQrCodeModal.tsx`: Modal de conexão passa a renderizar QR bruto retornado em `code` por `/instance/connect`, corrigindo estado preso em "Aguardando QR Code..." quando não há `base64`.
+- `frontend/src/lib/queries/instance/fetchInstance.ts` e `frontend/src/lib/queries/go/instance/fetchInstance.ts`: Dashboard da instância passa a atualizar a instância a cada 5s para refletir contadores e status sincronizados após conexão.
+- `frontend/src/pages/instance/DashboardInstance/RuntimeStatsPanel.tsx`: Novo painel de diagnóstico do histórico mostrando mensagens em memória, mensagens no banco e modo de persistência.
+- `frontend/src/lib/queries/instance/events.ts` e `frontend/src/pages/instance/DashboardInstance/InstanceEventsPanel.tsx`: Nova lista curta de eventos recentes na dashboard, com badge de severidade e ação para marcar como lido.
+- `frontend/src/pages/instance/DashboardInstance/EventsSummaryPanel.tsx`: Novo painel de resumo operacional para base de relatórios e gráficos simples da instância.
+- `frontend/src/pages/instance/DashboardInstance/EventsSummaryPanel.tsx`: O painel de resumo permanece visível mesmo sem eventos recentes, exibindo estado vazio e mantendo o envio desabilitado até existir conteúdo para relatar.
+- `frontend/src/pages/instance/DashboardInstance/EventsSummaryPanel.tsx`: Ação "Enviar resumo" envia manualmente o relatório operacional pelo canal Telegram configurado.
+- `frontend/src/lib/queries/instance/notificationChannels.ts` e `frontend/src/pages/instance/Notifications/TelegramChannelPanel.tsx`: Novo submenu de Configurações para configurar/remover canal Telegram por instância, mantendo a dashboard focada em sinais e resumos.
+- `frontend/src/pages/instance/Notifications/TelegramChannelPanel.tsx`: Adicionado bloco "Como funciona" explicando quais eventos disparam mensagens, quando o resumo é enviado e a prioridade entre canal da instância e fallback global.
+- `frontend/src/pages/instance/Notifications/TelegramChannelPanel.tsx`: Adicionadas instruções básicas de Telegram explicando `Bot token`, `Chat ID`, uso de grupos/canais e prefixo comum `-100`.
+- `backend/src/routes/config.routes.ts`, `frontend/src/lib/queries/instance/notificationChannels.ts` e `frontend/src/pages/instance/Notifications/TelegramChannelPanel.tsx`: Canal Telegram configurado por instância passa a ter botão "Enviar teste" para validar o envio real.
+- `.env.example` e `docs/DOCKER.md`: Documentadas `TELEGRAM_ALERTS_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALERT_DEDUPE_SECONDS`, `TELEGRAM_ALERT_CONNECTION_EVENTS` e `INSTANCE_EVENTS_RETENTION_DAYS`.
+- `backend/src/tests/telegram-alerts.test.ts`, `tests/zapo-manager-endpoints.spec.ts` e `tests/zapo-manager-ui.spec.ts`: Cobertura para Telegram sem chamada externa, contrato `operational`, diagnóstico runtime, eventos persistentes, modo memória e proxy crítico.
 
 ### Sync Upstream & Upgrades (Evolution Manager v2 & Baileys 7.0.0-rc14)
 

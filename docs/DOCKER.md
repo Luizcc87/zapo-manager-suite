@@ -65,6 +65,30 @@ export POSTGRES_PASSWORD=$(openssl rand -base64 24)
 export SERVER_URL=https://zapo.seu-dominio.com
 ```
 
+Alertas Telegram opcionais:
+
+```bash
+export TELEGRAM_ALERTS_ENABLED=true
+export TELEGRAM_BOT_TOKEN=<token-do-bot>
+export TELEGRAM_CHAT_ID=<chat-id>
+export TELEGRAM_ALERT_DEDUPE_SECONDS=600
+export TELEGRAM_ALERT_CONNECTION_EVENTS=false
+export INSTANCE_EVENTS_RETENTION_DAYS=30
+```
+
+Sem essas variáveis, nenhum alerta externo é enviado. Alertas de desconexão ficam desligados por padrão e exigem `TELEGRAM_ALERT_CONNECTION_EVENTS=true` para evitar ruído em loops de reconexão. Erros de entrega no Telegram não interrompem conexão, proxy, webhook ou envio de mensagens.
+
+`INSTANCE_EVENTS_RETENTION_DAYS` controla a limpeza automática dos eventos internos exibidos na dashboard. O padrão sugerido é 30 dias; use `0` apenas se quiser desativar essa limpeza e assumir a retenção externamente.
+
+Além do fallback global por `.env`, o backend aceita canais Telegram por instância via API:
+
+- `GET /notification/channels/:instanceName`
+- `POST /notification/channels/:instanceName`
+- `POST /notification/channels/:instanceName/:channelId`
+- `DELETE /notification/channels/:instanceName/:channelId`
+
+O `botToken` é usado somente para envio e volta mascarado nas respostas.
+
 ### 3. Deploy
 
 ```bash

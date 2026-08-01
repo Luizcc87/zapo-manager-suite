@@ -1,5 +1,6 @@
 import { CheckCircle2, KeyRound, QrCode, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import QRCode from "react-qr-code";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 
@@ -27,6 +28,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
   const { connect } = useManageInstance();
 
   const [base64, setBase64] = useState("");
+  const [qrCode, setQrCode] = useState("");
   const [pairingCode, setPairingCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [phone, setPhone] = useState("");
@@ -45,6 +47,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
       const data = await connect({ instanceName: instance.name, token: instance.token });
       LOG("fullConnect() response:", data);
       setBase64((data as { base64?: string })?.base64 ?? "");
+      setQrCode((data as { code?: string })?.code ?? "");
       setPairingCode((data as { pairingCode?: string })?.pairingCode ?? "");
       await reloadInstance();
     } catch (err) {
@@ -79,11 +82,16 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
       LOG("requestPairing() response status:", response.status, "data:", JSON.stringify(data));
       const code = (data as { pairingCode?: string })?.pairingCode ?? "";
       const b64 = (data as { base64?: string })?.base64 ?? "";
+      const rawQrCode = (data as { code?: string })?.code ?? "";
       LOG("requestPairing() parsed — pairingCode:", code, "base64 present:", !!b64);
       if (code) {
         setPairingCode(code);
         setBase64("");
+        setQrCode("");
         toast.success(t("qrCode.toast.pairingSuccess"));
+      } else if (b64 || rawQrCode) {
+        setBase64(b64);
+        setQrCode(rawQrCode);
       } else {
         ERR("requestPairing() — backend returned no pairingCode. Full response:", JSON.stringify(data));
         toast.error(t("qrCode.toast.pairingError"));
@@ -142,6 +150,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
   const handleClose = () => {
     LOG("handleClose() — resetting state");
     setBase64("");
+    setQrCode("");
     setPairingCode("");
     setPhone("");
     connectCalledRef.current = false;
@@ -190,7 +199,7 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
     );
   }
 
-  LOG("Rendering active setup modal (QR / Pairing Code screen). Base64 exists:", !!base64, "Pairing code:", pairingCode);
+  LOG("Rendering active setup modal (QR / Pairing Code screen). Base64 exists:", !!base64, "QR code exists:", !!qrCode, "Pairing code:", pairingCode);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -223,6 +232,10 @@ export function GoQrCodeModal({ open, onOpenChange }: GoQrCodeModalProps) {
               {base64 ? (
                 <div className="rounded-lg border-2 border-border bg-white p-3">
                   <img src={base64} alt="QR Code" className="h-56 w-56" />
+                </div>
+              ) : qrCode ? (
+                <div className="rounded-lg border-2 border-border bg-white p-3">
+                  <QRCode value={qrCode} size={224} className="h-56 w-56" />
                 </div>
               ) : (
                 <div className="flex h-56 w-56 items-center justify-center rounded-lg border-2 border-dashed border-border">

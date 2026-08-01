@@ -11,6 +11,8 @@ import * as fs from 'fs';
 import { randomBytes } from 'crypto';
 import { ProxyAgent } from 'undici';
 import { prisma } from './lib/prisma';
+import { recordInstanceEvent } from './services/instanceEvents';
+import { isTelegramConnectionAlertsEnabled, sendTelegramAlert } from './services/telegramAlerts';
 const activeClients = new Map<string, {
   client: WaClient;
   pgStore?: any;
@@ -860,11 +862,46 @@ export class ZapoManager {
 
     client.on('mobile_registration_code', (event: any) => {
       console.warn(`[ZapoManager] [${instanceName}] ⚠️ Código de registro SMS emitido para o número! code=${event.code} expiry=${event.expiryTimestampMs}`);
+      recordInstanceEvent({
+        instanceName,
+        type: 'mobile_registration_code',
+        severity: 'critical',
+        title: 'Codigo de registro mobile recebido',
+        summary: `Um codigo de registro foi emitido para esta instancia. Expira em ${event.expiryTimestampMs ?? 'n/a'}.`,
+        details: { expiryTimestampMs: event.expiryTimestampMs },
+      }).catch(() => {});
+      sendTelegramAlert({
+        instanceName,
+        type: 'mobile_registration_code',
+        severity: 'critical',
+        title: 'Codigo de registro mobile recebido',
+        summary: `Um codigo de registro foi emitido para esta instancia. Expira em ${event.expiryTimestampMs ?? 'n/a'}.`,
+        dedupeKey: `${instanceName}:mobile_registration_code`,
+      }).catch(() => {});
       emitSocket('mobile_registration_code', { instance: instanceName, data: event });
     });
 
     client.on('mobile_account_takeover_notice', (event: any) => {
       console.error(`[ZapoManager] [${instanceName}] 🚨 Tentativa de takeover detectada! Novo dispositivo: ${event.newDeviceName ?? 'desconhecido'} (${event.newDevicePlatform ?? '?'})`);
+      recordInstanceEvent({
+        instanceName,
+        type: 'mobile_account_takeover_notice',
+        severity: 'critical',
+        title: 'Tentativa de takeover detectada',
+        summary: `Novo dispositivo: ${event.newDeviceName ?? 'desconhecido'} (${event.newDevicePlatform ?? '?'})`,
+        details: {
+          newDeviceName: event.newDeviceName,
+          newDevicePlatform: event.newDevicePlatform,
+        },
+      }).catch(() => {});
+      sendTelegramAlert({
+        instanceName,
+        type: 'mobile_account_takeover_notice',
+        severity: 'critical',
+        title: 'Tentativa de takeover detectada',
+        summary: `Novo dispositivo: ${event.newDeviceName ?? 'desconhecido'} (${event.newDevicePlatform ?? '?'})`,
+        dedupeKey: `${instanceName}:mobile_account_takeover_notice`,
+      }).catch(() => {});
       emitSocket('mobile_account_takeover_notice', { instance: instanceName, data: event });
     });
 
@@ -973,6 +1010,24 @@ export class ZapoManager {
             status: 'disconnected',
             reason: (event as any).reason
           }));
+          if (isTelegramConnectionAlertsEnabled()) {
+            recordInstanceEvent({
+              instanceName,
+              type: 'connection.disconnected',
+              severity: 'warning',
+              title: 'Instancia desconectada',
+              summary: `A instancia foi desconectada. Motivo: ${(event as any).reason ?? 'n/a'}`,
+              details: { reason: (event as any).reason },
+            }).catch(() => {});
+            sendTelegramAlert({
+              instanceName,
+              type: 'connection.disconnected',
+              severity: 'warning',
+              title: 'Instancia desconectada',
+              summary: `A instancia foi desconectada. Motivo: ${(event as any).reason ?? 'n/a'}`,
+              dedupeKey: `${instanceName}:connection.disconnected:${(event as any).reason ?? 'unknown'}`,
+            }).catch(() => {});
+          }
           emitSocket('connection.update', {
             instance: instanceName,
             data: attachTrace({

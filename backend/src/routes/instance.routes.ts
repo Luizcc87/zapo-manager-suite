@@ -20,12 +20,16 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { prisma } from '../lib/prisma';
 import { checkGlobalApiKey, checkInstanceApiKey } from '../middleware/auth';
+import { countContactsByInstance } from '../services/contactStats';
+import { formatInstanceEventsSummary, listInstanceEvents, markInstanceEventRead, recordInstanceEvent, summarizeInstanceEvents } from '../services/instanceEvents';
+import { classifyProxyHealth, getChatActivityByInstance, getHistoryPersistence } from '../services/instanceOperational';
+import { sendTelegramAlert } from '../services/telegramAlerts';
 
 const router = Router();
 
 const getWebVersion = () => {
   try {
-    return require('zapo-js/spec/version').WA_VERSION ?? '';
+    return require('zapo-js').WA_VERSION ?? '';
   } catch (error) {
     return '';
   }
@@ -112,6 +116,24 @@ router.post('/create', checkGlobalApiKey, async (req: Request, res: Response) =>
       };
       const test = await testProxyConnectivity(proxyData).catch(() => ({ connected: false, error: 'check failed', details: undefined }));
       ZapoManager.proxyStatusCache.set(instanceName, { connected: test.connected, error: test.error, details: (test as any).details });
+      if (!test.connected) {
+        recordInstanceEvent({
+          instanceName,
+          type: 'proxy.test_failed',
+          severity: 'critical',
+          title: 'Falha no proxy da instancia',
+          summary: `O proxy foi salvo na criacao, mas o teste falhou: ${test.error}`,
+          details: { error: test.error, details: (test as any).details, source: 'instance.create' },
+        }).catch(() => {});
+        sendTelegramAlert({
+          instanceName,
+          type: 'proxy.test_failed',
+          severity: 'critical',
+          title: 'Falha no proxy da instancia',
+          summary: `O proxy foi salvo na criacao, mas o teste falhou: ${test.error}${(test as any).details ? ` (${(test as any).details})` : ''}`,
+          dedupeKey: `${instanceName}:proxy.test_failed:${test.error || 'unknown'}`,
+        }).catch(() => {});
+      }
       await prisma.instance.update({ where: { instanceName }, data: { proxyConfig: proxyData } });
       console.log(`[ZapoRouter] [Create] requestId=${effectiveRequestId || 'n/a'} | Proxy salvo para ${instanceName}: connected=${test.connected}`);
     }
@@ -367,7 +389,9 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
       ? { instanceName: instanceName as string }
       : undefined;
 
-    const [chatCounts, msgCounts] = await Promise.all([
+    const instanceNames = dbInstances.map(i => i.instanceName);
+
+    const [chatCounts, msgCounts, contactMap, chatActivityMap] = await Promise.all([
       prisma.chatEntry.groupBy({
         by: ['instanceName'],
         where: countWhere,
@@ -377,17 +401,33 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
         by: ['instanceName'],
         where: countWhere,
         _count: { id: true }
-      })
+      }),
+      countContactsByInstance(instanceNames),
+      getChatActivityByInstance(instanceNames)
     ]);
 
     const chatMap = Object.fromEntries(chatCounts.map(r => [r.instanceName, r._count.id]));
     const msgMap = Object.fromEntries(msgCounts.map(r => [r.instanceName, r._count.id]));
+    const historyPersistence = getHistoryPersistence();
 
     const result = dbInstances.map(inst => {
       const active = ZapoManager.getActive(inst.instanceName);
       const isMockConnected = inst.status === 'connected';
-      const connected = !!active && active.client.getState().connected && active.client.getState().registered;
+      const clientState = active?.client.getState();
+      const connected = !!active && !!clientState?.connected && !!clientState?.registered;
       const state = connected ? 'open' : (active?.qrCode ? 'connecting' : 'close');
+      const proxyEnabled = !!(inst.proxyConfig as any)?.enabled;
+      const proxyStatus = ZapoManager.proxyStatusCache.get(inst.instanceName);
+      const proxyConnected = proxyStatus?.connected ?? true;
+      const proxyError = proxyStatus?.connected === false
+        ? (proxyStatus?.details || proxyStatus?.error || null)
+        : null;
+      const proxyHealth = classifyProxyHealth(proxyEnabled, proxyStatus);
+      const chatStats = {
+        total: chatMap[inst.instanceName] ?? 0,
+        lastUpdatedAt: chatActivityMap[inst.instanceName]?.lastUpdatedAt ?? null,
+        lastRemoteJid: chatActivityMap[inst.instanceName]?.lastRemoteJid ?? null,
+      };
       
       let ownerJid: string | null = null;
       if (active) {
@@ -432,19 +472,134 @@ router.get('/fetchInstances', checkGlobalApiKey, async (req: Request, res: Respo
           readStatus: false,
           syncFullHistory: false
         },
-        proxyEnabled: !!(inst.proxyConfig as any)?.enabled,
-        proxyConnected: ZapoManager.proxyStatusCache.get(inst.instanceName)?.connected ?? true,
-        proxyError: ZapoManager.proxyStatusCache.get(inst.instanceName)?.connected === false 
-          ? (ZapoManager.proxyStatusCache.get(inst.instanceName)?.details || ZapoManager.proxyStatusCache.get(inst.instanceName)?.error || null)
-          : null,
+        proxyEnabled,
+        proxyConnected,
+        proxyError,
+        operational: {
+          contactCount: contactMap[inst.instanceName] ?? 0,
+          historyPersistence,
+          chatStats,
+          lastActivityAt: chatStats.lastUpdatedAt,
+          proxyHealth,
+          connectionDetails: {
+            registered: !!clientState?.registered || isMockConnected,
+            hasActiveClient: !!active,
+            hasQrCode: !!active?.qrCode,
+            ownerJid: ownerJid || inst.ownerJid || null,
+            lastKnownStatus: inst.status,
+          },
+        },
         _count: {
           Message: msgMap[inst.instanceName] ?? 0,
-          Contact: 0, // Nota: Sem model no Prisma local mapeado para contatos
+          Contact: contactMap[inst.instanceName] ?? 0,
           Chat: chatMap[inst.instanceName] ?? 0
         }
       };
     });
     return res.status(200).json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/runtime-stats/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const debug = ZapoManager.debugState(instanceName);
+    const databaseEnabled = process.env.SAVE_DATA_NEW_MESSAGE === 'true';
+    const databaseMessages = databaseEnabled
+      ? await prisma.message.count({ where: { instanceName } }).catch(() => 0)
+      : 0;
+
+    return res.json({
+      instanceName,
+      connected: debug.connected,
+      memoryChats: debug.chats.length,
+      memoryMessages: Object.values(debug.messages).reduce((total, count) => total + count, 0),
+      databaseMessages,
+      databaseEnabled,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/events/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const events = await listInstanceEvents(instanceName, Number(req.query.limit || 10));
+    return res.json({
+      instanceName,
+      events: events.map(event => ({
+        id: event.id,
+        instanceName: event.instanceName,
+        type: event.type,
+        severity: event.severity,
+        title: event.title,
+        summary: event.summary,
+        details: event.details,
+        readAt: event.readAt?.toISOString() ?? null,
+        createdAt: event.createdAt.toISOString(),
+      })),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/events-summary/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const summary = await summarizeInstanceEvents(instanceName, Number(req.query.days || 7));
+    return res.json({
+      ...summary,
+      since: summary.since.toISOString(),
+      lastCritical: summary.lastCritical ? {
+        ...summary.lastCritical,
+        createdAt: summary.lastCritical.createdAt.toISOString(),
+        readAt: summary.lastCritical.readAt?.toISOString() ?? null,
+      } : null,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/events-summary/:instanceName/send', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const days = Number(req.body?.days || req.query.days || 7);
+    const summary = await summarizeInstanceEvents(instanceName, days);
+    const sent = await sendTelegramAlert({
+      instanceName,
+      type: 'operational.summary',
+      severity: summary.severity.critical > 0 ? 'critical' : summary.severity.warning > 0 ? 'warning' : 'info',
+      title: 'Resumo operacional da instancia',
+      summary: formatInstanceEventsSummary(summary),
+      dedupeKey: `${instanceName}:operational.summary:${summary.days}:${new Date().toISOString().slice(0, 10)}`,
+    });
+
+    if (!sent) {
+      return res.status(400).json({
+        status: 'not_sent',
+        message: 'Nenhum canal Telegram habilitado ou envio recusado pelo provedor.',
+      });
+    }
+
+    return res.json({ status: 'sent', instanceName, days: summary.days });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/events/:instanceName/:eventId/read', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName, eventId } = req.params;
+    const result = await markInstanceEventRead(instanceName, eventId);
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    return res.json({ status: 'success', eventId });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
