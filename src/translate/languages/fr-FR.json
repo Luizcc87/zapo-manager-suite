@@ -1,39 +1,4 @@
 {
-  "primaryRegistration": {
-    "button": "Enregistrer comme Principal",
-    "warning": {
-      "title": "Attention: Mode Principal",
-      "subtitle": "Lisez attentivement avant de continuer.",
-      "headline": "WhatsApp sur votre téléphone physique SERA DÉCONNECTÉ.",
-      "body": "En enregistrant le numéro comme Principal ici, l'application WhatsApp sur le téléphone affichera le message \"Vous avez été déconnecté car ce numéro a été enregistré sur un autre appareil\". L'historique des messages n'existera que sur ce serveur.",
-      "confirm": "J'ai compris, continuer"
-    },
-    "form": {
-      "title": "Enregistrer le numéro comme Principal",
-      "subtitle": "Le code sera envoyé à la SIM physique par SMS ou appel vocal.",
-      "instanceName": "Nom de l'instance",
-      "phoneNumber": "Numéro de téléphone (avec indicatif pays)",
-      "phoneHint": "Incluez l'indicatif pays, ex: +33 pour la France.",
-      "method": "Méthode d'envoi du code",
-      "methodSms": "SMS",
-      "methodVoice": "Appel vocal",
-      "submit": "Envoyer le code SMS",
-      "sending": "Envoi en cours..."
-    },
-    "otp": {
-      "title": "Entrez le code reçu",
-      "subtitle": "Vérifiez le SMS (ou l'appel) sur la SIM physique et entrez le code à 6 chiffres.",
-      "label": "Code à 6 chiffres",
-      "submit": "Confirmer et Connecter",
-      "confirming": "Confirmation..."
-    },
-    "toast": {
-      "codeSent": "Code envoyé à votre numéro. Vérifiez votre SMS.",
-      "success": "Numéro enregistré avec succès comme Principal!",
-      "errorRequest": "Erreur lors de la demande de code. Vérifiez vos données.",
-      "errorConfirm": "Code invalide ou expiré. Veuillez réessayer."
-    }
-  },
   "dashboard": {
     "title": "Instances",
     "search": "Rechercher",
@@ -238,7 +203,7 @@
     }
   },
   "login": {
-    "title": "Zapo Manager",
+    "title": "Evolution Manager",
     "description": "Veuillez vous connecter pour continuer",
     "form": {
       "serverUrl": "URL du Serveur",
@@ -262,7 +227,7 @@
       "name": "Nom",
       "integration": {
         "label": "Canal",
-        "baileys": "Zapo",
+        "baileys": "Baileys",
         "whatsapp": "WhatsApp Cloud API",
         "facebook": "Facebook",
         "instagram": "Instagram",

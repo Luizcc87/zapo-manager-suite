@@ -13,8 +13,9 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation } from "react-router-dom";
 
-import { useInstance } from "@/contexts/InstanceContext";
 import { useTheme } from "@/components/theme-provider";
+import { useInstance } from "@/contexts/InstanceContext";
+
 import { FEATURES, FeatureKey, isFeatureEnabled } from "@/lib/provider/features";
 import { cn } from "@/lib/utils";
 
@@ -41,12 +42,15 @@ type Menu = MenuLeaf | MenuGroup;
 function SidebarShell({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
   const currentYear = new Date().getFullYear();
   const { theme } = useTheme();
-  const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const logoSrc = isDark ? "/assets/images/zapo-manager-logo.svg" : "/assets/images/zapo-manager-logo-light.svg";
+  const logoSrc =
+    theme === "dark"
+      ? "https://evolution-api.com/files/evo/evolution-logo-white.svg"
+      : "https://evolution-api.com/files/evo/evolution-logo.svg";
+
   return (
     <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-56 border-r border-sidebar-border">
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <img src={logoSrc} alt="Zapo Manager" className="h-7" />
+        <img src={logoSrc} alt="Evolution API" className="h-7" />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
@@ -60,7 +64,7 @@ function SidebarShell({ children, footer }: { children: React.ReactNode; footer?
       )}
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="text-sm font-medium text-primary">Zapo Manager</div>
+        <div className="text-sm font-medium text-primary">Evolution Manager</div>
         <div className="mt-1 text-xs text-muted-foreground">© {currentYear} All rights reserved</div>
       </div>
     </aside>
@@ -102,10 +106,12 @@ function NavItem({ to, icon: Icon, label, isExternal }: { to: string; icon?: typ
 }
 
 function ExternalLinks() {
+  const { t } = useTranslation();
   return (
     <>
-      <NavItem to="https://github.com/Luizcc87/zapo-manager-suite" icon={FileQuestion} label="GitHub" isExternal />
-      <NavItem to="https://github.com/vinikjkkj/zapo" icon={CircleHelp} label="Zapo API" isExternal />
+      <NavItem to="https://docs.evolutionfoundation.com.br/" icon={FileQuestion} label={t("sidebar.documentation")} isExternal />
+      <NavItem to="https://evolution-api.com/postman" icon={CircleHelp} label={t("sidebar.postman")} isExternal />
+      <NavItem to="https://evolution-api.com/discord" icon={MessageCircle} label={t("sidebar.discord")} isExternal />
     </>
   );
 }

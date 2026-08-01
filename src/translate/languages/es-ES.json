@@ -1,39 +1,4 @@
 {
-  "primaryRegistration": {
-    "button": "Registrar como Principal",
-    "warning": {
-      "title": "Atención: Modo Principal",
-      "subtitle": "Lea con atención antes de continuar.",
-      "headline": "El WhatsApp de su teléfono físico SERÁ DESCONECTADO.",
-      "body": "Al registrar el número como Principal aquí, la aplicación WhatsApp en el teléfono mostrará el mensaje \"Fue desconectado porque este número fue registrado en otro dispositivo\". El historial de mensajes solo existirá en este servidor.",
-      "confirm": "Entendido, continuar"
-    },
-    "form": {
-      "title": "Registrar número como Principal",
-      "subtitle": "El código se enviará al SIM físico por SMS o llamada de voz.",
-      "instanceName": "Nombre de instancia",
-      "phoneNumber": "Número de teléfono (con código de país)",
-      "phoneHint": "Incluya el código de país, ej: +34 para España.",
-      "method": "Método de entrega del código",
-      "methodSms": "SMS",
-      "methodVoice": "Llamada de voz",
-      "submit": "Enviar código SMS",
-      "sending": "Enviando..."
-    },
-    "otp": {
-      "title": "Ingrese el código recibido",
-      "subtitle": "Verifique el SMS (o llamada) en el SIM físico e ingrese el código de 6 dígitos.",
-      "label": "Código de 6 dígitos",
-      "submit": "Confirmar y Conectar",
-      "confirming": "Confirmando..."
-    },
-    "toast": {
-      "codeSent": "Código enviado a su número. Verifique el SMS.",
-      "success": "¡Número registrado exitosamente como Principal!",
-      "errorRequest": "Error al solicitar el código. Verifique los datos.",
-      "errorConfirm": "Código inválido o expirado. Intente nuevamente."
-    }
-  },
   "dashboard": {
     "title": "Instancias",
     "search": "Buscar",
@@ -239,7 +204,7 @@
     }
   },
   "login": {
-    "title": "Zapo Manager",
+    "title": "Evolution Manager",
     "description": "Por favor, inicia sesión para continuar",
     "form": {
       "serverUrl": "URL del Servidor",
@@ -263,7 +228,7 @@
       "name": "Nombre",
       "integration": {
         "label": "Canal",
-        "baileys": "Zapo",
+        "baileys": "Baileys",
         "whatsapp": "WhatsApp Cloud API",
         "facebook": "Facebook",
         "instagram": "Instagram",

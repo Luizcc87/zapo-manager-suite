@@ -1,39 +1,4 @@
 {
-  "primaryRegistration": {
-    "button": "Register as Primary",
-    "warning": {
-      "title": "Warning: Primary Mode",
-      "subtitle": "Read carefully before proceeding.",
-      "headline": "Your physical phone's WhatsApp WILL BE LOGGED OUT.",
-      "body": "By registering the number as Primary here, the WhatsApp app on your phone will show the message \"You were disconnected because this number was registered on another device\". Message history will only exist on this server.",
-      "confirm": "I understand, continue"
-    },
-    "form": {
-      "title": "Register number as Primary",
-      "subtitle": "The verification code will be sent to the physical SIM via SMS or voice call.",
-      "instanceName": "Instance name",
-      "phoneNumber": "Phone number (with country code)",
-      "phoneHint": "Include country code, e.g. +1 for USA.",
-      "method": "Code delivery method",
-      "methodSms": "SMS",
-      "methodVoice": "Voice call",
-      "submit": "Send SMS code",
-      "sending": "Sending..."
-    },
-    "otp": {
-      "title": "Enter the code you received",
-      "subtitle": "Check the SMS (or call) on your physical SIM and enter the 6-digit code below.",
-      "label": "6-digit code",
-      "submit": "Confirm & Connect",
-      "confirming": "Confirming..."
-    },
-    "toast": {
-      "codeSent": "Code sent to your number. Check your SMS.",
-      "success": "Number successfully registered as Primary!",
-      "errorRequest": "Error requesting code. Please check your details.",
-      "errorConfirm": "Invalid or expired code. Please try again."
-    }
-  },
   "dashboard": {
     "title": "Instances",
     "search": "Search",
@@ -282,7 +247,7 @@
     }
   },
   "login": {
-    "title": "Zapo Manager",
+    "title": "Evolution Manager",
     "description": "Please enter your credentials to continue",
     "form": {
       "serverUrl": "Server URL",
@@ -306,7 +271,7 @@
       "name": "Name",
       "integration": {
         "label": "Channel",
-        "baileys": "Zapo",
+        "baileys": "Baileys",
         "whatsapp": "WhatsApp Cloud API",
         "facebook": "Facebook",
         "instagram": "Instagram",

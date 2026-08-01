@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { Button } from "@evoapi/design-system/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FormInput, FormSelect, FormSwitch } from "@/components/ui/form";
+import { FormInput, FormSelect } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
 import { getProvider } from "@/lib/queries/token";
@@ -28,7 +28,6 @@ const FormSchema = z.object({
   number: stringOrUndefined,
   businessId: stringOrUndefined,
   integration: z.enum(["WHATSAPP-BUSINESS", "WHATSAPP-BAILEYS", "EVOLUTION"]),
-  mobileTransport: z.boolean().default(false),
 });
 
 function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => void; open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -58,7 +57,6 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
       token: uuidv4().replace("-", "").toUpperCase(),
       number: "",
       businessId: "",
-      mobileTransport: false,
     },
   });
 
@@ -66,13 +64,12 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
 
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
     try {
-      const instanceData: NewInstanceType & { mobileTransport?: boolean } = {
+      const instanceData: NewInstanceType = {
         instanceName: data.name,
         integration: data.integration,
         token: data.token === "" ? null : data.token,
         number: data.number === "" ? null : data.number,
         businessId: data.businessId === "" ? null : data.businessId,
-        mobileTransport: data.mobileTransport,
       };
 
       await createInstance(instanceData);
@@ -95,7 +92,6 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
       token: uuidv4().replace("-", "").toLocaleUpperCase(),
       number: "",
       businessId: "",
-      mobileTransport: false,
     });
   };
 
@@ -121,16 +117,6 @@ function NewInstance({ resetTable, open, onOpenChange }: { resetTable: () => voi
             <FormInput name="number" label={t("instance.form.number")}>
               <Input type="tel" />
             </FormInput>
-            {integrationSelected === "WHATSAPP-BAILEYS" && (
-              <div className="flex p-2 items-center justify-between rounded-md border border-sidebar-border bg-sidebar/30">
-                <FormSwitch
-                  name="mobileTransport"
-                  label={t("instance.form.mobileTransport.label", { defaultValue: "Conexão tipo Mobile (Zapo Mobile)" })}
-                  helper={t("instance.form.mobileTransport.description", { defaultValue: "Simula um dispositivo Android nativo TCP. Recomendado para maior estabilidade e evitar banimentos." })}
-                  className="w-full justify-between"
-                />
-              </div>
-            )}
             {integrationSelected === "WHATSAPP-BUSINESS" && (
               <FormInput required name="businessId" label={t("instance.form.businessId")}>
                 <Input />

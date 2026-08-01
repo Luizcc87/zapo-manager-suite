@@ -1,39 +1,4 @@
 {
-  "primaryRegistration": {
-    "button": "Registrar como Primário",
-    "warning": {
-      "title": "Atenção: Modo Primário",
-      "subtitle": "Leia com atenção antes de continuar.",
-      "headline": "O WhatsApp do seu celular físico SERÁ DESLOGADO.",
-      "body": "Ao registrar o número como Primário aqui, o aplicativo WhatsApp instalado no celular exibirá a mensagem \"Você foi desconectado porque este número foi registrado em outro aparelho\". O histórico de mensagens ficará apenas neste servidor.",
-      "confirm": "Entendi, continuar"
-    },
-    "form": {
-      "title": "Registrar número como Primário",
-      "subtitle": "O código será enviado para o chip físico via SMS ou chamada de voz.",
-      "instanceName": "Nome da instância",
-      "phoneNumber": "Número do chip (com DDI)",
-      "phoneHint": "Inclua o código do país, ex: +55 para Brasil.",
-      "method": "Método de envio do código",
-      "methodSms": "SMS",
-      "methodVoice": "Ligação de voz",
-      "submit": "Enviar código SMS",
-      "sending": "Enviando..."
-    },
-    "otp": {
-      "title": "Digite o código recebido",
-      "subtitle": "Verifique o SMS (ou ligação) no chip físico e insira o código de 6 dígitos abaixo.",
-      "label": "Código de 6 dígitos",
-      "submit": "Confirmar e Conectar",
-      "confirming": "Confirmando..."
-    },
-    "toast": {
-      "codeSent": "Código enviado para o seu número. Verifique o SMS.",
-      "success": "Número registrado com sucesso como Primário!",
-      "errorRequest": "Erro ao solicitar código. Verifique os dados.",
-      "errorConfirm": "Código inválido ou expirado. Tente novamente."
-    }
-  },
   "dashboard": {
     "title": "Instâncias",
     "subtitle": "Gerencie suas instâncias WhatsApp",
@@ -239,7 +204,7 @@
     }
   },
   "login": {
-    "title": "Zapo Manager",
+    "title": "Evolution Manager",
     "description": "Por favor, faça login para continuar",
     "subtitle": "Digite suas credenciais para acessar o sistema",
     "form": {
@@ -263,7 +228,7 @@
       "name": "Nome",
       "integration": {
         "label": "Canal",
-        "baileys": "Zapo",
+        "baileys": "Baileys",
         "whatsapp": "WhatsApp Cloud API",
         "facebook": "Facebook",
         "instagram": "Instagram",

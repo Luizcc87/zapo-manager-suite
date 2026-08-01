@@ -8,7 +8,7 @@ import {
 } from "@evoapi/design-system/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@evoapi/design-system/skeleton";
-import { ChevronsUpDown, Layers, Plus, RefreshCw, Smartphone, Trash2 } from "lucide-react";
+import { ChevronsUpDown, Layers, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -22,8 +22,6 @@ import { useManageInstance } from "@/lib/queries/instance/manageInstance";
 import { Instance } from "@/types/evolution.types";
 
 import { NewInstance } from "./NewInstance";
-import { PrimaryRegistrationDialog } from "./PrimaryRegistration";
-import { getProvider } from "@/lib/queries/token";
 
 function Dashboard() {
   const { t } = useTranslation();
@@ -34,8 +32,6 @@ function Dashboard() {
   const [deletingName, setDeletingName] = useState<string | null>(null);
   const [nameSearch, setNameSearch] = useState("");
   const [searchStatus, setSearchStatus] = useState("all");
-  const [primaryRegOpen, setPrimaryRegOpen] = useState(false);
-  const isApiProvider = getProvider() === "api";
 
   const { deleteInstance, logout } = useManageInstance();
   const { data: instances, isLoading, refetch } = useFetchInstances();
@@ -112,18 +108,6 @@ function Dashboard() {
             icon: <RefreshCw className="h-4 w-4" />,
             onClick: resetTable,
           },
-          ...(isApiProvider
-            ? [
-                {
-                  label: t("primaryRegistration.button", {
-                    defaultValue: "Registrar como Primário",
-                  }),
-                  icon: <Smartphone className="h-4 w-4" />,
-                  onClick: () => setPrimaryRegOpen(true),
-                  variant: "outline" as const,
-                },
-              ]
-            : []),
         ]}
       >
         <div className="flex items-center justify-end">
@@ -187,7 +171,6 @@ function Dashboard() {
       </div>
 
       <NewInstance resetTable={resetTable} open={createOpen} onOpenChange={setCreateOpen} />
-      <PrimaryRegistrationDialog open={primaryRegOpen} onOpenChange={setPrimaryRegOpen} resetTable={resetTable} />
 
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && closeDeleteModal()}>
         <DialogContent className="sm:max-w-md">
