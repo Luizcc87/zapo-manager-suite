@@ -29,7 +29,7 @@ type LoginSchema = z.infer<typeof loginSchema>;
 function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { logoSrc, copyrightOwner, githubUrl } = useAppConfig();
+  const { appName, logoSrc, copyrightOwner, githubUrl } = useAppConfig();
   const [loginError, setLoginError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -129,13 +129,13 @@ function Login() {
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-t from-primary/20 via-background/95 to-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center text-center">
-          <img src={logoSrc} alt="Zapo Manager" className="mb-3 h-10" />
+          <img src={logoSrc} alt={appName} className="mb-3 h-10" />
           <p className="text-sm text-muted-foreground">{t("login.description")}</p>
         </div>
 
         <div className="rounded-lg border bg-background/80 p-6 shadow-lg backdrop-blur-sm">
           <div className="mb-6 space-y-2">
-            <h2 className="text-2xl font-bold">{t("login.title")}</h2>
+            <h2 className="text-2xl font-bold">{appName}</h2>
             <p className="text-sm text-muted-foreground">
               {t("login.subtitle", { defaultValue: "Digite suas credenciais para acessar o sistema" })}
             </p>

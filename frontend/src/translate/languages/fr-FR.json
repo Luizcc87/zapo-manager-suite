@@ -253,7 +253,7 @@
     }
   },
   "login": {
-    "title": "Evolution Manager",
+    "title": "Zapo Manager",
     "description": "Veuillez vous connecter pour continuer",
     "form": {
       "serverUrl": "URL du Serveur",

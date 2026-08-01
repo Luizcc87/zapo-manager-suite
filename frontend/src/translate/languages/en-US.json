@@ -296,7 +296,7 @@
     }
   },
   "login": {
-    "title": "Evolution Manager",
+    "title": "Zapo Manager",
     "description": "Please enter your credentials to continue",
     "form": {
       "serverUrl": "Server URL",

@@ -254,7 +254,7 @@
     }
   },
   "login": {
-    "title": "Evolution Manager",
+    "title": "Zapo Manager",
     "description": "Por favor, inicia sesión para continuar",
     "form": {
       "serverUrl": "URL del Servidor",
