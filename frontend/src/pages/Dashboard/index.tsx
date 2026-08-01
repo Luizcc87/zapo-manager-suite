@@ -16,7 +16,6 @@ import { toast } from "react-toastify";
 import { BaseHeader } from "@/components/base-header";
 import { InstanceCard } from "@/components/instance-card";
 
-import { getProvider } from "@/lib/queries/token";
 import { useFetchInstances } from "@/lib/queries/instance/fetchInstances";
 import { useManageInstance } from "@/lib/queries/instance/manageInstance";
 
@@ -33,8 +32,6 @@ function Dashboard() {
   const [deletingName, setDeletingName] = useState<string | null>(null);
   const [nameSearch, setNameSearch] = useState("");
   const [searchStatus, setSearchStatus] = useState("all");
-  const [primaryRegOpen, setPrimaryRegOpen] = useState(false);
-  const isApiProvider = getProvider() !== "go";
 
   const { deleteInstance, logout } = useManageInstance();
   const { data: instances, isLoading, refetch } = useFetchInstances();

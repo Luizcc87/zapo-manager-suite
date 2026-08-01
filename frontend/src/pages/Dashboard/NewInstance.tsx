@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { Button } from "@evoapi/design-system/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FormInput, FormSelect } from "@/components/ui/form";
+import { FormInput, FormSelect, FormSwitch } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
 import { getProvider } from "@/lib/queries/token";
