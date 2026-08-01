@@ -60,6 +60,14 @@ const implementationChecklist = [
   'If a change is required, keep it scoped to the smallest local touchpoint.',
 ];
 
+const activeInstancesImpactChecklist = [
+  '⚠️ SESSÃO & AUTH: Verificar se altera chaves no Redis/Store ou o protocolo Noise Handshake. Alterações de auth podem derrubar instâncias ativas na VPS.',
+  '⚠️ LOCKS & SWARM SAFETY: Verificar se altera o lock de reconexão no Redis (`lock:zapo:<instanceName>`). Conexões concorrentes causam banimento no WhatsApp.',
+  '⚠️ MOBILE TRANSPORT: Verificar se altera o deviceInfo/appVersion Android. Incompatibilidades provocam erro `failure_client_too_old`.',
+  '⚠️ PROXY GUARD: Verificar se o hot-reload de proxy ou reconexão em caso de erro garante zero-fallback (proibição de uso de IP nativo).',
+  '⚠️ COMPATIBILIDADE DE PAYLOADS: Verificar se o formato de eventos/mensagens recebidas quebra webhooks/sockets de instâncias em rodando.',
+];
+
 const testChecklist = [
   'Run `npx tsc --noEmit`.',
   'Run targeted backend or Playwright tests for the impacted flow.',
@@ -293,6 +301,11 @@ function render() {
   lines.push('');
   lines.push('## Implementation Checklist');
   for (const item of implementationChecklist) {
+    lines.push(`- ${item}`);
+  }
+  lines.push('');
+  lines.push('## Active Production Instances Impact Warning');
+  for (const item of activeInstancesImpactChecklist) {
     lines.push(`- ${item}`);
   }
   lines.push('');

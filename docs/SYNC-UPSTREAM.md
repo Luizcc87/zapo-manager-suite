@@ -232,6 +232,20 @@ Leitura prática para o projeto local:
 
 ---
 
+## ⚠️ Avaliação de Impacto em Instâncias Conectadas em Produção (VPS)
+
+Sempre que realizar atualizações no backend ou pacotes upstream (`zapo-js` ou `Baileys`), avalie o risco de impacto em instâncias ativas na VPS conforme a tabela abaixo:
+
+| Área de Mudança | Risco em Produção | Como Mitigar / Verificar |
+|---|---|---|
+| **Sessão & Auth (Noise Handshake)** | 🔴 Alto (Pode deslogar o número) | Testar fluxo de logout e re-admissão de sessão em `backend/src/manager.ts` antes de publicar. |
+| **Swarm Locks (`lock:zapo:*`)** | 🔴 Alto (Risco de Banimento) | Garantir que o lock com TTL 30s e renovação 10s no Redis esteja ativo e que o deploy na VPS use `replicas: 1` + `stop-first`. |
+| **Mobile Transport (WA Android AppVersion)** | 🟡 Médio (Erro `failure_client_too_old`) | Verificar se o fetcher em `backend/src/config/fetchAndroidWaVersion.ts` resolve a versão atual da Play Store ou se necessita fallback atualizado. |
+| **Proxy Guard (Strict Anti-Leak)** | 🟡 Médio (Falha na conexão) | Validar se instâncias com `proxyConfig.enabled === true` interrompem o startup em caso de timeout/407 sem realizar fallback para o IP nativo. |
+| **Payloads de Mensagem / JID** | 🟢 Baixo | Garantir que o wrapping de mensagens interativas com `viewOnceMessage` e a resolução de JID sem dígito `9` no Brasil permaneçam intactos. |
+
+---
+
 ## Resumo dos comandos do dia a dia
 
 ### Frontend (subtree)
