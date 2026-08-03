@@ -41,9 +41,16 @@ A maioria das APIs de WhatsApp (incluindo a Evolution API clássica) usa **WebSo
 
 > Documentação completa dos modos: [docs/zapo_connection_modes.md](docs/zapo_connection_modes.md)
 
-### Lock Distribuído (Swarm-safe)
+### Arquitetura de Estabilidade e Proteção Anti-Banimento
 
-O backend usa **locks Redis** (`lock:zapo:<instancia>`) para garantir que apenas um container conecte ao WhatsApp por vez — prevenindo banimentos por dupla conexão em ambientes com múltiplas réplicas.
+O **Zapo Manager** implementa regras rígidas no backend para evitar banimentos e manter a conexão estável 24/7:
+
+- **Lock Distribuído (Swarm Safety):** Utiliza **locks no Redis** (`lock:zapo:<instancia>`) com TTL e auto-renovação. Se outro contêiner/réplica tentar conectar na mesma sessão simultaneamente, a conexão é bloqueada imediatamente — eliminando o risco de banimento por duplicação de sessão.
+- **Strict Proxy Enforcement (Leak-Proof):** Se o proxy configurado falhar ou estiver inacessível, a conexão é interrompida e **nunca** faz fallback para o IP nativo da VPS, evitando a rotação brusca de IP durante a sessão (gatilho clássico de detecção do WhatsApp).
+- **Auto-Recovery de Versão do WhatsApp:**
+  - **WA Web:** Auto-recuperação (`recoverFromClientTooOld`) que busca o `client_revision` atualizado em `web.whatsapp.com/sw.js` ao receber erros de versão defasada (`HTTP 405`).
+  - **WA Mobile:** Fetcher integrado que sincroniza com a versão estável do WhatsApp Business na Google Play Store.
+- **Desconexão Graciosa (Graceful Shutdown):** Em reinicializações e atualizações de código, o sistema executa `client.disconnect()`, descarregando os buffers *write-behind* e preservando as chaves Signal sem revogar o pareamento com o WhatsApp.
 
 ---
 

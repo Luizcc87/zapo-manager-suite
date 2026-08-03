@@ -10,6 +10,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 - `backend/src/manager.ts`: O manipulador do logger do motor WhatsApp (`ConsoleLogger`) agora respeita a variável de ambiente `LOG_LEVEL` (`debug`, `info`, `warn`, `error`, `silent`).
 - `docker-compose.yml`, `docker-stack-swarm.yaml` e `.env.example`: Adicionada a variável `LOG_LEVEL=${LOG_LEVEL:-info}` e a seção de rotação de logs `logging.driver="json-file"` (`max-size: 10m`, `max-file: 3`) para evitar acúmulo de arquivos de log no disco da VPS.
 - `backend/src/manager.ts`: Ignora leitura automática de arquivos residuais em `.tmp/zapo-fake-server.json` em modo dev para eliminar reconexões fantasmas de socket local.
+- `README.md`: Expandida a documentação da arquitetura de estabilidade e proteção anti-banimento, detalhando os mecanismos de lock distribuído Redis, Strict Proxy Guard (zero-leak sem fallback), auto-recovery de versão do WhatsApp e desconexão graciosa.
 
 ## [v1.6.21] — 2026-08-03
 
