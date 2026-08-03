@@ -105,8 +105,14 @@ services:
       - SAVE_DATA_HISTORIC=${SAVE_DATA_HISTORIC:-false}
       - QRCODE_LIMIT=${QRCODE_LIMIT:-5}
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-pt-BR}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - PORT=8080
       - NODE_ENV=production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - network_swarm_public
       - zapo-internal

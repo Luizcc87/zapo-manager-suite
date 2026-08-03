@@ -741,7 +741,8 @@ export class ZapoManager {
     }
 
     const proxyConfig = rawProxy;
-    const logger = new ConsoleLogger('info');
+    const logLevel = (process.env.LOG_LEVEL || 'info').toLowerCase();
+    const logger = new ConsoleLogger(logLevel as any);
     const { store, pgStore, redisClient, poller } = await buildStore(instanceName, { syncFullHistory: settings.syncFullHistory ?? false });
     const proxy = buildProxy(proxyConfig);
     if (proxy && instance.mobileTransport) {

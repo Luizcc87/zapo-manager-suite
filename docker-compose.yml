@@ -22,6 +22,12 @@ services:
       - PROXY_REPLACE_API_KEY=
       - PORT=8080
       - DEFAULT_LANGUAGE=pt-BR
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     deploy:
       replicas: 1
       restart_policy:
