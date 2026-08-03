@@ -12,7 +12,7 @@ export interface AppConfig {
 
 export const defaultAppConfig: AppConfig = {
   appName: import.meta.env.VITE_APP_NAME || "Zapo Manager",
-  appVersion: import.meta.env.VITE_APP_VERSION || "1.6.20",
+  appVersion: import.meta.env.VITE_APP_VERSION || "1.6.19",
   appDescription: import.meta.env.VITE_APP_DESCRIPTION || "Painel de gerenciamento para a Zapo API",
   logoDark: import.meta.env.VITE_APP_LOGO_DARK || "/assets/images/zapo-manager-logo.svg",
   logoLight: import.meta.env.VITE_APP_LOGO_LIGHT || "/assets/images/zapo-manager-logo-light.svg",

@@ -14,7 +14,7 @@ export function useAppConfig(customConfig?: Partial<AppConfig>) {
   const provider = getProvider();
   const { data: serverInfo } = useVerifyServer({ url, enabled: !!url && provider !== "go" });
 
-  const zapoEngineVersion = serverInfo?.zapoVersion || getToken(TOKEN_ID.ZAPO_VERSION) || "1.6.2";
+  const zapoEngineVersion = serverInfo?.zapoVersion || getToken(TOKEN_ID.ZAPO_VERSION) || "1.7.0";
   const managerVersion = serverInfo?.version && serverInfo.version !== "2.0.0" ? serverInfo.version : config.appVersion;
 
   return {

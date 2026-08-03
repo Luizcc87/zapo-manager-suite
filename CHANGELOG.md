@@ -2,6 +2,15 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
+## [v1.6.21] — 2026-08-03
+
+### Upgrade zapo-js v1.7.0 (WASM Native, Group History Bundles & Placeholder Resend)
+
+**Backend / Frontend / Docs**
+- `backend/package.json` e `backend/package-lock.json`: Atualizada dependência do motor WhatsApp `zapo-js` de `^1.6.2` para `^1.7.0`.
+- `zapo-js v1.7.0`: Inclui aceleradores criptográficos Rust WASM (`@zapo-js/native`), reenvio automático de placeholders de mensagens não baixadas (`placeholder_resend`), bundles de histórico de grupo e suporte a mensagens temporárias por conversa.
+- `frontend/src/hooks/useAppConfig.ts`, `frontend/src/config/app-config.ts` e `backend/src/main.ts`: Atualizados fallbacks da versão do motor para `1.7.0` e versão da suíte para `1.6.21`.
+
 ## [v1.6.20] — 2026-08-01
 
 ### Operação: redução de ruído nos logs HTTP
