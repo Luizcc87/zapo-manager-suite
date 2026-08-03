@@ -95,8 +95,18 @@ function readFakeServerRuntimeConfig(): FakeServerRuntimeConfig | null {
   const envTcpUrl = process.env.ZAPO_TEST_TCP_URL;
 
   let fileConfig: any = null;
-  const configFile = process.env.ZAPO_TEST_FAKE_SERVER_INFO_FILE || path.resolve(process.cwd(), '..', '.tmp', 'zapo-fake-server.json');
-  if (fs.existsSync(configFile)) {
+  const explicitConfigFile = process.env.ZAPO_TEST_FAKE_SERVER_INFO_FILE;
+  const defaultConfigFile = path.resolve(process.cwd(), '..', '.tmp', 'zapo-fake-server.json');
+  const isFakeServerEnabled = Boolean(
+    explicitConfigFile ||
+    process.env.USE_FAKE_SERVER === 'true' ||
+    envUrls?.length ||
+    envCaPublicKey ||
+    envTcpUrl
+  );
+
+  const configFile = explicitConfigFile || defaultConfigFile;
+  if (isFakeServerEnabled && fs.existsSync(configFile)) {
     try {
       fileConfig = JSON.parse(fs.readFileSync(configFile, 'utf8'));
     } catch (error: any) {
@@ -104,10 +114,10 @@ function readFakeServerRuntimeConfig(): FakeServerRuntimeConfig | null {
     }
   }
 
-  const chatSocketUrls = envUrls?.length ? envUrls : fileConfig?.chatSocketUrls;
-  const publicKeyHex = envCaPublicKey || fileConfig?.noiseRootCa?.publicKeyHex;
-  const serial = envCaSerial || fileConfig?.noiseRootCa?.serial;
-  const tcpUrl = envTcpUrl || fileConfig?.tcpUrl;
+  const chatSocketUrls = envUrls?.length ? envUrls : (isFakeServerEnabled ? fileConfig?.chatSocketUrls : undefined);
+  const publicKeyHex = envCaPublicKey || (isFakeServerEnabled ? fileConfig?.noiseRootCa?.publicKeyHex : undefined);
+  const serial = envCaSerial || (isFakeServerEnabled ? fileConfig?.noiseRootCa?.serial : undefined);
+  const tcpUrl = envTcpUrl || (isFakeServerEnabled ? fileConfig?.tcpUrl : undefined);
 
   if (!chatSocketUrls?.length && !publicKeyHex && !tcpUrl) return null;
 
