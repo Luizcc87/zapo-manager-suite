@@ -2,6 +2,27 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
+## [Unreleased]
+
+### Cobertura completa de tipos de mensagem no Chat
+
+**Backend**
+- `backend/src/routes/message.routes.ts`: 7 rotas novas compat Evolution API — `POST /message/sendReaction`, `POST /message/sendLocation`, `POST /message/sendContact`, `POST /message/sendPoll`, `POST /message/revoke`, `POST /message/sendEvent`, `POST /message/sendStickerPack` — cada uma validada (400 para campos obrigatórios ausentes, 403 no revoke de mensagem alheia, 503 para instância offline), testada e documentada.
+- `backend/src/tests/message-new-types.test.ts` (novo): 30 testes funcionais cobrindo as 7 rotas (caminho feliz + erros).
+- `docs/openapi.yaml`: entradas para as 7 rotas novas, validado sem gaps via `zapo-release-triage.mjs --evolution-api`.
+
+**Frontend**
+- Chat do Manager passa a enviar e renderizar: reação rápida (emoji picker em `MessageOptions`), apagar mensagem própria (revoke real via protocolo), localização, contato (vCard), enquete (pergunta + opções, sem contagem de votos agregada nesta entrega), evento/agenda e pacote de figurinhas.
+- Vídeo redondo (`ptvMessage`) renderiza reusando o player de `videoMessage`.
+- Reações e revokes recebidos via socket são agrupados client-side (`frontend/src/lib/queries/chat/findMessages.ts`) e anexados à mensagem-alvo (`reactions[]`, `isDeleted`) em vez de aparecerem como bolhas próprias na timeline.
+- Novos componentes: `poll-message.tsx`, `event-message.tsx`, `sticker-pack-message.tsx` (renderização) e `location-picker.tsx`, `contact-picker.tsx`, `poll-composer.tsx`, `event-composer.tsx` (composição/envio), integrados ao dropdown `MediaOptions`.
+- Chaves i18n adicionadas nos 4 idiomas (`pt-BR`, `en-US`, `es-ES`, `fr-FR`).
+
+### Pendências ativas
+- Poll: contagem agregada de votos (`pollUpdateMessage`) não implementada — só exibição de pergunta/opções.
+- Lint pré-existente (fora deste escopo, não corrigido): `frontend/src/services/websocket/socket.ts` (`no-use-before-define`), `frontend/src/pages/instance/DashboardInstance/CompanionsPanel.tsx` (`react/self-closing-comp`), `frontend/src/pages/instance/EmbedChatMessage/Messages/message-content.tsx` (`no-unreachable`).
+- Verificação manual end-to-end com WhatsApp real (instância conectada) não executada nesta sessão — requer ambiente com instância ativa e número de teste.
+
 ## [v1.6.23] — 2026-08-11
 
 ### Upgrade zapo-js v1.7.1 & Pacotes de Store (@zapo-js/store-*)
