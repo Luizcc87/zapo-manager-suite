@@ -1294,4 +1294,52 @@ router.post('/sendPoll/:instanceName', checkStrictInstanceApiKey, async (req: Re
   }
 });
 
+// 11. Apagar/Revogar Mensagem
+router.post('/revoke/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { key } = req.body;
+
+    if (!key || !key.id || !key.remoteJid) {
+      return res.status(400).json({ error: 'key.id and key.remoteJid are required' });
+    }
+    if (key.fromMe !== true) {
+      return res.status(403).json({ error: 'Only own messages (key.fromMe=true) can be revoked' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = key.remoteJid;
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=revoke, to=${jid}, target=${key.id}`);
+    const sentMsg = await active.client.message.send(jid, {
+      type: 'revoke',
+      target: key,
+    });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=revoke, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { protocolMessage: { type: 'REVOKE', key } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { protocolMessage: { type: 'REVOKE', key } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] revoke error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

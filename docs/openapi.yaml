@@ -1058,6 +1058,52 @@ paths:
         '503':
           description: Instância desconectada
 
+  /message/revoke/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Apagar/revogar mensagem própria para todos
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key:
+                  type: object
+                  required: [id, remoteJid, fromMe]
+                  properties:
+                    id:
+                      type: string
+                      example: "ABC123"
+                    remoteJid:
+                      type: string
+                      example: "{{number}}@s.whatsapp.net"
+                    fromMe:
+                      type: boolean
+                      description: Deve ser true — só mensagens próprias podem ser revogadas
+                      example: true
+                    participant:
+                      type: string
+      responses:
+        '201':
+          description: Mensagem revogada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: key ausente/inválida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Tentativa de revogar mensagem que não é própria
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]

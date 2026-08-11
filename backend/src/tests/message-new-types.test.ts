@@ -250,4 +250,52 @@ describe('Message routes — new types', () => {
       assert.strictEqual(res.status, 503);
     });
   });
+
+  describe('POST /message/revoke/:instanceName', () => {
+    test('revoga mensagem própria com sucesso', async () => {
+      const res = await request(app)
+        .post(`/message/revoke/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: true, id: 'ABC123' },
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.accepted, true);
+      assert.strictEqual(lastSendCall?.content.type, 'revoke');
+      assert.strictEqual(lastSendCall?.content.target.id, 'ABC123');
+    });
+
+    test('retorna 403 quando key.fromMe é false', async () => {
+      const res = await request(app)
+        .post(`/message/revoke/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'ABC123' },
+        });
+
+      assert.strictEqual(res.status, 403);
+    });
+
+    test('retorna 400 quando key ausente', async () => {
+      const res = await request(app)
+        .post(`/message/revoke/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({});
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 503 quando instância offline', async () => {
+      (ZapoManager.getActive as any) = () => null;
+      const res = await request(app)
+        .post(`/message/revoke/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: true, id: 'ABC123' },
+        });
+
+      assert.strictEqual(res.status, 503);
+    });
+  });
 });
