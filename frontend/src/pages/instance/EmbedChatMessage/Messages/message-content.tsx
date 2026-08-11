@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 
 // Removed tooltip import - not available in project
 
-import { Message, Chat } from "@/types/evolution.types";
+import { Message, Chat, Reaction } from "@/types/evolution.types";
 
 // Removed contact-colors import - using simple color logic
 
@@ -11,15 +11,8 @@ import { MessageBubble } from "./message-bubble";
 import { MessageRenderer } from "./message-renderer";
 import { QuotedMessage } from "./quoted-message";
 
-// Adicione ao tipo Message (você pode fazer isso no arquivo de tipos)
-interface Reaction {
-  emoji: string;
-  sender: string;
-  messageId: string;
-}
-
 interface MessageContentProps {
-  message: Message & { reactions?: Reaction[] };
+  message: Message & { reactions?: Reaction[]; isDeleted?: boolean };
   quotedMessage?: Message;
   chat?: Chat;
   fromMe: boolean;
@@ -195,6 +188,17 @@ export function MessageContent({ message, quotedMessage, chat, fromMe, onQuoteCl
 
     return formattedTime;
   };
+
+  if (message.isDeleted) {
+    return (
+      <MessageBubble.Content fromMe={fromMe}>
+        <div className="flex flex-col">
+          <div className="flex items-center gap-1 italic text-muted-foreground">🚫 Mensagem apagada</div>
+          <MessageBubble.Footer fromMe={fromMe}>{renderTimestamp()}</MessageBubble.Footer>
+        </div>
+      </MessageBubble.Content>
+    );
+  }
 
   return (
     <MessageBubble.Content fromMe={fromMe}>

@@ -58,6 +58,7 @@ export function MessageRenderer({ message, fromMe }: MessageRendererProps) {
       );
 
     case "videoMessage":
+    case "ptvMessage": {
       // Ensure proper data URI format for video base64
       const videoBase64 = message.message.base64 ? (message.message.base64.startsWith("data:") ? message.message.base64 : `data:video/mp4;base64,${message.message.base64}`) : null;
 
@@ -78,9 +79,10 @@ export function MessageRenderer({ message, fromMe }: MessageRendererProps) {
               <p className="text-center text-xs text-muted-foreground mt-1">Missing base64 data</p>
             </div>
           )}
-          <MarkdownWrapper>{message.message.videoMessage?.caption}</MarkdownWrapper>
+          <MarkdownWrapper>{message.message.videoMessage?.caption ?? message.message.ptvMessage?.caption}</MarkdownWrapper>
         </div>
       );
+    }
 
     case "audioMessage":
       // Ensure proper data URI format for audio base64
