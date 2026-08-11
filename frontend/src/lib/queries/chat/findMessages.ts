@@ -27,10 +27,11 @@ function groupReactionsAndRevokes(rawMessages: Message[]): (Message & { reaction
       const emoji = msg.message.reactionMessage.text;
       if (!targetId) continue;
       const list = reactionsByTargetId.get(targetId) ?? [];
+      const senderId = msg.key.fromMe ? "me" : (msg.key.participant ?? msg.key.remoteJid);
       // Remove reação anterior do mesmo sender pra esse alvo (WhatsApp permite 1 reação por pessoa/mensagem)
-      const filtered = list.filter((r) => r.sender !== msg.key.remoteJid);
+      const filtered = list.filter((r) => r.sender !== senderId);
       if (emoji) {
-        filtered.push({ emoji, sender: msg.key.remoteJid, messageId: msg.key.id });
+        filtered.push({ emoji, sender: senderId, messageId: msg.key.id });
       }
       reactionsByTargetId.set(targetId, filtered);
       continue;
