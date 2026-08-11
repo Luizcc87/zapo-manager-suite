@@ -1624,6 +1624,38 @@
     }
   },
   "chat": {
+    "location": {
+      "title": "Enviar ubicación",
+      "latitude": "Latitud",
+      "longitude": "Longitud",
+      "name": "Nombre de la ubicación (opcional)",
+      "address": "Dirección (opcional)",
+      "send": "Enviar",
+      "invalidCoordinates": "La latitud y longitud deben ser números válidos"
+    },
+    "contact": {
+      "title": "Enviar contacto",
+      "fullName": "Nombre completo",
+      "phoneNumber": "Teléfono (con código de país)",
+      "send": "Enviar",
+      "missingFields": "Rellene el nombre y teléfono"
+    },
+    "poll": {
+      "title": "Crear encuesta",
+      "question": "Pregunta",
+      "option": "Opción",
+      "addOption": "Añadir opción",
+      "send": "Enviar",
+      "missingFields": "Rellene la pregunta y al menos 2 opciones"
+    },
+    "event": {
+      "title": "Crear evento",
+      "name": "Nombre del evento",
+      "description": "Descripción (opcional)",
+      "send": "Enviar",
+      "missingFields": "Rellene el nombre y la fecha",
+      "invalidDate": "Fecha inválida"
+    },
     "search": "Buscar conversaciones...",
     "back": "Volver",
     "tabs": {
@@ -1646,6 +1678,16 @@
     "date": {
       "today": "Hoy",
       "yesterday": "Ayer"
+    },
+    "message": {
+      "options": "Opciones",
+      "reply": "Responder",
+      "delete": "Eliminar",
+      "react": "Reaccionar"
+    },
+    "toast": {
+      "error": "Error al procesar el mensaje",
+      "sendError": "Error al enviar el mensaje"
     }
   },
   "common": {
