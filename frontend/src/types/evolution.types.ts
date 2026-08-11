@@ -107,6 +107,12 @@ export type Key = {
   participant?: string;
 };
 
+export type Reaction = {
+  emoji: string;
+  sender: string;
+  messageId: string;
+};
+
 export type Message = {
   id: string;
   key: Key;
