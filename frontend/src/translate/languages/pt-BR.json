@@ -1656,6 +1656,12 @@
       "missingFields": "Preencha nome e data",
       "invalidDate": "Data inválida"
     },
+    "media": {
+      "location": "Localização",
+      "contact": "Contato",
+      "poll": "Enquete",
+      "event": "Evento"
+    },
     "search": "Buscar conversas...",
     "back": "Voltar",
     "tabs": {

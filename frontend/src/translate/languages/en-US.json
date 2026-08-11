@@ -240,6 +240,10 @@
       "attach": "Attach file",
       "document": "Document",
       "photosAndVideos": "Photos and Videos",
+      "location": "Location",
+      "contact": "Contact",
+      "poll": "Poll",
+      "event": "Event",
       "errors": {
         "audioSize": "Audio file size must be less than 16 MB",
         "imageSize": "Image file size must be less than 5 MB",
