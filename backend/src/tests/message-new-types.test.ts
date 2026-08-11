@@ -347,4 +347,80 @@ describe('Message routes — new types', () => {
       assert.strictEqual(res.status, 503);
     });
   });
+
+  describe('POST /message/sendStickerPack/:instanceName', () => {
+    test('envia pacote de figurinhas com sucesso', async () => {
+      const res = await request(app)
+        .post(`/message/sendStickerPack/${instanceName}`)
+        .set('apikey', apiKey)
+        .field('number', '5511999999999')
+        .field('stickerPackId', 'pack-001')
+        .field('name', 'Meu Pacote')
+        .field('publisher', 'Zapo Manager')
+        .attach('stickers', Buffer.from('fake-webp-1'), 'sticker1.webp')
+        .attach('stickers', Buffer.from('fake-webp-2'), 'sticker2.webp')
+        .attach('cover', Buffer.from('fake-cover'), 'cover.webp');
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.accepted, true);
+      assert.strictEqual(lastSendCall?.content.type, 'sticker-pack');
+      assert.strictEqual(lastSendCall?.content.stickerPackId, 'pack-001');
+      assert.strictEqual(lastSendCall?.content.name, 'Meu Pacote');
+      assert.strictEqual(lastSendCall?.content.stickers.length, 2);
+    });
+
+    test('retorna 400 quando number ausente', async () => {
+      const res = await request(app)
+        .post(`/message/sendStickerPack/${instanceName}`)
+        .set('apikey', apiKey)
+        .field('stickerPackId', 'pack-001')
+        .field('name', 'Meu Pacote')
+        .field('publisher', 'Zapo Manager')
+        .attach('stickers', Buffer.from('fake-webp-1'), 'sticker1.webp')
+        .attach('cover', Buffer.from('fake-cover'), 'cover.webp');
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 400 quando nenhum sticker é anexado', async () => {
+      const res = await request(app)
+        .post(`/message/sendStickerPack/${instanceName}`)
+        .set('apikey', apiKey)
+        .field('number', '5511999999999')
+        .field('stickerPackId', 'pack-001')
+        .field('name', 'Meu Pacote')
+        .field('publisher', 'Zapo Manager')
+        .attach('cover', Buffer.from('fake-cover'), 'cover.webp');
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 400 quando cover ausente', async () => {
+      const res = await request(app)
+        .post(`/message/sendStickerPack/${instanceName}`)
+        .set('apikey', apiKey)
+        .field('number', '5511999999999')
+        .field('stickerPackId', 'pack-001')
+        .field('name', 'Meu Pacote')
+        .field('publisher', 'Zapo Manager')
+        .attach('stickers', Buffer.from('fake-webp-1'), 'sticker1.webp');
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 503 quando instância offline', async () => {
+      (ZapoManager.getActive as any) = () => null;
+      const res = await request(app)
+        .post(`/message/sendStickerPack/${instanceName}`)
+        .set('apikey', apiKey)
+        .field('number', '5511999999999')
+        .field('stickerPackId', 'pack-001')
+        .field('name', 'Meu Pacote')
+        .field('publisher', 'Zapo Manager')
+        .attach('stickers', Buffer.from('fake-webp-1'), 'sticker1.webp')
+        .attach('cover', Buffer.from('fake-cover'), 'cover.webp');
+
+      assert.strictEqual(res.status, 503);
+    });
+  });
 });

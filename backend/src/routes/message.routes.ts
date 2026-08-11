@@ -1413,4 +1413,92 @@ router.post('/sendEvent/:instanceName', checkStrictInstanceApiKey, async (req: R
   }
 });
 
+// 13. Enviar Pacote de Figurinhas
+router.post(
+  '/sendStickerPack/:instanceName',
+  checkStrictInstanceApiKey,
+  upload.fields([{ name: 'stickers', maxCount: 30 }, { name: 'cover', maxCount: 1 }]),
+  async (req: Request, res: Response) => {
+    const tempPaths: string[] = [];
+    try {
+      const { instanceName } = req.params;
+      const { number, stickerPackId, name, publisher } = req.body;
+      const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
+      const stickerFiles = files?.stickers ?? [];
+      const coverFile = files?.cover?.[0];
+
+      if (!number) {
+        return res.status(400).json({ error: 'number is required' });
+      }
+      if (stickerFiles.length === 0) {
+        return res.status(400).json({ error: 'at least one file in stickers[] is required' });
+      }
+      if (!coverFile) {
+        return res.status(400).json({ error: 'cover file is required' });
+      }
+      if (!stickerPackId || !name || !publisher) {
+        return res.status(400).json({ error: 'stickerPackId, name and publisher are required' });
+      }
+
+      const active = ZapoManager.getActive(instanceName);
+      if (!active) {
+        return res.status(503).json({ error: 'Instance is disconnected or offline' });
+      }
+
+      const jid = await resolveJid(active.client, number);
+
+      const stickers = stickerFiles.map((file) => {
+        const tempPath = saveTempFile(file.buffer, file.originalname);
+        tempPaths.push(tempPath);
+        return { image: tempPath };
+      });
+      const coverPath = saveTempFile(coverFile.buffer, coverFile.originalname);
+      tempPaths.push(coverPath);
+
+      const stickerPackPayload = {
+        type: 'sticker-pack',
+        stickerPackId,
+        name,
+        publisher,
+        stickers,
+        coverThumbnail: coverPath,
+        trayIcon: { fileName: 'tray.webp' },
+      };
+
+      console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=sticker-pack, to=${jid}, stickerPackId=${stickerPackId}, count=${stickers.length}`);
+      const sentMsg = await active.client.message.send(jid, stickerPackPayload);
+      console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=sticker-pack, to=${jid}, id=${sentMsg.id}`);
+
+      const returnedMsg = {
+        stickerPackMessage: { stickerPackId, name, publisher },
+      };
+
+      const msgData = {
+        key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+        message: returnedMsg,
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        pushName: undefined,
+      };
+      ZapoManager.recordSentMessage(instanceName, msgData);
+
+      return res.status(201).json({
+        accepted: true,
+        key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+        message: returnedMsg,
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 'PENDING',
+      });
+    } catch (err: any) {
+      console.error(`[MessageRoutes] sendStickerPack error:`, err.message);
+      return res.status(500).json({ error: err.message });
+    } finally {
+      for (const p of tempPaths) {
+        if (fs.existsSync(p)) {
+          try { fs.unlinkSync(p); } catch (e) {}
+        }
+      }
+    }
+  }
+);
+
 export default router;

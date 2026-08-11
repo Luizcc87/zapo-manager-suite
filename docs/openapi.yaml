@@ -1162,6 +1162,56 @@ paths:
         '503':
           description: Instância desconectada
 
+  /message/sendStickerPack/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar pacote de figurinhas
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [number, stickerPackId, name, publisher, stickers, cover]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                stickerPackId:
+                  type: string
+                  example: "pack-001"
+                name:
+                  type: string
+                  example: "Meu Pacote"
+                publisher:
+                  type: string
+                  example: "Zapo Manager"
+                stickers:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Arquivos webp das figurinhas (até 30)
+                cover:
+                  type: string
+                  format: binary
+                  description: Thumbnail de capa do pacote
+      responses:
+        '201':
+          description: Pacote de figurinhas enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: campos obrigatórios ausentes (number, stickers, cover, stickerPackId, name, publisher)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]
