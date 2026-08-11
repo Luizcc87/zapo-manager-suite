@@ -274,18 +274,25 @@ Após concluir a triagem, atualização de código, `CHANGELOG.md` e testes, exe
 
 ### 1. Criar Tag e Push no Git
 ```bash
-git tag v1.6.17
-git push origin master v1.6.17
+git tag v1.6.23
+git push origin master v1.6.23
 ```
 
 ### 2. Publicar Imagem Multi-arch no Docker Hub
 ```bash
-bash scripts/build-push.sh v1.6.17
+bash scripts/build-push.sh v1.6.23
 ```
 
-### 3. Criar Release no GitHub
-Via GitHub CLI:
-```bash
-gh release create v1.6.17 --title "v1.6.17 — Upgrade Zapo-JS v1.6.2 & Sidebar Version Fix" --notes-file tmp/release-v1.6.17-notes.md
+### 3. Criar Release no GitHub (Obrigatório / Perguntar)
+> [!IMPORTANT]
+> **REGRA DE PUBLICAÇÃO:** Sempre que gerar e enviar uma nova tag Git (`vX.Y.Z`), você deve criar a Release correspondente no GitHub (ou perguntar expressamente ao usuário se deseja criá-la).
+
+Via GitHub CLI (no Windows, caso `GITHUB_TOKEN` local esteja desalinhado, limpe a variável antes do comando):
+```powershell
+$env:GITHUB_TOKEN=$null; gh release create v1.6.23 --title "v1.6.23 — Upgrade Zapo-JS v1.7.1 & Store Packages" --notes "Notas da release"
 ```
-Ou manualmente no navegador: `https://github.com/Luizcc87/zapo-manager-suite/releases/new?tag=v1.6.17`
+Ou via arquivo de notas:
+```powershell
+$env:GITHUB_TOKEN=$null; gh release create v1.6.23 --title "v1.6.23 — Upgrade Zapo-JS v1.7.1 & Store Packages" --notes-file tmp/release-v1.6.23-notes.md
+```
+Ou manualmente no navegador: `https://github.com/Luizcc87/zapo-manager-suite/releases/new?tag=v1.6.23`

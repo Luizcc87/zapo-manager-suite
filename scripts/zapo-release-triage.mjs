@@ -382,14 +382,17 @@ function render() {
     lines.push('   - `npx tsc --noEmit`');
     lines.push('   - Run targeted backend tests for `backend/src/manager.ts` and `backend/src/routes/message.routes.ts`');
     lines.push('   - Update `CHANGELOG.md` and `docs/openapi.yaml` if the API surface changed');
+    lines.push('   - Criar ou solicitar criação da Release no GitHub via: `$env:GITHUB_TOKEN=$null; gh release create vX.Y.Z --title "vX.Y.Z — Título" --notes "Notas"`');
   } else if (modeKey === 'baileys') {
     lines.push('   - Run primary-registration and migration tests');
     lines.push('   - Verify `backend/src/routes/instance.routes.ts` and `backend/src/manager.ts` against the new Baileys behavior');
     lines.push('   - Confirm whether the Baileys API change affects the SMS/OTP flow');
+    lines.push('   - Criar ou solicitar criação da Release no GitHub via: `$env:GITHUB_TOKEN=$null; gh release create vX.Y.Z --title "vX.Y.Z — Título" --notes "Notas"`');
   } else {
     lines.push('   - Compare the subtree release note with frontend assumptions and `backend/src/main.ts` envelopes');
     lines.push('   - Validate `docs/openapi.yaml` against the current contract');
     lines.push('   - Run the UI smoke tests that cover the changed manager flow');
+    lines.push('   - Criar ou solicitar criação da Release no GitHub via: `$env:GITHUB_TOKEN=$null; gh release create vX.Y.Z --title "vX.Y.Z — Título" --notes "Notas"`');
   }
   lines.push('');
   return lines.join('\n');
