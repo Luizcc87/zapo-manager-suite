@@ -1013,6 +1013,51 @@ paths:
         '503':
           description: Instância desconectada
 
+  /message/sendPoll/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar enquete
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, name, options]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                name:
+                  type: string
+                  description: Pergunta da enquete
+                  example: "Qual sua cor favorita?"
+                options:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: string
+                  example: ["Azul", "Verde", "Vermelho"]
+                selectableCount:
+                  type: integer
+                  description: Quantidade de opções que o votante pode selecionar (padrão 1)
+                  example: 1
+      responses:
+        '201':
+          description: Enquete enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number, name ou options ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]

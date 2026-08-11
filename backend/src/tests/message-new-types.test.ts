@@ -194,4 +194,60 @@ describe('Message routes — new types', () => {
       assert.strictEqual(res.status, 503);
     });
   });
+
+  describe('POST /message/sendPoll/:instanceName', () => {
+    test('envia enquete com sucesso', async () => {
+      const res = await request(app)
+        .post(`/message/sendPoll/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          number: '5511999999999',
+          name: 'Qual sua cor favorita?',
+          options: ['Azul', 'Verde', 'Vermelho'],
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.accepted, true);
+      assert.strictEqual(lastSendCall?.content.type, 'poll');
+      assert.strictEqual(lastSendCall?.content.name, 'Qual sua cor favorita?');
+      assert.deepStrictEqual(lastSendCall?.content.options, ['Azul', 'Verde', 'Vermelho']);
+    });
+
+    test('retorna 400 quando number ausente', async () => {
+      const res = await request(app)
+        .post(`/message/sendPoll/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ name: 'Pergunta', options: ['A', 'B'] });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 400 quando options tem menos de 2 itens', async () => {
+      const res = await request(app)
+        .post(`/message/sendPoll/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', name: 'Pergunta', options: ['Só uma'] });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 400 quando name ausente', async () => {
+      const res = await request(app)
+        .post(`/message/sendPoll/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', options: ['A', 'B'] });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 503 quando instância offline', async () => {
+      (ZapoManager.getActive as any) = () => null;
+      const res = await request(app)
+        .post(`/message/sendPoll/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', name: 'Pergunta', options: ['A', 'B'] });
+
+      assert.strictEqual(res.status, 503);
+    });
+  });
 });

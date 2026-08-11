@@ -1232,4 +1232,66 @@ router.post('/sendContact/:instanceName', checkStrictInstanceApiKey, async (req:
   }
 });
 
+// 10. Enviar Enquete
+router.post('/sendPoll/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, name, options, selectableCount } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (!name) {
+      return res.status(400).json({ error: 'name (poll question) is required' });
+    }
+    if (!Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({ error: 'options must be an array with at least 2 items' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const pollPayload: any = {
+      type: 'poll',
+      name,
+      options,
+    };
+    if (selectableCount !== undefined) pollPayload.selectableCount = selectableCount;
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=poll, to=${jid}, name=${name}, optionsCount=${options.length}`);
+    const sentMsg = await active.client.message.send(jid, pollPayload);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=poll, to=${jid}, id=${sentMsg.id}`);
+
+    const returnedMsg = {
+      pollCreationMessageV3: {
+        name,
+        options: options.map((opt: string) => ({ optionName: opt })),
+        selectableOptionsCount: selectableCount ?? 1,
+      },
+    };
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendPoll error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
