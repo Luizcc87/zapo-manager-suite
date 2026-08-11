@@ -871,6 +871,61 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /message/sendReaction/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Reagir a uma mensagem com emoji
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, reaction]
+              properties:
+                key:
+                  type: object
+                  required: [id, remoteJid]
+                  properties:
+                    id:
+                      type: string
+                      example: "ABC123"
+                    remoteJid:
+                      type: string
+                      example: "{{number}}@s.whatsapp.net"
+                    fromMe:
+                      type: boolean
+                    participant:
+                      type: string
+                reaction:
+                  type: string
+                  description: Emoji da reação. String vazia remove a reação existente.
+                  example: "👍"
+            examples:
+              reagir:
+                value:
+                  key: { id: "ABC123", remoteJid: "{{number}}@s.whatsapp.net", fromMe: false }
+                  reaction: "👍"
+              remover:
+                value:
+                  key: { id: "ABC123", remoteJid: "{{number}}@s.whatsapp.net", fromMe: false }
+                  reaction: ""
+      responses:
+        '201':
+          description: Reação enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: key ou reaction ausentes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]

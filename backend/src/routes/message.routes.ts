@@ -1064,4 +1064,53 @@ router.post('/sendCarousel/:instanceName', checkStrictInstanceApiKey, async (req
   }
 });
 
+// 7. Enviar Reação
+router.post('/sendReaction/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { key, reaction } = req.body;
+
+    if (!key || !key.id || !key.remoteJid) {
+      return res.status(400).json({ error: 'key.id and key.remoteJid are required' });
+    }
+    if (typeof reaction !== 'string') {
+      return res.status(400).json({ error: 'reaction is required (use empty string to remove)' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = key.remoteJid;
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=reaction, to=${jid}, target=${key.id}, emoji=${reaction}`);
+    const sentMsg = await active.client.message.send(jid, {
+      type: 'reaction',
+      target: key,
+      emoji: reaction,
+    });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=reaction, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { reactionMessage: { key, text: reaction } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { reactionMessage: { key, text: reaction } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendReaction error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
