@@ -2,6 +2,15 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
+## [v1.6.23] — 2026-08-11
+
+### Upgrade zapo-js v1.7.1 & Pacotes de Store (@zapo-js/store-*)
+
+**Backend / Frontend / Docs**
+- `backend/package.json` e `backend/package-lock.json`: Atualizado o motor WhatsApp `zapo-js` para `1.7.1`, `@zapo-js/store-redis` para `1.2.0`, `@zapo-js/store-postgres` para `1.1.0`, `@zapo-js/store-sqlite` para `1.1.0` e `@zapo-js/fake-server` para `1.3.0`.
+- `zapo-js v1.7.1`: Alinhamento do handshake Noise e payload de pareamento com o WhatsApp Web, correção do nome do negócio em envios `native_flow` (PIX/checkout), redução de CPU/alocações no Signal hot-path e suporte a Noise root CA no fake server.
+- `frontend/src/config/app-config.ts`, `frontend/src/hooks/useAppConfig.ts` e `backend/src/main.ts`: Atualizados fallbacks da versão do motor para `1.7.1` e da suíte para `1.6.23`.
+
 ## [v1.6.22] — 2026-08-03
 
 ### Infra & Operações: LOG_LEVEL configurável e rotação de logs Docker
