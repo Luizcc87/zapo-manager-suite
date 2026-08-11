@@ -145,4 +145,53 @@ describe('Message routes — new types', () => {
       assert.strictEqual(res.status, 503);
     });
   });
+
+  describe('POST /message/sendContact/:instanceName', () => {
+    test('envia contato com sucesso', async () => {
+      const res = await request(app)
+        .post(`/message/sendContact/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          number: '5511999999999',
+          contact: { fullName: 'João Silva', phoneNumber: '5511988887777' },
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.accepted, true);
+      assert.strictEqual(lastSendCall?.content.contactMessage.displayName, 'João Silva');
+      assert.match(lastSendCall?.content.contactMessage.vcard, /FN:João Silva/);
+      assert.match(lastSendCall?.content.contactMessage.vcard, /TEL.*5511988887777/);
+    });
+
+    test('retorna 400 quando number ausente', async () => {
+      const res = await request(app)
+        .post(`/message/sendContact/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ contact: { fullName: 'João Silva', phoneNumber: '5511988887777' } });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 400 quando contact.fullName ou phoneNumber ausentes', async () => {
+      const res = await request(app)
+        .post(`/message/sendContact/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', contact: { fullName: 'João Silva' } });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 503 quando instância offline', async () => {
+      (ZapoManager.getActive as any) = () => null;
+      const res = await request(app)
+        .post(`/message/sendContact/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          number: '5511999999999',
+          contact: { fullName: 'João Silva', phoneNumber: '5511988887777' },
+        });
+
+      assert.strictEqual(res.status, 503);
+    });
+  });
 });

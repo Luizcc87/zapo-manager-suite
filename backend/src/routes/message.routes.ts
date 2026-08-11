@@ -413,6 +413,20 @@ function saveTempFile(buffer: Buffer, originalname: string): string {
   return tempPath;
 }
 
+// Gera vCard 3.0 simples (nome + telefone + organização opcional)
+function buildVCard(fullName: string, phoneNumber: string, organization?: string): string {
+  const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
+  const lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${fullName}`,
+    `TEL;type=CELL;waid=${cleanPhone.replace(/^\+/, '')}:${cleanPhone}`,
+  ];
+  if (organization) lines.push(`ORG:${organization}`);
+  lines.push('END:VCARD');
+  return lines.join('\n');
+}
+
 
 // 0. Enviar Áudio (PTT / Voice Note) — base64
 router.post('/sendWhatsAppAudio/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
@@ -1162,6 +1176,58 @@ router.post('/sendLocation/:instanceName', checkStrictInstanceApiKey, async (req
     });
   } catch (err: any) {
     console.error(`[MessageRoutes] sendLocation error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. Enviar Contato
+router.post('/sendContact/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, contact } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (!contact?.fullName || !contact?.phoneNumber) {
+      return res.status(400).json({ error: 'contact.fullName and contact.phoneNumber are required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const vcard = buildVCard(contact.fullName, contact.phoneNumber, contact.organization);
+    const contactContent = {
+      contactMessage: {
+        displayName: contact.fullName,
+        vcard,
+      },
+    };
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=contact, to=${jid}, contactName=${contact.fullName}`);
+    const sentMsg = await active.client.message.send(jid, contactContent);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=contact, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: contactContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: contactContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendContact error:`, err.message);
     return res.status(500).json({ error: err.message });
   }
 });

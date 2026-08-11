@@ -969,6 +969,50 @@ paths:
         '503':
           description: Instância desconectada
 
+  /message/sendContact/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar cartão de contato (vCard)
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, contact]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                contact:
+                  type: object
+                  required: [fullName, phoneNumber]
+                  properties:
+                    fullName:
+                      type: string
+                      example: "João Silva"
+                    phoneNumber:
+                      type: string
+                      example: "5511988887777"
+                    organization:
+                      type: string
+                      example: "Empresa XYZ"
+      responses:
+        '201':
+          description: Contato enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number ou contact ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]
