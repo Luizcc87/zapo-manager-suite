@@ -1113,4 +1113,57 @@ router.post('/sendReaction/:instanceName', checkStrictInstanceApiKey, async (req
   }
 });
 
+// 8. Enviar Localização
+router.post('/sendLocation/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, latitude, longitude, name, address } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ error: 'latitude and longitude (numbers) are required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const locationContent = {
+      locationMessage: {
+        degreesLatitude: latitude,
+        degreesLongitude: longitude,
+        ...(name ? { name } : {}),
+        ...(address ? { address } : {}),
+      },
+    };
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=location, to=${jid}, lat=${latitude}, lng=${longitude}`);
+    const sentMsg = await active.client.message.send(jid, locationContent);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=location, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: locationContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: locationContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendLocation error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

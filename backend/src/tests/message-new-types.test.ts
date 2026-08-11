@@ -96,4 +96,53 @@ describe('Message routes — new types', () => {
       assert.strictEqual(res.status, 503);
     });
   });
+
+  describe('POST /message/sendLocation/:instanceName', () => {
+    test('envia localização com sucesso', async () => {
+      const res = await request(app)
+        .post(`/message/sendLocation/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          number: '5511999999999',
+          latitude: -23.55052,
+          longitude: -46.633308,
+          name: 'Praça da Sé',
+          address: 'São Paulo, SP',
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.accepted, true);
+      assert.strictEqual(lastSendCall?.content.locationMessage.degreesLatitude, -23.55052);
+      assert.strictEqual(lastSendCall?.content.locationMessage.degreesLongitude, -46.633308);
+      assert.strictEqual(lastSendCall?.content.locationMessage.name, 'Praça da Sé');
+    });
+
+    test('retorna 400 quando number ausente', async () => {
+      const res = await request(app)
+        .post(`/message/sendLocation/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ latitude: -23.55052, longitude: -46.633308 });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 400 quando latitude ou longitude ausentes', async () => {
+      const res = await request(app)
+        .post(`/message/sendLocation/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', latitude: -23.55052 });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 503 quando instância offline', async () => {
+      (ZapoManager.getActive as any) = () => null;
+      const res = await request(app)
+        .post(`/message/sendLocation/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', latitude: -23.55052, longitude: -46.633308 });
+
+      assert.strictEqual(res.status, 503);
+    });
+  });
 });

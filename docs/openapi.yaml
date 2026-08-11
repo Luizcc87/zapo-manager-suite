@@ -926,6 +926,49 @@ paths:
         '503':
           description: Instância desconectada
 
+  /message/sendLocation/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar localização
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, latitude, longitude]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                latitude:
+                  type: number
+                  example: -23.55052
+                longitude:
+                  type: number
+                  example: -46.633308
+                name:
+                  type: string
+                  example: "Praça da Sé"
+                address:
+                  type: string
+                  example: "São Paulo, SP"
+      responses:
+        '201':
+          description: Localização enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number, latitude ou longitude ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]
