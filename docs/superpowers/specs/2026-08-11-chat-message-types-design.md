@@ -72,6 +72,31 @@ pollUpdateMessage, eventMessage, stickerPackMessage, ptvMessage). Validar durant
 implementação que `ZapoManager.storeMessage`/`resolveMessageTypeAttr` não caem em
 `unknown` pra esses tipos novos; ajustar normalização pontualmente se necessário.
 
+## API pública — validação e documentação obrigatórias
+
+Cada rota nova (`sendReaction`, `sendLocation`, `sendContact`, `sendPoll`,
+`revoke`, `sendEvent`, `sendStickerPack`) é entregável só quando os três itens
+abaixo estiverem prontos, não só o handler funcionando manualmente:
+
+- **Validação de request**: 400 com mensagem clara pra campos obrigatórios
+  ausentes/malformados (`number`, `key`, `options` vazio, etc.), seguindo o
+  padrão já usado nas rotas existentes (`if (!number) return res.status(400)...`).
+- **Teste funcional do endpoint**: request real contra instância conectada
+  (ou mock equivalente ao já usado em `backend/src/tests/`), cobrindo caminho
+  feliz e pelo menos um caso de erro (instância offline `503`, payload inválido
+  `400`).
+- **Documentação OpenAPI**: entrada correspondente em `docs/openapi.yaml`
+  (`paths`, request body schema, exemplos, respostas 201/400/503), no mesmo
+  padrão das rotas existentes (`/message/sendText`, `/message/sendMedia`,
+  `/message/sendButtons`, etc. — ver linhas 469-890).
+- **Cobertura via `zapo-release-triage.mjs`**: rodar `--evolution-api` para
+  validar que o contrato local bate com `docs/openapi.yaml` (regra já definida
+  em `CLAUDE.md` → Upstreams e trilhos de validação), garantindo que a doc não
+  fique dessincronizada da implementação.
+
+Nenhuma rota nova é considerada concluída no plano de implementação sem esses
+quatro pontos fechados.
+
 ## Frontend — queries (`frontend/src/lib/queries/chat/sendMessage.ts`)
 
 Novos hooks, mesmo padrão `useManageMutation` + invalidate
