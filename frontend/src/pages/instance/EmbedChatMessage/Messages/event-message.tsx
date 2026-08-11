@@ -19,8 +19,21 @@ function formatEventDate(unixSeconds: number): string {
   });
 }
 
+// Só permite http(s) — bloqueia javascript:/data: e outros schemes perigosos em href
+function resolveSafeUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function EventMessage({ eventMessage, fromMe }: EventMessageProps) {
   if (!eventMessage?.name) return null;
+
+  const safeJoinLink = resolveSafeUrl(eventMessage.joinLink);
 
   return (
     <div
@@ -31,9 +44,9 @@ function EventMessage({ eventMessage, fromMe }: EventMessageProps) {
       <div className="text-md font-medium">{eventMessage.name}</div>
       <div className="text-sm text-muted-foreground">{formatEventDate(eventMessage.startTime)}</div>
       {eventMessage.description && <div className="text-sm">{eventMessage.description}</div>}
-      {eventMessage.joinLink && (
-        <a href={eventMessage.joinLink} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-          {eventMessage.joinLink}
+      {safeJoinLink && (
+        <a href={safeJoinLink} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
+          {safeJoinLink}
         </a>
       )}
     </div>
