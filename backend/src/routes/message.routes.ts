@@ -1342,4 +1342,75 @@ router.post('/revoke/:instanceName', checkStrictInstanceApiKey, async (req: Requ
   }
 });
 
+// 12. Enviar Evento
+router.post('/sendEvent/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, name, startTime, description, endTime, location, joinLink } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (!name || typeof startTime !== 'number') {
+      return res.status(400).json({ error: 'name and startTime (unix seconds) are required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const eventPayload: any = {
+      type: 'event',
+      name,
+      startTime,
+    };
+    if (description !== undefined) eventPayload.description = description;
+    if (endTime !== undefined) eventPayload.endTime = endTime;
+    if (joinLink !== undefined) eventPayload.joinLink = joinLink;
+    if (location?.latitude !== undefined && location?.longitude !== undefined) {
+      eventPayload.location = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        ...(location.name ? { name: location.name } : {}),
+        ...(location.address ? { address: location.address } : {}),
+      };
+    }
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=event, to=${jid}, name=${name}, startTime=${startTime}`);
+    const sentMsg = await active.client.message.send(jid, eventPayload);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=event, to=${jid}, id=${sentMsg.id}`);
+
+    const returnedMsg = {
+      eventMessage: {
+        name,
+        startTime,
+        ...(description !== undefined ? { description } : {}),
+        ...(endTime !== undefined ? { endTime } : {}),
+        ...(joinLink !== undefined ? { joinLink } : {}),
+      },
+    };
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendEvent error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

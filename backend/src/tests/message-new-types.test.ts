@@ -298,4 +298,53 @@ describe('Message routes — new types', () => {
       assert.strictEqual(res.status, 503);
     });
   });
+
+  describe('POST /message/sendEvent/:instanceName', () => {
+    test('envia evento com sucesso', async () => {
+      const startTime = Math.floor(Date.now() / 1000) + 3600;
+      const res = await request(app)
+        .post(`/message/sendEvent/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({
+          number: '5511999999999',
+          name: 'Reunião de time',
+          startTime,
+          description: 'Alinhamento semanal',
+        });
+
+      assert.strictEqual(res.status, 201);
+      assert.strictEqual(res.body.accepted, true);
+      assert.strictEqual(lastSendCall?.content.type, 'event');
+      assert.strictEqual(lastSendCall?.content.name, 'Reunião de time');
+      assert.strictEqual(lastSendCall?.content.startTime, startTime);
+    });
+
+    test('retorna 400 quando number ausente', async () => {
+      const res = await request(app)
+        .post(`/message/sendEvent/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ name: 'Reunião', startTime: Math.floor(Date.now() / 1000) + 3600 });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 400 quando name ou startTime ausentes', async () => {
+      const res = await request(app)
+        .post(`/message/sendEvent/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', name: 'Reunião' });
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    test('retorna 503 quando instância offline', async () => {
+      (ZapoManager.getActive as any) = () => null;
+      const res = await request(app)
+        .post(`/message/sendEvent/${instanceName}`)
+        .set('apikey', apiKey)
+        .send({ number: '5511999999999', name: 'Reunião', startTime: Math.floor(Date.now() / 1000) + 3600 });
+
+      assert.strictEqual(res.status, 503);
+    });
+  });
 });

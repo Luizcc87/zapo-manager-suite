@@ -1104,6 +1104,64 @@ paths:
         '503':
           description: Instância desconectada
 
+  /message/sendEvent/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar evento/agenda
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, name, startTime]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                name:
+                  type: string
+                  example: "Reunião de time"
+                startTime:
+                  type: integer
+                  description: Unix timestamp em segundos
+                  example: 1739462400
+                description:
+                  type: string
+                  example: "Alinhamento semanal"
+                endTime:
+                  type: integer
+                  example: 1739466000
+                joinLink:
+                  type: string
+                  example: "https://meet.google.com/abc-defg-hij"
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                    name:
+                      type: string
+                    address:
+                      type: string
+      responses:
+        '201':
+          description: Evento enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number, name ou startTime ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]
