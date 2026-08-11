@@ -7,8 +7,11 @@ import { Message } from "@/types/evolution.types";
 import { AudioPlayer } from "./audio-player";
 import { ContactMessage } from "./contact-message";
 import { ConversationMessage } from "./conversation-message";
+import { EventMessage } from "./event-message";
 import { LocationMessage } from "./location-message";
 import { MarkdownWrapper } from "./markdown-wrapper";
+import { PollMessage } from "./poll-message";
+import { StickerPackMessage } from "./sticker-pack-message";
 
 interface MessageRendererProps {
   message: Message;
@@ -144,6 +147,15 @@ export function MessageRenderer({ message, fromMe }: MessageRendererProps) {
 
     case "locationMessage":
       return <LocationMessage locationMessage={message.message.locationMessage} fromMe={fromMe} />;
+
+    case "pollCreationMessageV3":
+      return <PollMessage pollMessage={message.message.pollCreationMessageV3} fromMe={fromMe} />;
+
+    case "eventMessage":
+      return <EventMessage eventMessage={message.message.eventMessage} fromMe={fromMe} />;
+
+    case "stickerPackMessage":
+      return <StickerPackMessage stickerPackMessage={message.message.stickerPackMessage} fromMe={fromMe} />;
 
     default:
       return <>{JSON.stringify(message.message)}</>;
