@@ -30,6 +30,8 @@ Este guia consolida os caminhos de integração do **Zapo Manager** e do ecossis
 > **Handoff bot/humano:** todo agente autônomo (Hermes Agent, OpenClaw, etc.) que enviar mensagens automáticas deve consultar `get_conversation_status` antes de responder. O backend também bloqueia o envio via `assertBotCanSend` quando o status não é `pending` — a checagem do agente é uma segunda camada, não a única.
 
 > **Onde isso vive:** o servidor MCP nativo (`backend/src/mcp/server.ts`) envia essas mesmas regras no campo `instructions` da resposta de inicialização MCP — qualquer cliente compatível com o protocolo recebe a orientação automaticamente, sem precisar copiar texto de um doc. As seções abaixo documentam o fluxo para quem está integrando manualmente ou revisando comportamento esperado.
+>
+> **Skill opcional para Claude Code:** [`docs/skills/zapo-mcp-agent/SKILL.md`](./skills/zapo-mcp-agent/SKILL.md) — mesma regra empacotada como skill instalável (`curl` + copiar para `.claude/skills/`), útil quando o `instructions` do protocolo não é suficiente (cliente MCP que não aplica, ou tarefa sem conexão MCP ativa no momento).
 
 ### 🔄 Fluxo de comportamento esperado (handoff)
 

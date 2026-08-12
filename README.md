@@ -154,6 +154,7 @@ O Zapo Manager e o ecossistema Zapo oferecem suporte nativo a [Model Context Pro
 | **Live WaClient MCP** | `npx -y @zapo-js/mcp-server` | Controla um `WaClient` real via agente — ⚠️ apenas dev/sandbox |
 | **llms.txt** | `https://zapo.to/llms.txt` | Corpus estático para agentes sem MCP (ChatGPT, etc.) |
 | **OpenAPI Actions** | [`docs/openapi.yaml`](docs/openapi.yaml) | Schema REST para Custom GPTs e frameworks autônomos |
+| **Skill de handoff (opcional)** | [`docs/skills/zapo-mcp-agent/SKILL.md`](docs/skills/zapo-mcp-agent/SKILL.md) | Regra de handoff bot/humano empacotada como skill Claude Code instalável — a mesma regra já chega via `instructions` do protocolo MCP, esta skill é reforço para clientes que não a aplicam |
 
 📖 **Guia completo:** [docs/AI-AGENTS-MCP-INTEGRATION.md](docs/AI-AGENTS-MCP-INTEGRATION.md)
 

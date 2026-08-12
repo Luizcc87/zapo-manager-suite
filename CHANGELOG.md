@@ -4,6 +4,12 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### MCP: skill de handoff baixável e opcional
+
+- `docs/skills/zapo-mcp-agent/SKILL.md` (novo, versionado): mesma regra de handoff empacotada como skill Claude Code instalável via `curl` + copiar para `.claude/skills/` — fonte canônica, para operadores que querem a regra citável por nome ou como reforço quando o cliente MCP não aplica o campo `instructions`.
+- `docs/AI-AGENTS-MCP-INTEGRATION.md` e `README.md`: linkam a skill baixável como opcional, deixando claro que `instructions` do protocolo MCP já cobre o caso padrão.
+- `.claude/skills/zapo-mcp-agent/SKILL.md` (local, gitignored) simplificado para apontar para a versão canônica em `docs/skills/`, evitando duas fontes divergindo.
+
 ### MCP: instruções de comportamento para agentes de IA (handoff)
 
 Servidor MCP nativo passa a declarar a regra de handoff bot/humano no próprio protocolo, para qualquer cliente que conectar (Hermes Agent, OpenClaw, Claude, Cursor, etc.), sem depender de o operador copiar texto de doc manualmente.
