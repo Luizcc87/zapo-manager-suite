@@ -4,6 +4,15 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Reposicionamento do projeto — handoff + CRM como diferencial (Épico 3)
+
+Descrição pública do projeto passa a refletir o diferencial construído nos Épicos 1 e 2 (controle seguro de agentes de IA sobre WhatsApp), não só "painel de gerenciamento". Iniciado somente após Épicos 1 e 2 validados end-to-end (REST + MCP + UI), conforme decidido em party mode.
+
+- `README.md`: nova seção de destaque "O corpo com trava de segurança para o seu agente de IA" logo após o cabeçalho; tabela de integração MCP atualizada citando o servidor nativo (`/mcp`) e as 11 tools, incluindo handoff e CRM.
+- `docs/AI-AGENTS-MCP-INTEGRATION.md`: nova seção "Contexto persistente do contato (CRM leve)" com fluxo recomendado (`get_lead` antes de responder, `update_lead` ao aprender algo novo) e exemplo de prompt.
+- `CLAUDE.md`: nova seção de arquitetura "Handoff Bot/Humano e CRM Leve (Agentes de IA)" documentando os dois mecanismos, fonte única de cada um, e as três superfícies que os expõem.
+- `docs/DEMO-SCRIPT-HANDOFF-CRM.md` (novo): roteiro de demo (~2min) mostrando agente respondendo com contexto → atendente assume → bot bloqueado de fato → devolução ao bot. Regra explícita de nunca mostrar CRM sem handoff visível junto.
+
 ### CRM leve por contato (Épico 2 — Uazapi-style)
 
 Campos de CRM configuráveis por instância (slots livres, tipo Uazapi `updateFieldsMap`/`editLead`), persistentes por contato — sobrevivem ao fim da conversa, diferente do handoff (Épico 1) que é por atendimento. Lidos/editados por UI, REST e agentes de IA via MCP.

@@ -53,6 +53,21 @@ Todo agente que envia mensagens automáticas via `send_text_message`/`send_media
 
 > "Antes de responder qualquer mensagem de WhatsApp, chame a tool `get_conversation_status`. Se o status retornado não for `pending`, não envie nada — um humano já está atendendo essa conversa. Quando precisar escalar para um atendente humano, chame `update_conversation_status` com `status: 'open'`."
 
+### 🗂️ Contexto persistente do contato (CRM leve)
+
+Handoff resolve *quem* pode falar agora. O CRM leve resolve o outro lado: *o que o agente sabe* sobre esse contato antes de responder — dado que sobrevive ao fim da conversa (diferente do histórico de mensagens).
+
+Fluxo recomendado para um agente que responde com contexto:
+
+1. **Antes de gerar a resposta**, chame `get_lead(instanceName, remoteJid)`. Retorna os campos já preenchidos, resolvidos por label (ex: `{"Empresa": "Acme Ltda", "Orçamento": "5000"}`).
+2. Use esses valores para personalizar a resposta — evita perguntar de novo algo que o cliente já informou em conversas anteriores.
+3. **Ao aprender algo novo** durante a conversa (nome da empresa, orçamento, cidade, etc.), chame `update_lead(instanceName, remoteJid, fields)` com os `slotKey`s já mapeados na instância — não invente chaves novas; um slot não mapeado é rejeitado.
+4. Se a instância ainda não tem os campos que o agente precisa, use `update_fields_map(instanceName, fields)` para defini-los (normalmente é o operador humano quem configura isso pelo painel, mas o agente pode fazer via MCP se tiver essa permissão).
+
+**Exemplo de prompt/instrução para configurar num agente externo:**
+
+> "Antes de responder, chame `get_lead` para ver o que já se sabe sobre esse contato (empresa, orçamento, etc.) e use isso para personalizar a resposta — não repita perguntas já respondidas. Quando o cliente informar um dado novo relevante, salve com `update_lead` usando as chaves (`slotKey`) já configuradas na instância."
+
 
 ---
 

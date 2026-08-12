@@ -133,6 +133,21 @@ Cada integração em `src/lib/queries/<integration>/` tem estrutura uniforme:
 - `EmbedColorsContext` — customização de cores do embed
 - `ReplyingMessageContext` — mensagem sendo respondida no chat
 
+### Handoff Bot/Humano e CRM Leve (Agentes de IA)
+
+O sistema permite que agentes autônomos (via MCP) e atendentes humanos (via painel) compartilhem o mesmo canal WhatsApp sem colidir. Dois mecanismos, complementares:
+
+**Handoff (`ChatEntry.status`, tabela `wa_chats`):**
+- `pending` — bot pode responder (padrão) · `open` — humano assumiu, bot bloqueado · `resolved` — conversa encerrada
+- Fonte única: `backend/src/services/conversationStatus.ts`, chamado por três superfícies (REST `GET/PATCH /chat/:instanceName/:remoteJid/status`, MCP tools `get_conversation_status`/`update_conversation_status`, UI `frontend/src/pages/instance/Chat/conversation-status.tsx`)
+- `assertBotCanSend()` bloqueia o envio de bot no backend (não é convenção — o servidor recusa) quando o status não é `pending`; MCP tools `send_text_message`/`send_media_message` chamam essa checagem antes de enviar
+
+**CRM leve (`InstanceFieldMap` + `ChatEntry.leadFields`):**
+- Slots de campo configuráveis por instância (`slotKey` livre, `label`, `fieldType`), estilo Uazapi `updateFieldsMap`/`editLead` — persistentes por contato, sobrevivem ao fim da conversa
+- Fonte única: `backend/src/services/instanceFieldMap.ts`; REST (`fields-map`, `lead` — `?raw=true` retorna por `slotKey` em vez de label, usado pelo formulário editável), MCP tools (`update_fields_map`/`get_lead`/`update_lead`), UI (`ContactLead.tsx` no chat, `FieldsMapForm.tsx` em Settings)
+
+MCP nativo em `backend/src/mcp/server.ts` envia essas regras de comportamento no campo `instructions` da inicialização MCP — qualquer cliente compatível recebe a orientação automaticamente. Guia completo: [docs/AI-AGENTS-MCP-INTEGRATION.md](docs/AI-AGENTS-MCP-INTEGRATION.md).
+
 ## Versões do WhatsApp — Como o Sistema Trata
 
 Existem **dois espaços de versão independentes** que o sistema precisa manter atualizados:

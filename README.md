@@ -16,6 +16,18 @@
 
 ---
 
+## O corpo com trava de segurança para o seu agente de IA
+
+Agentes autônomos (Hermes Agent, OpenClaw, Claude, ChatGPT e similares) já sabem *pensar* — o que falta é um canal real (WhatsApp) que eles possam operar **com supervisão**, não às cegas. O Zapo Manager resolve isso via [MCP nativo](docs/AI-AGENTS-MCP-INTEGRATION.md):
+
+- **Controle:** handoff bot/humano por conversa. Um atendente clica "Assumir" e o agente é bloqueado de responder — não por convenção, o backend recusa o envio (`assertBotCanSend`). Devolvido ao bot com um clique.
+- **Supervisão:** toda mudança de status é auditável e visível em tempo real no painel — nenhum agente muda de controle sem o humano saber.
+- **Contexto persistente:** CRM leve por contato (campos configuráveis por instância, estilo Uazapi) — o agente consulta o que já se sabe sobre o cliente antes de responder, em vez de reprocessar o histórico inteiro de mensagens a cada resposta.
+
+Isso não é "mais um painel de chat" — é a peça que falta entre o agente e o WhatsApp real: o cérebro já existe (o LLM), o Zapo Manager é o corpo com a trava de segurança.
+
+---
+
 ## O que é a Zapo API?
 
 [Zapo](https://github.com/vinikjkkj/zapo) (`zapo-js`) é uma biblioteca Node.js que implementa o protocolo nativo do WhatsApp — o mesmo protocolo que o aplicativo oficial usa no celular. É **compatível com a API REST da Evolution API v2**, funcionando como um drop-in replacement.
@@ -150,6 +162,7 @@ O Zapo Manager e o ecossistema Zapo oferecem suporte nativo a [Model Context Pro
 
 | Integração | Endpoint / Pacote | Descrição |
 |---|---|---|
+| **Zapo Manager MCP (nativo)** | `/mcp` no seu backend | 11 tools: instâncias, mensagens, **handoff bot/humano** (`get_conversation_status`, `update_conversation_status`) e **CRM leve** (`get_lead`, `update_lead`, `update_fields_map`) — protegido por `apikey`/`Bearer` |
 | **Docs MCP** | `https://zapo.to/mcp` | Leitura e busca na documentação Zapo — seguro para qualquer agente |
 | **Live WaClient MCP** | `npx -y @zapo-js/mcp-server` | Controla um `WaClient` real via agente — ⚠️ apenas dev/sandbox |
 | **llms.txt** | `https://zapo.to/llms.txt` | Corpus estático para agentes sem MCP (ChatGPT, etc.) |
