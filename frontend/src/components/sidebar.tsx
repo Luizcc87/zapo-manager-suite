@@ -73,10 +73,19 @@ function useSidebarCollapsed() {
   return { collapsed, toggle };
 }
 
-function SidebarShell({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
+function SidebarShell({
+  children,
+  footer,
+  collapsed,
+  toggle,
+}: {
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  collapsed: boolean;
+  toggle: () => void;
+}) {
   const currentYear = new Date().getFullYear();
   const { appName, logoSrc, fullVersionTag } = useAppConfig();
-  const { collapsed, toggle } = useSidebarCollapsed();
 
   if (collapsed) {
     return (
@@ -204,8 +213,9 @@ function ExternalLinks() {
 
 function MainSidebar() {
   const { t } = useTranslation();
+  const { collapsed, toggle } = useSidebarCollapsed();
   return (
-    <SidebarShell footer={<ExternalLinks />}>
+    <SidebarShell footer={<ExternalLinks />} collapsed={collapsed} toggle={toggle}>
       <NavItem to="/manager" icon={LayoutDashboard} label={t("sidebar.dashboard")} />
     </SidebarShell>
   );
@@ -216,7 +226,7 @@ function InstanceSidebar() {
   const { instance } = useInstance();
   const { pathname } = useLocation();
   const { instanceId } = useParams<{ instanceId: string }>();
-  const collapsed = useContext(SidebarCollapsedContext);
+  const { collapsed, toggle } = useSidebarCollapsed();
 
   const base = instance ? `/manager/instance/${instance.id}` : (instanceId ? `/manager/instance/${instanceId}` : "");
 
@@ -280,7 +290,7 @@ function InstanceSidebar() {
   );
 
   return (
-    <SidebarShell footer={<ExternalLinks />}>
+    <SidebarShell footer={<ExternalLinks />} collapsed={collapsed} toggle={toggle}>
       <NavItem to="/manager" icon={LayoutDashboard} label={`← ${t("dashboard.title")}`} />
       <div className="my-2 border-t border-sidebar-border" />
       {visibleMenus.map((menu) => {
