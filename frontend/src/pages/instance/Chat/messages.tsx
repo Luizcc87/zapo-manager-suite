@@ -1,5 +1,5 @@
 import { Copy, CornerUpLeft, SmilePlus, Send, Trash2, User, X } from "lucide-react";
-import { ReactNode, RefObject, useEffect, useMemo, useState } from "react";
+import { Dispatch, memo, ReactNode, RefObject, SetStateAction, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
@@ -587,17 +587,193 @@ const MessageContent = ({ message }: { message: Message }) => {
   );
 };
 
+type ChatComposerProps = {
+  instance: NonNullable<ReturnType<typeof useInstance>["instance"]>;
+  remoteJid?: string;
+  chatName?: string;
+  selectedMedia: File | null;
+  setSelectedMedia: Dispatch<SetStateAction<File | null>>;
+  replyTo: Message | null;
+  setReplyTo: (message: Message | null) => void;
+  textareaRef: RefObject<HTMLTextAreaElement>;
+  handleTextareaChange: () => void;
+  textareaHeight: string;
+};
+
+const ChatComposer = memo(function ChatComposer({
+  instance,
+  remoteJid,
+  chatName,
+  selectedMedia,
+  setSelectedMedia,
+  replyTo,
+  setReplyTo,
+  textareaRef,
+  handleTextareaChange,
+  textareaHeight,
+}: ChatComposerProps) {
+  const { t } = useTranslation();
+  const [messageText, setMessageText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const { sendText: sendTextMutation } = useSendMessage();
+  const { sendMedia: sendMediaMutation } = useSendMedia();
+
+  const resetComposer = () => {
+    setMessageText("");
+    setReplyTo(null);
+    if (textareaRef.current) {
+      textareaRef.current.value = "";
+      handleTextareaChange();
+    }
+  };
+
+  const sendTextMessage = async () => {
+    const text = messageText.trim();
+    if (!text || !remoteJid || !instance?.name || !instance?.token || isSending) return;
+
+    try {
+      setIsSending(true);
+      await sendTextMutation({
+        instanceName: instance.name,
+        token: instance.token,
+        data: {
+          number: remoteJid,
+          text,
+          quoted: replyTo ?? undefined,
+        },
+      });
+      resetComposer();
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const sendMediaMessage = async () => {
+    if (!selectedMedia || !remoteJid || !instance?.name || !instance?.token || isSending) return;
+
+    try {
+      setIsSending(true);
+      const mediaKind = getChatMediaKind(selectedMedia);
+      if (!mediaKind) {
+        toast.error(t("chat.media.errors.unsupportedType"));
+        return;
+      }
+
+      const caption = mediaKind === "audio" ? undefined : messageText.trim().slice(0, MEDIA_CAPTION_MAX) || undefined;
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(selectedMedia);
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          resolve(base64.split(",")[1]);
+        };
+        reader.onerror = reject;
+      });
+
+      await sendMediaMutation({
+        instanceName: instance.name,
+        token: instance.token,
+        data: {
+          number: remoteJid,
+          mediaMessage: {
+            mediatype: mediaKind,
+            mimetype: selectedMedia.type,
+            caption,
+            media: base64Data,
+            fileName: mediaKind === "document" ? selectedMedia.name : undefined,
+          },
+          quoted: replyTo ?? undefined,
+        },
+      });
+
+      setSelectedMedia(null);
+      resetComposer();
+    } catch (error) {
+      console.error("Error sending media:", error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (selectedMedia) {
+      await sendMediaMessage();
+    } else {
+      await sendTextMessage();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void sendMessage();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessageText(e.target.value);
+    handleTextareaChange();
+  };
+
+  return (
+    <div className="flex-shrink-0 border-t bg-background p-3">
+      <div className="rounded-lg border border-border bg-card shadow-sm">
+        {selectedMedia && (
+          <div className="border-b border-border bg-muted/30 px-3 py-2">
+            <SelectedMedia selectedMedia={selectedMedia} setSelectedMedia={setSelectedMedia} />
+          </div>
+        )}
+        {replyTo && (
+          <div className="border-b border-border bg-muted/30 px-3 py-2">
+            <ReplyQuote
+              authorLabel={replyTo.key.fromMe ? "Você" : chatName || "Contato"}
+              preview={buildReplyPreview(replyTo.message)}
+              onClear={() => setReplyTo(null)}
+            />
+          </div>
+        )}
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <div className="flex flex-shrink-0 items-center">
+            {instance && <MediaOptions instance={instance} setSelectedMedia={setSelectedMedia} />}
+          </div>
+          <Textarea
+            placeholder={t("chat.input.placeholder", { defaultValue: "Digite uma mensagem..." })}
+            name="message"
+            id="message"
+            rows={1}
+            ref={textareaRef}
+            value={messageText}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            disabled={isSending}
+            style={{ height: textareaHeight }}
+            className="min-h-9 flex-1 resize-none border-none bg-transparent px-2 py-1.5 text-sm shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+          <Button
+            type="button"
+            size="icon"
+            onClick={() => void sendMessage()}
+            disabled={(!messageText.trim() && !selectedMedia) || isSending}
+            className="h-9 w-9 flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/85 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+            <span className="sr-only">{t("chat.input.send")}</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessageRef, scrollToBottom }: MessagesProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const { instance } = useInstance();
-  const [messageText, setMessageText] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
-  const { sendText: sendTextMutation } = useSendMessage();
-  const { sendMedia: sendMediaMutation } = useSendMedia();
   const { sendReaction } = useSendReaction();
   const { revokeMessage } = useRevokeMessage();
   const { deleteMessageForMe } = useDeleteMessageForMe();
@@ -683,116 +859,6 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
     );
   };
 
-  // Handle sending text messages
-  const sendTextMessage = async () => {
-    if (!messageText.trim() || !remoteJid || !instance?.name || !instance?.token || isSending) return;
-
-    try {
-      setIsSending(true);
-      await sendTextMutation({
-        instanceName: instance.name,
-        token: instance.token,
-        data: {
-          number: remoteJid,
-          text: messageText.trim(),
-          quoted: replyTo ?? undefined,
-        },
-      });
-
-      // Clear the input after sending
-      setMessageText("");
-      setReplyTo(null);
-      if (textareaRef.current) {
-        textareaRef.current.value = "";
-        handleTextareaChange(); // Reset height
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  // Handle sending media messages
-  const sendMediaMessage = async () => {
-    if (!selectedMedia || !remoteJid || !instance?.name || !instance?.token || isSending) return;
-
-    try {
-      setIsSending(true);
-      const mediaKind = getChatMediaKind(selectedMedia);
-      if (!mediaKind) {
-        toast.error(t("chat.media.errors.unsupportedType"));
-        return;
-      }
-
-      const caption = mediaKind === "audio" ? undefined : messageText.trim().slice(0, MEDIA_CAPTION_MAX) || undefined;
-
-      // Convert media to base64
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(selectedMedia);
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          // Strip the data URI prefix (data:image/xyz;base64,)
-          const base64Data = base64.split(",")[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-      });
-
-      await sendMediaMutation({
-        instanceName: instance.name,
-        token: instance.token,
-        data: {
-          number: remoteJid,
-          mediaMessage: {
-            mediatype: mediaKind,
-            mimetype: selectedMedia.type,
-            caption,
-            media: base64Data,
-            fileName: mediaKind === "document" ? selectedMedia.name : undefined,
-          },
-          quoted: replyTo ?? undefined,
-        },
-      });
-
-      // Clear the input and media after sending
-      setSelectedMedia(null);
-      setMessageText("");
-      setReplyTo(null);
-      if (textareaRef.current) {
-        textareaRef.current.value = "";
-        handleTextareaChange(); // Reset height
-      }
-    } catch (error) {
-      console.error("Error sending media:", error);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  // Handle message sending (decides between text or media)
-  const sendMessage = async () => {
-    if (selectedMedia) {
-      await sendMediaMessage();
-    } else {
-      await sendTextMessage();
-    }
-  };
-
-  // Handle Enter key press
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  // Handle input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessageText(e.target.value);
-    handleTextareaChange();
-  };
   const { data: chat } = useFindChat({
     remoteJid,
     instanceName: instance?.name,
@@ -946,7 +1012,6 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
   useEffect(() => {
     setSelectedMedia(null);
     setReplyTo(null);
-    setMessageText("");
     setRealtimeMessages([]); // Clear real-time messages when switching chats
     if (textareaRef.current) {
       textareaRef.current.value = "";
@@ -1044,52 +1109,21 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
         ))}
         <div ref={lastMessageRef as never} />
       </div>
-      <div className="flex-shrink-0 border-t bg-background p-3">
-        <div className="rounded-lg border border-border bg-card shadow-sm">
-          {selectedMedia && (
-            <div className="border-b border-border bg-muted/30 px-3 py-2">
-              <SelectedMedia selectedMedia={selectedMedia} setSelectedMedia={setSelectedMedia} />
-            </div>
-          )}
-          {replyTo && (
-            <div className="border-b border-border bg-muted/30 px-3 py-2">
-              <ReplyQuote
-                authorLabel={replyTo.key.fromMe ? "Você" : chat?.pushName || "Contato"}
-                preview={buildReplyPreview(replyTo.message)}
-                onClear={() => setReplyTo(null)}
-              />
-            </div>
-          )}
-          <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="flex flex-shrink-0 items-center">
-              {instance && <MediaOptions instance={instance} setSelectedMedia={setSelectedMedia} />}
-            </div>
-            <Textarea
-              placeholder={t("chat.input.placeholder", { defaultValue: "Digite uma mensagem..." })}
-              name="message"
-              id="message"
-              rows={1}
-              ref={textareaRef}
-              value={messageText}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              disabled={isSending}
-              style={{ height: textareaHeight }}
-              className="min-h-9 flex-1 resize-none border-none bg-transparent px-2 py-1.5 text-sm shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-            <Button
-              type="button"
-              size="icon"
-              onClick={sendMessage}
-              disabled={(!messageText.trim() && !selectedMedia) || isSending}
-              className="h-9 w-9 flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/85 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-              <span className="sr-only">{t("chat.input.send")}</span>
-            </Button>
-          </div>
-        </div>
-      </div>
+      {instance && (
+        <ChatComposer
+          key={remoteJid}
+          instance={instance}
+          remoteJid={remoteJid}
+          chatName={chat?.pushName}
+          selectedMedia={selectedMedia}
+          setSelectedMedia={setSelectedMedia}
+          replyTo={replyTo}
+          setReplyTo={setReplyTo}
+          textareaRef={textareaRef}
+          handleTextareaChange={handleTextareaChange}
+          textareaHeight={textareaHeight}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ Registro cronológico reverso de implementações e alterações relevantes.
 ### Chat: reações visíveis e fundo estilo WACRM
 
 **Frontend**
+- `frontend/src/pages/instance/Chat/messages.tsx`: composer isolado em subcomponente memoizado para digitação e Enter/envio não rerenderizarem a timeline inteira de mensagens.
 - `frontend/src/pages/instance/Chat/messages.tsx`: reações enviadas pela própria UI passam a aparecer imediatamente no chat, reações ficam fora do quadro da mensagem como no WACRM e o painel de mensagens recebeu o fundo `inbox-doodle.svg`.
 - `frontend/src/lib/queries/chat/findMessages.ts`: agrupamento de `reactionMessage`/`protocolMessage` reaplicado após merge com mensagens realtime e preserva reações já existentes sem duplicar por remetente.
 - `frontend/src/types/evolution.types.ts`: adicionados campos opcionais `reactions` e `isDeleted` em `Message`.
