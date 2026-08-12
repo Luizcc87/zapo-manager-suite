@@ -1,6 +1,7 @@
-import { PlusIcon, ImagesIcon, FilePlus } from "lucide-react";
+import { PlusIcon, ImagesIcon, FilePlus, MapPinIcon, UserIcon, BarChart3Icon, CalendarIcon } from "lucide-react";
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import { Button } from "@evoapi/design-system/button";
@@ -9,6 +10,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useEmbedColors } from "@/contexts/EmbedColorsContext";
 
 import { Instance } from "@/types/evolution.types";
+
+import { ContactPicker } from "./contact-picker";
+import { EventComposer } from "./event-composer";
+import { LocationPicker } from "./location-picker";
+import { PollComposer } from "./poll-composer";
 
 interface MediaOptionsProps {
   instance: Instance;
@@ -22,6 +28,12 @@ const MediaOptions = ({ setSelectedMedia }: MediaOptionsProps) => {
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const [openDropdown, setOpenDropdown] = useState(false);
+  const [searchParams] = useSearchParams();
+  const remoteJid = searchParams.get("remoteJid") ?? "";
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [showPollComposer, setShowPollComposer] = useState(false);
+  const [showEventComposer, setShowEventComposer] = useState(false);
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,8 +129,28 @@ const MediaOptions = ({ setSelectedMedia }: MediaOptionsProps) => {
             <ImagesIcon className="mr-2 h-4 w-4" />
             {t("chat.media.photosAndVideos")}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowLocationPicker(true)}>
+            <MapPinIcon className="mr-2 h-4 w-4" />
+            {t("chat.media.location")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowContactPicker(true)}>
+            <UserIcon className="mr-2 h-4 w-4" />
+            {t("chat.media.contact")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowPollComposer(true)}>
+            <BarChart3Icon className="mr-2 h-4 w-4" />
+            {t("chat.media.poll")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowEventComposer(true)}>
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {t("chat.media.event")}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <LocationPicker open={showLocationPicker} onOpenChange={setShowLocationPicker} remoteJid={remoteJid} />
+      <ContactPicker open={showContactPicker} onOpenChange={setShowContactPicker} remoteJid={remoteJid} />
+      <PollComposer open={showPollComposer} onOpenChange={setShowPollComposer} remoteJid={remoteJid} />
+      <EventComposer open={showEventComposer} onOpenChange={setShowEventComposer} remoteJid={remoteJid} />
     </>
   );
 };

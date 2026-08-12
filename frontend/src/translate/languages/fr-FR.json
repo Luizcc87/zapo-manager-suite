@@ -1623,6 +1623,44 @@
     }
   },
   "chat": {
+    "location": {
+      "title": "Envoyer la position",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "name": "Nom du lieu (optionnel)",
+      "address": "Adresse (optionnel)",
+      "send": "Envoyer",
+      "invalidCoordinates": "La latitude et la longitude doivent être des nombres valides"
+    },
+    "contact": {
+      "title": "Envoyer un contact",
+      "fullName": "Nom complet",
+      "phoneNumber": "Téléphone (avec code pays)",
+      "send": "Envoyer",
+      "missingFields": "Remplissez le nom et le téléphone"
+    },
+    "poll": {
+      "title": "Créer un sondage",
+      "question": "Question",
+      "option": "Option",
+      "addOption": "Ajouter une option",
+      "send": "Envoyer",
+      "missingFields": "Remplissez la question et au moins 2 options"
+    },
+    "event": {
+      "title": "Créer un événement",
+      "name": "Nom de l'événement",
+      "description": "Description (optionnel)",
+      "send": "Envoyer",
+      "missingFields": "Remplissez le nom et la date",
+      "invalidDate": "Date invalide"
+    },
+    "media": {
+      "location": "Localisation",
+      "contact": "Contact",
+      "poll": "Sondage",
+      "event": "Événement"
+    },
     "search": "Rechercher des conversations...",
     "back": "Retour",
     "tabs": {
@@ -1645,6 +1683,16 @@
     "date": {
       "today": "Aujourd'hui",
       "yesterday": "Hier"
+    },
+    "message": {
+      "options": "Options",
+      "reply": "Répondre",
+      "delete": "Supprimer",
+      "react": "Réagir"
+    },
+    "toast": {
+      "error": "Erreur lors du traitement du message",
+      "sendError": "Erreur lors de l'envoi du message"
     }
   },
   "common": {

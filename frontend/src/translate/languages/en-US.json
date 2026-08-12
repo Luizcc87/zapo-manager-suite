@@ -204,10 +204,46 @@
     }
   },
   "chat": {
+    "location": {
+      "title": "Send location",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "name": "Location name (optional)",
+      "address": "Address (optional)",
+      "send": "Send",
+      "invalidCoordinates": "Latitude and longitude must be valid numbers"
+    },
+    "contact": {
+      "title": "Send contact",
+      "fullName": "Full name",
+      "phoneNumber": "Phone number (with country code)",
+      "send": "Send",
+      "missingFields": "Fill in name and phone"
+    },
+    "poll": {
+      "title": "Create poll",
+      "question": "Question",
+      "option": "Option",
+      "addOption": "Add option",
+      "send": "Send",
+      "missingFields": "Fill in the question and at least 2 options"
+    },
+    "event": {
+      "title": "Create event",
+      "name": "Event name",
+      "description": "Description (optional)",
+      "send": "Send",
+      "missingFields": "Fill in name and date",
+      "invalidDate": "Invalid date"
+    },
     "media": {
       "attach": "Attach file",
       "document": "Document",
       "photosAndVideos": "Photos and Videos",
+      "location": "Location",
+      "contact": "Contact",
+      "poll": "Poll",
+      "event": "Event",
       "errors": {
         "audioSize": "Audio file size must be less than 16 MB",
         "imageSize": "Image file size must be less than 5 MB",
@@ -243,6 +279,16 @@
     "date": {
       "today": "Today",
       "yesterday": "Yesterday"
+    },
+    "message": {
+      "options": "Options",
+      "reply": "Reply",
+      "delete": "Delete",
+      "react": "React"
+    },
+    "toast": {
+      "error": "Error processing message",
+      "sendError": "Error sending message"
     }
   },
   "sidebar": {

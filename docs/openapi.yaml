@@ -871,6 +871,347 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /message/sendReaction/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Reagir a uma mensagem com emoji
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, reaction]
+              properties:
+                key:
+                  type: object
+                  required: [id, remoteJid]
+                  properties:
+                    id:
+                      type: string
+                      example: "ABC123"
+                    remoteJid:
+                      type: string
+                      example: "{{number}}@s.whatsapp.net"
+                    fromMe:
+                      type: boolean
+                    participant:
+                      type: string
+                reaction:
+                  type: string
+                  description: Emoji da reação. String vazia remove a reação existente.
+                  example: "👍"
+            examples:
+              reagir:
+                value:
+                  key: { id: "ABC123", remoteJid: "{{number}}@s.whatsapp.net", fromMe: false }
+                  reaction: "👍"
+              remover:
+                value:
+                  key: { id: "ABC123", remoteJid: "{{number}}@s.whatsapp.net", fromMe: false }
+                  reaction: ""
+      responses:
+        '201':
+          description: Reação enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: key ou reaction ausentes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
+  /message/sendLocation/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar localização
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, latitude, longitude]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                latitude:
+                  type: number
+                  example: -23.55052
+                longitude:
+                  type: number
+                  example: -46.633308
+                name:
+                  type: string
+                  example: "Praça da Sé"
+                address:
+                  type: string
+                  example: "São Paulo, SP"
+      responses:
+        '201':
+          description: Localização enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number, latitude ou longitude ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
+  /message/sendContact/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar cartão de contato (vCard)
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, contact]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                contact:
+                  type: object
+                  required: [fullName, phoneNumber]
+                  properties:
+                    fullName:
+                      type: string
+                      example: "João Silva"
+                    phoneNumber:
+                      type: string
+                      example: "5511988887777"
+                    organization:
+                      type: string
+                      example: "Empresa XYZ"
+      responses:
+        '201':
+          description: Contato enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number ou contact ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
+  /message/sendPoll/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar enquete
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, name, options]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                name:
+                  type: string
+                  description: Pergunta da enquete
+                  example: "Qual sua cor favorita?"
+                options:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: string
+                  example: ["Azul", "Verde", "Vermelho"]
+                selectableCount:
+                  type: integer
+                  description: Quantidade de opções que o votante pode selecionar (padrão 1)
+                  example: 1
+      responses:
+        '201':
+          description: Enquete enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number, name ou options ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
+  /message/revoke/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Apagar/revogar mensagem própria para todos
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key:
+                  type: object
+                  required: [id, remoteJid, fromMe]
+                  properties:
+                    id:
+                      type: string
+                      example: "ABC123"
+                    remoteJid:
+                      type: string
+                      example: "{{number}}@s.whatsapp.net"
+                    fromMe:
+                      type: boolean
+                      description: Deve ser true — só mensagens próprias podem ser revogadas
+                      example: true
+                    participant:
+                      type: string
+      responses:
+        '201':
+          description: Mensagem revogada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: key ausente/inválida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Tentativa de revogar mensagem que não é própria
+        '503':
+          description: Instância desconectada
+
+  /message/sendEvent/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar evento/agenda
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number, name, startTime]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                name:
+                  type: string
+                  example: "Reunião de time"
+                startTime:
+                  type: integer
+                  description: Unix timestamp em segundos
+                  example: 1739462400
+                description:
+                  type: string
+                  example: "Alinhamento semanal"
+                endTime:
+                  type: integer
+                  example: 1739466000
+                joinLink:
+                  type: string
+                  example: "https://meet.google.com/abc-defg-hij"
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                    name:
+                      type: string
+                    address:
+                      type: string
+      responses:
+        '201':
+          description: Evento enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: number, name ou startTime ausentes/inválidos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
+  /message/sendStickerPack/{instanceName}:
+    post:
+      tags: [Mensagens]
+      summary: Enviar pacote de figurinhas
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [number, stickerPackId, name, publisher, stickers, cover]
+              properties:
+                number:
+                  type: string
+                  example: "{{number}}"
+                stickerPackId:
+                  type: string
+                  example: "pack-001"
+                name:
+                  type: string
+                  example: "Meu Pacote"
+                publisher:
+                  type: string
+                  example: "Zapo Manager"
+                stickers:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Arquivos webp das figurinhas (até 30)
+                cover:
+                  type: string
+                  format: binary
+                  description: Thumbnail de capa do pacote
+      responses:
+        '201':
+          description: Pacote de figurinhas enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSent'
+        '400':
+          description: campos obrigatórios ausentes (number, stickers, cover, stickerPackId, name, publisher)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Instância desconectada
+
   /webhook/find/{instanceName}:
     get:
       tags: [Configuração]

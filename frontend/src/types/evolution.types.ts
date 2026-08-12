@@ -107,6 +107,12 @@ export type Key = {
   participant?: string;
 };
 
+export type Reaction = {
+  emoji: string;
+  sender: string;
+  messageId: string;
+};
+
 export type Message = {
   id: string;
   key: Key;
@@ -153,6 +159,63 @@ export type SendAudio = {
     delay?: number;
     presence?: string;
   };
+};
+
+export type SendReaction = {
+  key: Key;
+  reaction: string;
+};
+
+export type SendLocation = {
+  number: string;
+  latitude: number;
+  longitude: number;
+  name?: string;
+  address?: string;
+};
+
+export type SendContact = {
+  number: string;
+  contact: {
+    fullName: string;
+    phoneNumber: string;
+    organization?: string;
+  };
+};
+
+export type SendPoll = {
+  number: string;
+  name: string;
+  options: string[];
+  selectableCount?: number;
+};
+
+export type RevokeMessage = {
+  key: Key;
+};
+
+export type SendEvent = {
+  number: string;
+  name: string;
+  startTime: number;
+  description?: string;
+  endTime?: number;
+  joinLink?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    address?: string;
+  };
+};
+
+export type SendStickerPack = {
+  number: string;
+  stickerPackId: string;
+  name: string;
+  publisher: string;
+  stickers: File[];
+  cover: File;
 };
 
 export type IntegrationSession = {

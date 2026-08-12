@@ -413,6 +413,24 @@ function saveTempFile(buffer: Buffer, originalname: string): string {
   return tempPath;
 }
 
+// Gera vCard 3.0 simples (nome + telefone + organização opcional)
+function escapeVCardValue(value: string): string {
+  return value.replace(/[\\;,\n\r]/g, (m) => '\\' + (m === '\n' || m === '\r' ? 'n' : m));
+}
+
+function buildVCard(fullName: string, phoneNumber: string, organization?: string): string {
+  const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
+  const lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${escapeVCardValue(fullName)}`,
+    `TEL;type=CELL;waid=${cleanPhone.replace(/^\+/, '')}:${cleanPhone}`,
+  ];
+  if (organization) lines.push(`ORG:${escapeVCardValue(organization)}`);
+  lines.push('END:VCARD');
+  return lines.join('\n');
+}
+
 
 // 0. Enviar Áudio (PTT / Voice Note) — base64
 router.post('/sendWhatsAppAudio/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
@@ -1063,5 +1081,428 @@ router.post('/sendCarousel/:instanceName', checkStrictInstanceApiKey, async (req
     return res.status(500).json({ error: err.message });
   }
 });
+
+// 7. Enviar Reação
+router.post('/sendReaction/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { key, reaction } = req.body;
+
+    if (!key || !key.id || !key.remoteJid) {
+      return res.status(400).json({ error: 'key.id and key.remoteJid are required' });
+    }
+    if (typeof reaction !== 'string') {
+      return res.status(400).json({ error: 'reaction is required (use empty string to remove)' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = key.remoteJid;
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=reaction, to=${jid}, target=${key.id}, emoji=${reaction}`);
+    const sentMsg = await active.client.message.send(jid, {
+      type: 'reaction',
+      target: key,
+      emoji: reaction,
+    });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=reaction, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { reactionMessage: { key, text: reaction } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { reactionMessage: { key, text: reaction } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendReaction error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. Enviar Localização
+router.post('/sendLocation/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, latitude, longitude, name, address } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ error: 'latitude and longitude (numbers) are required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const locationContent = {
+      locationMessage: {
+        degreesLatitude: latitude,
+        degreesLongitude: longitude,
+        ...(name ? { name } : {}),
+        ...(address ? { address } : {}),
+      },
+    };
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=location, to=${jid}, lat=${latitude}, lng=${longitude}`);
+    const sentMsg = await active.client.message.send(jid, locationContent);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=location, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: locationContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: locationContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendLocation error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 9. Enviar Contato
+router.post('/sendContact/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, contact } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (!contact?.fullName || !contact?.phoneNumber) {
+      return res.status(400).json({ error: 'contact.fullName and contact.phoneNumber are required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const vcard = buildVCard(contact.fullName, contact.phoneNumber, contact.organization);
+    const contactContent = {
+      contactMessage: {
+        displayName: contact.fullName,
+        vcard,
+      },
+    };
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=contact, to=${jid}, contactName=${contact.fullName}`);
+    const sentMsg = await active.client.message.send(jid, contactContent);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=contact, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: contactContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: contactContent,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendContact error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 10. Enviar Enquete
+router.post('/sendPoll/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, name, options, selectableCount } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (!name) {
+      return res.status(400).json({ error: 'name (poll question) is required' });
+    }
+    if (!Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({ error: 'options must be an array with at least 2 items' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const pollPayload: any = {
+      type: 'poll',
+      name,
+      options,
+    };
+    if (selectableCount !== undefined) pollPayload.selectableCount = selectableCount;
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=poll, to=${jid}, name=${name}, optionsCount=${options.length}`);
+    const sentMsg = await active.client.message.send(jid, pollPayload);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=poll, to=${jid}, id=${sentMsg.id}`);
+
+    const returnedMsg = {
+      pollCreationMessageV3: {
+        name,
+        options: options.map((opt: string) => ({ optionName: opt })),
+        selectableOptionsCount: selectableCount ?? 1,
+      },
+    };
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendPoll error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 11. Apagar/Revogar Mensagem
+router.post('/revoke/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { key } = req.body;
+
+    if (!key || !key.id || !key.remoteJid) {
+      return res.status(400).json({ error: 'key.id and key.remoteJid are required' });
+    }
+    if (key.fromMe !== true) {
+      return res.status(403).json({ error: 'Only own messages (key.fromMe=true) can be revoked' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = key.remoteJid;
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=revoke, to=${jid}, target=${key.id}`);
+    const sentMsg = await active.client.message.send(jid, {
+      type: 'revoke',
+      target: key,
+    });
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=revoke, to=${jid}, id=${sentMsg.id}`);
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { protocolMessage: { type: 'REVOKE', key } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: { protocolMessage: { type: 'REVOKE', key } },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] revoke error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 12. Enviar Evento
+router.post('/sendEvent/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { number, name, startTime, description, endTime, location, joinLink } = req.body;
+
+    if (!number) {
+      return res.status(400).json({ error: 'number is required' });
+    }
+    if (!name || typeof startTime !== 'number') {
+      return res.status(400).json({ error: 'name and startTime (unix seconds) are required' });
+    }
+
+    const active = ZapoManager.getActive(instanceName);
+    if (!active) {
+      return res.status(503).json({ error: 'Instance is disconnected or offline' });
+    }
+
+    const jid = await resolveJid(active.client, number);
+    const eventPayload: any = {
+      type: 'event',
+      name,
+      startTime,
+    };
+    if (description !== undefined) eventPayload.description = description;
+    if (endTime !== undefined) eventPayload.endTime = endTime;
+    if (joinLink !== undefined) eventPayload.joinLink = joinLink;
+    if (location?.latitude !== undefined && location?.longitude !== undefined) {
+      eventPayload.location = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        ...(location.name ? { name: location.name } : {}),
+        ...(location.address ? { address: location.address } : {}),
+      };
+    }
+
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=event, to=${jid}, name=${name}, startTime=${startTime}`);
+    const sentMsg = await active.client.message.send(jid, eventPayload);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=event, to=${jid}, id=${sentMsg.id}`);
+
+    const returnedMsg = {
+      eventMessage: {
+        name,
+        startTime,
+        ...(description !== undefined ? { description } : {}),
+        ...(endTime !== undefined ? { endTime } : {}),
+        ...(joinLink !== undefined ? { joinLink } : {}),
+      },
+    };
+
+    const msgData = {
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      pushName: undefined,
+    };
+    ZapoManager.recordSentMessage(instanceName, msgData);
+
+    return res.status(201).json({
+      accepted: true,
+      key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+      message: returnedMsg,
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 'PENDING',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] sendEvent error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 13. Enviar Pacote de Figurinhas
+router.post(
+  '/sendStickerPack/:instanceName',
+  checkStrictInstanceApiKey,
+  upload.fields([{ name: 'stickers', maxCount: 30 }, { name: 'cover', maxCount: 1 }]),
+  async (req: Request, res: Response) => {
+    const tempPaths: string[] = [];
+    try {
+      const { instanceName } = req.params;
+      const { number, stickerPackId, name, publisher } = req.body;
+      const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
+      const stickerFiles = files?.stickers ?? [];
+      const coverFile = files?.cover?.[0];
+
+      if (!number) {
+        return res.status(400).json({ error: 'number is required' });
+      }
+      if (stickerFiles.length === 0) {
+        return res.status(400).json({ error: 'at least one file in stickers[] is required' });
+      }
+      if (!coverFile) {
+        return res.status(400).json({ error: 'cover file is required' });
+      }
+      if (!stickerPackId || !name || !publisher) {
+        return res.status(400).json({ error: 'stickerPackId, name and publisher are required' });
+      }
+
+      const active = ZapoManager.getActive(instanceName);
+      if (!active) {
+        return res.status(503).json({ error: 'Instance is disconnected or offline' });
+      }
+
+      const jid = await resolveJid(active.client, number);
+
+      const stickers = stickerFiles.map((file) => {
+        const tempPath = saveTempFile(file.buffer, file.originalname);
+        tempPaths.push(tempPath);
+        return { media: tempPath, fileName: file.originalname, emojis: [] };
+      });
+      const coverPath = saveTempFile(coverFile.buffer, coverFile.originalname);
+      tempPaths.push(coverPath);
+
+      const stickerPackPayload = {
+        type: 'sticker-pack',
+        stickerPackId,
+        name,
+        publisher,
+        stickers,
+        coverThumbnail: coverPath,
+        trayIcon: { media: coverPath, fileName: coverFile.originalname },
+      };
+
+      console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=sticker-pack, to=${jid}, stickerPackId=${stickerPackId}, count=${stickers.length}`);
+      const sentMsg = await active.client.message.send(jid, stickerPackPayload);
+      console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=sticker-pack, to=${jid}, id=${sentMsg.id}`);
+
+      const returnedMsg = {
+        stickerPackMessage: { stickerPackId, name, publisher },
+      };
+
+      const msgData = {
+        key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+        message: returnedMsg,
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        pushName: undefined,
+      };
+      ZapoManager.recordSentMessage(instanceName, msgData);
+
+      return res.status(201).json({
+        accepted: true,
+        key: { remoteJid: jid, fromMe: true, id: sentMsg.id },
+        message: returnedMsg,
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        status: 'PENDING',
+      });
+    } catch (err: any) {
+      console.error(`[MessageRoutes] sendStickerPack error:`, err.message);
+      return res.status(500).json({ error: err.message });
+    } finally {
+      for (const p of tempPaths) {
+        if (fs.existsSync(p)) {
+          try { fs.unlinkSync(p); } catch (e) {}
+        }
+      }
+    }
+  }
+);
 
 export default router;
