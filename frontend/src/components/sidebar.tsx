@@ -95,7 +95,7 @@ function SidebarShell({ children, footer }: { children: React.ReactNode; footer?
             </Button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
+          <nav className="flex-1 px-2 py-4 space-y-1">
             {children}
           </nav>
 
