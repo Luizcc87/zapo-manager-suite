@@ -4,6 +4,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Fix: MCP tools não bloqueavam envio de bot com conversa assumida (handoff)
+
+Validação manual ponta a ponta contra WhatsApp real (instância `teste-web-luiz`) encontrou gap: `send_text_message`/`send_media_message` nunca chamavam `assertBotCanSend` — a "dupla trava" documentada não existia de fato, só a checagem opcional (`get_conversation_status`) funcionava.
+
+- `backend/src/mcp/tools.ts`: `send_text_message` e `send_media_message` agora chamam `assertBotCanSend(instanceName, jid)` antes de enviar; retornam `{ error, blocked: true }` sem tentar contornar quando bloqueadas.
+- Validado manualmente: mensagem real enviada → humano assume (`status: open`) → tentativa de envio via MCP bloqueada de fato (mensagem não chega ao WhatsApp) → devolução ao bot (`status: pending`) → envio volta a funcionar. Ciclo completo confirmado contra número real.
+- Suíte automatizada: 82/82 passando após a correção.
+
 ### MCP: skill de handoff baixável e opcional
 
 - `docs/skills/zapo-mcp-agent/SKILL.md` (novo, versionado): mesma regra de handoff empacotada como skill Claude Code instalável via `curl` + copiar para `.claude/skills/` — fonte canônica, para operadores que querem a regra citável por nome ou como reforço quando o cliente MCP não aplica o campo `instructions`.

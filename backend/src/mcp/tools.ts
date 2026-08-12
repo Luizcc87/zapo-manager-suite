@@ -4,7 +4,9 @@ import { prisma } from '../lib/prisma';
 import {
   getConversationStatus,
   setConversationStatus,
+  assertBotCanSend,
   InvalidStatusError,
+  BotBlockedError,
 } from '../services/conversationStatus';
 
 export interface McpContext {
@@ -83,6 +85,17 @@ export const mcpTools = [
     }),
     execute: async (args: { instanceName: string; number: string; text: string }, _ctx: McpContext) => {
       const { instanceName, number, text } = args;
+      const jid = formatJid(number);
+
+      try {
+        await assertBotCanSend(instanceName, jid);
+      } catch (err: any) {
+        if (err instanceof BotBlockedError) {
+          return { error: err.message, blocked: true, instanceName };
+        }
+        throw err;
+      }
+
       const active = ZapoManager.getActive(instanceName);
 
       if (!active || !active.client.getState().connected) {
@@ -93,7 +106,6 @@ export const mcpTools = [
         };
       }
 
-      const jid = formatJid(number);
       const sent = await active.client.message.send(jid, text as any);
       return {
         success: true,
@@ -116,6 +128,17 @@ export const mcpTools = [
     }),
     execute: async (args: { instanceName: string; number: string; mediaUrl: string; mediaType: string; caption?: string; fileName?: string }, _ctx: McpContext) => {
       const { instanceName, number, mediaUrl, mediaType, caption, fileName } = args;
+      const jid = formatJid(number);
+
+      try {
+        await assertBotCanSend(instanceName, jid);
+      } catch (err: any) {
+        if (err instanceof BotBlockedError) {
+          return { error: err.message, blocked: true, instanceName };
+        }
+        throw err;
+      }
+
       const active = ZapoManager.getActive(instanceName);
 
       if (!active || !active.client.getState().connected) {
@@ -126,7 +149,6 @@ export const mcpTools = [
         };
       }
 
-      const jid = formatJid(number);
       let content: any = {};
 
       if (mediaType === 'image') content = { type: 'image', image: { url: mediaUrl }, caption };
