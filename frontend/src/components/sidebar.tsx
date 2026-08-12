@@ -1,6 +1,13 @@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@evoapi/design-system/collapsible";
 import { Button } from "@evoapi/design-system/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@evoapi/design-system/dropdown-menu";
+import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -281,18 +288,35 @@ function InstanceSidebar() {
           const groupActive = menu.children.some((c) => c.path && pathname.includes(c.path));
 
           if (collapsed) {
-            // Colapsado: mostra só o ícone do grupo com tooltip; sem submenu expansível.
+            // Colapsado: ícone do grupo abre os filhos num flyout à direita (sem scroll, sem expandir a coluna).
             return (
-              <div
-                key={menu.title}
-                title={menu.title}
-                className={cn(
-                  "flex items-center justify-center rounded-md py-2.5",
-                  groupActive ? "bg-primary/10 text-primary" : "text-muted-foreground",
-                )}
-              >
-                <menu.icon className="h-5 w-5 flex-shrink-0" />
-              </div>
+              <DropdownMenu key={menu.title}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title={menu.title}
+                    className={cn(
+                      "flex w-full items-center justify-center rounded-md py-2.5",
+                      groupActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    )}
+                  >
+                    <menu.icon className="h-5 w-5 flex-shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="start" sideOffset={8}>
+                  <DropdownMenuLabel>{menu.title}</DropdownMenuLabel>
+                  {menu.children.map((child) => (
+                    <DropdownMenuItem key={child.id} asChild>
+                      <NavLink
+                        to={`${base}/${child.path}`}
+                        className={({ isActive }) => cn(isActive && "text-primary font-medium")}
+                      >
+                        {child.title}
+                      </NavLink>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             );
           }
 

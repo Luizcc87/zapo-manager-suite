@@ -14,6 +14,7 @@ Padrão de referência: `PanelRightOpen`/`PanelRightClose` do wacrm-multi-ling (
 - `frontend/src/pages/instance/Chat/index.tsx`: estado do painel de contato (`contact-panel-open` em `localStorage`) controlado aqui, `<aside>` só renderiza quando aberto.
 - `frontend/src/pages/instance/Chat/ContactLead.tsx`: toggle removido do componente (fica só o conteúdo) — controle voltou pro pai/header, evitando dois estados de colapso independentes competindo.
 - 4 idiomas: chaves `chat.collapseContactInfo`/`chat.expandContactInfo`.
+- **Fix (mesma feature)**: sidebar colapsada, submenus (Configurations/Events/Integrations) expandiam inline dentro da coluna estreita, exigindo scroll pra ler — trocado por `DropdownMenu` (`@evoapi/design-system/dropdown-menu`) como flyout à direita (`side="right"`, `align="start"`), sem scroll, sem expandir a coluna.
 
 ### Reposicionamento do projeto — handoff + CRM como diferencial (Épico 3)
 
