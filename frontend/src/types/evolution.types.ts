@@ -89,6 +89,8 @@ export type Contact = {
   instanceId: string;
 };
 
+export type ConversationStatus = "pending" | "open" | "resolved";
+
 export type Chat = {
   id: string;
   pushName: string;
@@ -98,6 +100,8 @@ export type Chat = {
   createdAt: string;
   updatedAt: string;
   instanceId: string;
+  status?: ConversationStatus;
+  assignedUserId?: string | null;
 };
 
 export type Key = {

@@ -64,6 +64,10 @@ function mergeChatEntries(current: any | undefined, incoming: any): any {
     pushName: latest.pushName || fallback.pushName || '',
     profilePicUrl: latest.profilePicUrl || fallback.profilePicUrl || '',
     labels: latest.labels ?? fallback.labels ?? null,
+    // status/assignedUserId só existem em entradas vindas do banco (wa_chats) — entradas
+    // em memória (eventos socket) nunca têm esses campos, então preserva do fallback.
+    status: latest.status ?? fallback.status ?? 'pending',
+    assignedUserId: latest.assignedUserId ?? fallback.assignedUserId ?? null,
   };
 }
 
@@ -421,6 +425,11 @@ export class ZapoManager {
     _socketEmitter = fn;
   }
 
+  /** Emite evento arbitrário pela mesma ponte socket usada internamente (rooms por instância). */
+  static emitEvent(instanceName: string, event: string, data: any) {
+    _socketEmitter?.(event, { instance: instanceName, data });
+  }
+
   // ── In-memory chat/message accessors ────────────────────────────────────────
 
   static debugState(instanceName: string) {
@@ -449,6 +458,8 @@ export class ZapoManager {
         pushName: row.pushName,
         profilePicUrl: row.profilePicUrl,
         labels: row.labels,
+        status: row.status,
+        assignedUserId: row.assignedUserId,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         instanceId: instanceName,

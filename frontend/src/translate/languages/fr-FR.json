@@ -1623,6 +1623,15 @@
     }
   },
   "chat": {
+    "status": {
+      "pending": "Bot",
+      "open": "Prise en charge",
+      "resolved": "Résolue",
+      "take": "Prendre en charge la conversation",
+      "release": "Rendre au bot",
+      "resolve": "Marquer comme résolue",
+      "changedBy": "Statut modifié par {{actor}}"
+    },
     "location": {
       "title": "Envoyer la position",
       "latitude": "Latitude",

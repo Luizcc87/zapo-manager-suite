@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { ZapoManager } from '../manager';
 import { prisma } from '../lib/prisma';
+import {
+  getConversationStatus,
+  setConversationStatus,
+  InvalidStatusError,
+} from '../services/conversationStatus';
 
 export interface McpContext {
   apiKey: string;
@@ -181,6 +186,48 @@ export const mcpTools = [
         pairingCode: active?.pairingCode ?? null,
         connected: active?.client?.getState()?.connected ?? false,
       };
+    },
+  },
+  {
+    name: 'get_conversation_status',
+    description:
+      'Check the bot/human handoff status of a conversation (pending|open|resolved) before sending an automated message. ' +
+      'If status is not "pending", a human has taken over — do not send.',
+    paramsSchema: z.object({
+      instanceName: z.string().describe('Name of the WhatsApp instance'),
+      remoteJid: z.string().describe('Recipient JID (e.g. 5511999998888@s.whatsapp.net) or phone number'),
+    }),
+    execute: async (args: { instanceName: string; remoteJid: string }, _ctx: McpContext) => {
+      const { instanceName, remoteJid } = args;
+      const jid = formatJid(remoteJid);
+      return getConversationStatus(instanceName, jid);
+    },
+  },
+  {
+    name: 'update_conversation_status',
+    description:
+      'Update the bot/human handoff status of a conversation. Use status="pending" to release control back to the bot, ' +
+      'or "resolved" to close the conversation. Do not set "open" unless a human is actually taking over.',
+    paramsSchema: z.object({
+      instanceName: z.string().describe('Name of the WhatsApp instance'),
+      remoteJid: z.string().describe('Recipient JID (e.g. 5511999998888@s.whatsapp.net) or phone number'),
+      status: z.enum(['pending', 'open', 'resolved']).describe('New conversation status'),
+    }),
+    execute: async (args: { instanceName: string; remoteJid: string; status: string }, ctx: McpContext) => {
+      const { instanceName, remoteJid, status } = args;
+      const jid = formatJid(remoteJid);
+      try {
+        const updated = await setConversationStatus(instanceName, jid, status, {
+          type: 'agent',
+          id: ctx.instanceName ? `mcp:${ctx.instanceName}` : 'mcp:global',
+        });
+        return updated;
+      } catch (err: any) {
+        if (err instanceof InvalidStatusError) {
+          return { error: err.message };
+        }
+        throw err;
+      }
     },
   },
 ];

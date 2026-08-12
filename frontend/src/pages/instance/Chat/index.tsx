@@ -267,6 +267,18 @@ function Chat() {
                     <div className="min-w-0 flex-1">
                       <div className="mb-0.5 flex items-center justify-between gap-2">
                         <p className="truncate font-medium">{name}</p>
+                        {chat.status === "open" && (
+                          <span
+                            className="h-2 w-2 flex-shrink-0 rounded-full bg-green-500"
+                            title={t("chat.status.open")}
+                          />
+                        )}
+                        {chat.status === "resolved" && (
+                          <span
+                            className="h-2 w-2 flex-shrink-0 rounded-full bg-blue-500"
+                            title={t("chat.status.resolved")}
+                          />
+                        )}
                       </div>
                       <p className="truncate text-sm text-muted-foreground">
                         {formatJid(chat.remoteJid)}

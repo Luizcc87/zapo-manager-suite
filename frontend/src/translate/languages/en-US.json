@@ -204,6 +204,15 @@
     }
   },
   "chat": {
+    "status": {
+      "pending": "Bot",
+      "open": "Assigned",
+      "resolved": "Resolved",
+      "take": "Take over conversation",
+      "release": "Return to bot",
+      "resolve": "Mark as resolved",
+      "changedBy": "Status changed by {{actor}}"
+    },
     "location": {
       "title": "Send location",
       "latitude": "Latitude",

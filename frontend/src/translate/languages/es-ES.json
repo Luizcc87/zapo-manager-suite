@@ -1624,6 +1624,15 @@
     }
   },
   "chat": {
+    "status": {
+      "pending": "Bot",
+      "open": "Asignada",
+      "resolved": "Resuelta",
+      "take": "Asumir conversación",
+      "release": "Devolver al bot",
+      "resolve": "Marcar como resuelta",
+      "changedBy": "Estado cambiado por {{actor}}"
+    },
     "location": {
       "title": "Enviar ubicación",
       "latitude": "Latitud",

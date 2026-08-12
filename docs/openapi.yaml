@@ -1477,6 +1477,104 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /chat/{instanceName}/{remoteJid}/status:
+    get:
+      tags: [Chat]
+      summary: Consultar status de handoff da conversa
+      description: |
+        Retorna o status de controle bot/humano (pending|open|resolved) e o atendente
+        atribuído. Agentes de IA devem consultar antes de enviar mensagem automática.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+        - name: remoteJid
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "5511999999999@s.whatsapp.net"
+      responses:
+        '200':
+          description: Status atual da conversa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  instanceName:
+                    type: string
+                  remoteJid:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, open, resolved]
+                  assignedUserId:
+                    type: string
+                    nullable: true
+                  statusChangedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  statusChangedBy:
+                    type: string
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Chat]
+      summary: Alterar status de handoff da conversa
+      description: |
+        Superfície única de escrita reaproveitada por UI, webhooks externos e MCP tools.
+        Bot só pode enviar mensagem quando status = pending; humano assumindo deve
+        transicionar para open (com autoAssign opcional).
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+        - name: remoteJid
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "5511999999999@s.whatsapp.net"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              status: "open"
+              actor:
+                type: "human"
+                id: "luiz"
+              autoAssign: true
+            schema:
+              type: object
+              required: [status, actor]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, open, resolved]
+                actor:
+                  type: object
+                  required: [type, id]
+                  properties:
+                    type:
+                      type: string
+                      enum: [human, agent, webhook]
+                    id:
+                      type: string
+                autoAssign:
+                  type: boolean
+                  description: Se true e actor.type=human e status=open, atribui automaticamente ao actor.id
+      responses:
+        '200':
+          description: Status atualizado
+        '400':
+          description: status ou actor inválido
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /mcp:
     post:
       tags: [MCP]

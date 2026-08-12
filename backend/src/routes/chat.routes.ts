@@ -1,6 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { ZapoManager } from '../manager';
 import { checkInstanceApiKey } from '../middleware/auth';
+import {
+  getConversationStatus,
+  setConversationStatus,
+  InvalidStatusError,
+  type SetStatusActor,
+} from '../services/conversationStatus';
 
 const router = Router();
 
@@ -59,6 +65,53 @@ router.post('/findMessages/:instanceName', checkInstanceApiKey, async (req: Requ
     // response.data?.messages?.records OR response.data (array)
     return res.json({ messages: { records } });
   } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /chat/:instanceName/:remoteJid/status
+// Consulta o status de handoff (pending|open|resolved) — agente deve checar antes de enviar.
+router.get('/:instanceName/:remoteJid/status', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName, remoteJid } = req.params;
+    const current = await getConversationStatus(instanceName, decodeURIComponent(remoteJid));
+    return res.json(current);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /chat/:instanceName/:remoteJid/status
+// body: { status: 'pending'|'open'|'resolved', actor: { type: 'human'|'agent'|'webhook', id: string }, autoAssign?: boolean }
+// Superfície única de escrita reaproveitada por UI, webhooks externos e MCP tools.
+router.patch('/:instanceName/:remoteJid/status', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName, remoteJid } = req.params;
+    const { status, actor, autoAssign } = req.body ?? {};
+
+    if (!status || typeof status !== 'string') {
+      return res.status(400).json({ error: 'status is required' });
+    }
+    if (!actor || typeof actor.type !== 'string' || typeof actor.id !== 'string') {
+      return res.status(400).json({ error: 'actor { type, id } is required' });
+    }
+    if (!['human', 'agent', 'webhook'].includes(actor.type)) {
+      return res.status(400).json({ error: "actor.type must be 'human', 'agent' or 'webhook'" });
+    }
+
+    const updated = await setConversationStatus(
+      instanceName,
+      decodeURIComponent(remoteJid),
+      status,
+      actor as SetStatusActor,
+      { autoAssign: Boolean(autoAssign) }
+    );
+
+    return res.json(updated);
+  } catch (err: any) {
+    if (err instanceof InvalidStatusError) {
+      return res.status(400).json({ error: err.message });
+    }
     return res.status(500).json({ error: err.message });
   }
 });

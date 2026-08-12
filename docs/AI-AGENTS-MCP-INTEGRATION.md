@@ -24,6 +24,10 @@ Este guia consolida os caminhos de integração do **Zapo Manager** e do ecossis
 4. `send_media_message`: Envia imagem, documento, áudio, vídeo ou sticker via URL.
 5. `list_chats`: Lista chats e conversas recentes de uma instância.
 6. `get_qr_or_pairing_code`: Retorna o QR Code ou código de 8 dígitos para pareamento.
+7. `get_conversation_status`: Consulta o status de handoff bot/humano (`pending`/`open`/`resolved`) de uma conversa — **chame antes de enviar mensagem automática**. Se o status não for `pending`, um humano já assumiu; não envie.
+8. `update_conversation_status`: Atualiza o status de handoff. Use `pending` para devolver o controle ao bot, ou `resolved` para encerrar. Não defina `open` a menos que o agente esteja de fato escalando para um humano.
+
+> **Handoff bot/humano:** todo agente autônomo (Hermes Agent, OpenClaw, etc.) que enviar mensagens automáticas deve consultar `get_conversation_status` antes de responder. O backend também bloqueia o envio via `assertBotCanSend` quando o status não é `pending` — a checagem do agente é uma segunda camada, não a única.
 
 
 ---

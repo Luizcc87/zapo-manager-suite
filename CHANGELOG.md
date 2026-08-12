@@ -4,6 +4,27 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Chat: handoff bot/humano (status de conversa)
+
+Controle de quem responde a conversa — bot (agente de IA via MCP) ou humano (painel) — evitando os dois responderem ao mesmo tempo. Modelo inspirado no Chatwoot: `pending` (bot pode enviar) → `open` (humano assumiu, bot bloqueado) → `resolved` (encerrada).
+
+**Backend**
+- `backend/prisma/schema.prisma` e `backend/prisma/migrations/20260812000001_add_chat_status_assignment/`: novos campos em `ChatEntry`/`wa_chats` — `status` (`pending`|`open`|`resolved`, default `pending`), `assignedUserId`, `statusChangedAt`, `statusChangedBy`, com índice em `(instanceName, status)`.
+- `backend/src/services/conversationStatus.ts` (novo): `ConversationStatusService` — `getConversationStatus`, `setConversationStatus` (grava, emite realtime, audita via `InstanceEvent`, auto-assign quando humano abre), `assertBotCanSend` (bloqueia envio de bot fora de `pending`, nunca falha silenciosamente).
+- `backend/src/manager.ts`: novo método `ZapoManager.emitEvent(instanceName, event, data)` reaproveitando a ponte socket existente; `getChatList`/`mergeChatEntries` corrigidos para propagar `status`/`assignedUserId` (não eram incluídos no retorno, mesmo já existindo na tabela).
+- `backend/src/routes/chat.routes.ts`: `GET`/`PATCH /chat/:instanceName/:remoteJid/status` — superfície REST única, reaproveitada por UI, webhooks externos e MCP; `actor { type, id }` no body identifica quem mudou o status (sem sessão de usuário no backend).
+- `backend/src/mcp/tools.ts`: MCP tools `get_conversation_status` e `update_conversation_status` — agente de IA consulta/atualiza pelo mesmo service, mesma fonte de verdade da UI.
+- `backend/src/tests/conversation-status.test.ts` (novo): cobertura de validação de status inválido e mensagens de erro.
+- `docs/openapi.yaml` e `docs/AI-AGENTS-MCP-INTEGRATION.md`: endpoint e tools novas documentados.
+
+**Frontend**
+- `frontend/src/types/evolution.types.ts`: `ConversationStatus`, `Chat.status`/`assignedUserId`.
+- `frontend/src/lib/queries/chat/findConversationStatus.ts` e `manageConversationStatus.tsx` (novos): query e mutation do status de handoff.
+- `frontend/src/pages/instance/Chat/conversation-status.tsx` (novo): badge + menu de ações ("Assumir conversa", "Devolver ao bot", "Marcar como resolvida") no header do chat.
+- `frontend/src/pages/instance/Chat/messages.tsx`: badge plugado no header da conversa.
+- `frontend/src/pages/instance/Chat/index.tsx`: indicador (bolinha verde/azul) na lista de conversas para status `open`/`resolved`.
+- 4 idiomas (`pt-BR`, `en-US`, `es-ES`, `fr-FR`): chaves `chat.status.*`.
+
 ### Chat: reações visíveis e fundo estilo WACRM
 
 **Frontend**
@@ -1118,3 +1139,6 @@ GET /proxy/status → session=DC-555596773757 → effectiveUser=fpawtgcq-14-5555
 | Push origin | Múltiplos commits à frente de `origin/master` — realizar push após validação local |
 | History sync UI | `history.sync` socket event disponível; frontend ainda não exibe indicador de progresso |
 | Histórico no chat | Mensagens históricas ficam no store interno do zapo-js, não nas tabelas Prisma — integração futura necessária para exibir no Manager chat |
+| CRM leve (Épico 2) | Backlog em `_bmad-output/planning-artifacts/backlog-atendimento-basico-ia.md` — campos de lead mapeados por instância (`wa_instance_field_map` + `ChatEntry.leadFields`), ainda não implementado |
+| Reposicionamento do projeto (Épico 3) | Atualizar README/docs/CLAUDE.md com foco em integração de agentes de IA — depende dos Épicos 1 e 2 completos |
+| Lint frontend | `eslint-plugin-n` ausente em `node_modules` — `npm run lint` falha até reinstalar dependências |

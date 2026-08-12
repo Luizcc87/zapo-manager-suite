@@ -25,6 +25,7 @@ import { toast } from "react-toastify";
 // Import components from EmbedChatMessage for attachment functionality
 import { MediaOptions } from "../EmbedChatMessage/InputMessage/media-options";
 import { SelectedMedia } from "../EmbedChatMessage/InputMessage/selected-media";
+import { ConversationStatusBadge } from "./conversation-status";
 
 type MessagesProps = {
   textareaRef: RefObject<HTMLTextAreaElement>;
@@ -1096,6 +1097,9 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
             <h3 className="truncate font-semibold">{headerName}</h3>
             <p className="truncate text-xs text-muted-foreground">{headerSub}</p>
           </div>
+          {instance?.name && remoteJid && (
+            <ConversationStatusBadge instanceName={instance.name} remoteJid={remoteJid} />
+          )}
         </div>
       </div>
       <div className={`flex w-full flex-1 flex-col overflow-y-auto px-4 py-4 ${DOODLE_BG_CLASSES}`}>
