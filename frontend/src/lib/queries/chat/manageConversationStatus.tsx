@@ -2,7 +2,7 @@ import { ConversationStatus } from "@/types/evolution.types";
 
 import { api } from "../api";
 import { useManageMutation } from "../mutateQuery";
-import { queryKey as statusQueryKey, ConversationStatusResponse } from "./findConversationStatus";
+import { ConversationStatusResponse } from "./findConversationStatus";
 
 interface SetConversationStatusParams {
   instanceName: string;

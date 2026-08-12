@@ -4,6 +4,13 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Fix: lint do frontend quebrado por hoisting incorreto de eslint-plugin-n
+
+`npm run lint` falhava com "ESLint couldn't find the plugin eslint-plugin-n" — o pacote existia só aninhado em `node_modules/@herowcode/eslint-config/node_modules/`, não no top-level. `npm install` corrigiu o hoisting.
+
+- `frontend/package-lock.json`: reinstalado.
+- `frontend/src/lib/queries/chat/manageConversationStatus.tsx`: removido import não usado (`statusQueryKey`) que o lint (agora funcional) apontou.
+
 ### Fix: MCP tools não bloqueavam envio de bot com conversa assumida (handoff)
 
 Validação manual ponta a ponta contra WhatsApp real (instância `teste-web-luiz`) encontrou gap: `send_text_message`/`send_media_message` nunca chamavam `assertBotCanSend` — a "dupla trava" documentada não existia de fato, só a checagem opcional (`get_conversation_status`) funcionava.
