@@ -1,0 +1,21 @@
+{
+  "_readme": "Copy this file to .cursor/mcp.json to activate MCP servers in Cursor IDE. The 'zapo-live-dev' server requires a real WhatsApp account — use only in dev/sandbox.",
+  "mcpServers": {
+    "zapo-docs": {
+      "url": "https://zapo.to/mcp",
+      "description": "Zapo Official Documentation — search and fetch pages on demand"
+    },
+    "zapo-live-dev": {
+      "command": "npx",
+      "args": ["-y", "@zapo-js/mcp-server@^1.2.0"],
+      "description": "⚠️  DEV ONLY — drives a live WaClient from Cursor. Never use with production accounts.",
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "MCP_SESSION_ID": "dev-session",
+        "MCP_AUTH_PATH": "./.auth/mcp-state.sqlite",
+        "MCP_LOG_LEVEL": "info",
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}

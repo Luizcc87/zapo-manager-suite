@@ -4,6 +4,28 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+## [v1.6.25] — 2026-08-11
+
+### Configuração MCP Nativo e Guia de Integração para Agentes de IA
+
+**Backend**
+- `backend/src/routes/mcp.routes.ts` (novo): Rota de transporte HTTP Streaming para protocolo MCP em `/mcp` e `/mcp/:apiKey`. Autenticação tripla suportada (`apikey` header, `Authorization: Bearer <token>` e token na URL).
+- `backend/src/mcp/tools.ts` e `backend/src/mcp/server.ts` (novos): 6 ferramentas nativas registradas via `@modelcontextprotocol/sdk` (`list_instances`, `get_instance_status`, `send_text_message`, `send_media_message`, `list_chats`, `get_qr_or_pairing_code`).
+- `backend/src/main.ts`: Registro do `mcpRouter` e adição de `/mcp` ao `quietHttpGetPaths`.
+- `backend/src/routes/instance.routes.ts`: Adicionada rota `POST /instance/rotate-key/:instanceName` para revogação e rotação segura de chave de instância.
+- `docs/openapi.yaml`: Adicionadas definições das rotas `/mcp` e `/mcp/{apiKey}`.
+
+**Frontend**
+- `frontend/src/pages/instance/Mcp/index.tsx` (novo): Tela dedicada para integração MCP acessível via rota `/manager/instance/:instanceId/mcp`.
+- `frontend/src/components/ai-integration/AIIntegrationCard.tsx` (novo): Widget com cópia de URL HTTP MCP em 1 clique (com token na URL e com header), botões de **Revelar/Ocultar Token** (👁️) e **Revogar & Recriar Token** (🔄), além de snippet JSON pré-formatado para `.cursor/mcp.json`.
+- `frontend/src/components/sidebar.tsx`: Novo sub-menu `🤖 Agentes de IA (MCP)` sob o grupo **Integrações**.
+
+**Documentação / Configuração**
+- `.mcp.json` (novo, raiz): configuração de auto-descoberta MCP com dois servidores — `zapo-docs` e `zapo-live-dev`.
+- `.cursor/mcp.json.example` (novo): exemplo de configuração para Cursor IDE.
+- `docs/AI-AGENTS-MCP-INTEGRATION.md` (novo): guia consolidado de integração para Claude, Cursor, Windsurf, ChatGPT, Hermes Agent, Openclaw, etc., atualizado com a tabela de ferramentas do novo Servidor MCP Nativo.
+- `README.md`: nova seção "Integração com Agentes de IA (MCP)" com tabela de resumo e link para o guia.
+
 ### Chat: ações por mensagem, respostas e anexos alinhados ao WACRM
 
 **Backend**

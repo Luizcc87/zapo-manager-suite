@@ -15,6 +15,7 @@ import chatRouter from './routes/chat.routes';
 import contactRouter from './routes/contact.routes';
 import configRouter from './routes/config.routes';
 import companionRouter from './routes/companion.routes';
+import mcpRouter from './routes/mcp.routes';
 import { ZapoManager } from './manager';
 import { fetchLatestAndroidWaVersion } from './config/fetchAndroidWaVersion';
 import { fetchLatestIosWaVersion } from './config/fetchIosWaVersion';
@@ -136,6 +137,7 @@ const quietHttpGetPaths = [
   '/instance/events',
   '/instance/events-summary',
   '/notification/channels',
+  '/mcp',
 ];
 
 function shouldLogHttpRequest(req: express.Request): boolean {
@@ -157,6 +159,7 @@ app.use('/instance', companionRouter);
 app.use('/message', messageRouter);
 app.use('/chat', chatRouter);
 app.use('/contact', contactRouter);
+app.use('/mcp', mcpRouter);
 app.use('/', configRouter);
 
 
@@ -192,7 +195,7 @@ app.get('/', (req, res, next) => {
     return next();
   }
   res.json({
-    version: process.env.APP_VERSION || '1.6.24',
+    version: process.env.APP_VERSION || '1.6.25',
     clientName: 'zapo-manager',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
@@ -205,7 +208,7 @@ app.get('/runtime/status', (req, res) => {
   res.json({
     ok: true,
     clientName: 'zapo-manager',
-    version: process.env.APP_VERSION || '1.6.24',
+    version: process.env.APP_VERSION || '1.6.25',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
     runtimeEnvironment: getRuntimeEnvironment(req),

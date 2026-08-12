@@ -144,6 +144,23 @@ Para hospedar o Zapo Manager em produção, recomendamos a **Hostinger** — VPS
 
 ---
 
+## Integração com Agentes de IA (MCP)
+
+O Zapo Manager e o ecossistema Zapo oferecem suporte nativo a [Model Context Protocol (MCP)](https://modelcontextprotocol.io):
+
+| Integração | Endpoint / Pacote | Descrição |
+|---|---|---|
+| **Docs MCP** | `https://zapo.to/mcp` | Leitura e busca na documentação Zapo — seguro para qualquer agente |
+| **Live WaClient MCP** | `npx -y @zapo-js/mcp-server` | Controla um `WaClient` real via agente — ⚠️ apenas dev/sandbox |
+| **llms.txt** | `https://zapo.to/llms.txt` | Corpus estático para agentes sem MCP (ChatGPT, etc.) |
+| **OpenAPI Actions** | [`docs/openapi.yaml`](docs/openapi.yaml) | Schema REST para Custom GPTs e frameworks autônomos |
+
+📖 **Guia completo:** [docs/AI-AGENTS-MCP-INTEGRATION.md](docs/AI-AGENTS-MCP-INTEGRATION.md)
+
+O repositório inclui `.mcp.json` (auto-descoberta) e `.cursor/mcp.json.example` para ativação rápida.
+
+---
+
 ## Licença e Créditos
 
 Este projeto é distribuído sob a **Apache License 2.0**.

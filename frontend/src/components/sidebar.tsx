@@ -165,6 +165,7 @@ function InstanceSidebar() {
         title: t("sidebar.integrations"),
         icon: Zap,
         children: [
+          { id: "mcp", title: "🤖 Agentes de IA (MCP)", path: "mcp" },
           { id: "evoai", title: t("sidebar.evoai"), path: "evoai" },
           { id: "n8n", title: t("sidebar.n8n"), path: "n8n" },
           { id: "evolutionBot", title: t("sidebar.evolutionBot"), path: "evolutionBot" },

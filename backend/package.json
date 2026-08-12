@@ -13,6 +13,7 @@
     "prisma:status": "prisma migrate status"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@prisma/client": "^6.1.0",
     "@scalar/express-api-reference": "^0.10.4",
     "@whiskeysockets/baileys": "7.0.0-rc14",

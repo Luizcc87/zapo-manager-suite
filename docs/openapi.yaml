@@ -1476,3 +1476,42 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /mcp:
+    post:
+      tags: [MCP]
+      summary: Endpoint HTTP MCP (Model Context Protocol)
+      description: |
+        Endpoint de transporte HTTP Streaming para o protocolo MCP.
+        Permite que assistentes de IA (Claude, Cursor, Windsurf, etc.) executem ferramentas nativas
+        como listar instâncias, consultar status, listar chats e enviar mensagens de texto/mídia.
+        
+        Autenticação via header `apikey` ou `Authorization: Bearer <token>`.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Resposta JSON-RPC / HTTP Streaming MCP
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /mcp/{apiKey}:
+    post:
+      tags: [MCP]
+      summary: Endpoint HTTP MCP com Token na URL
+      description: |
+        Variante do endpoint MCP com a chave de API embutida na URL.
+        Ideal para assistentes que não suportam headers customizados (ChatGPT Custom GPTs, Openclaw, N8N).
+      parameters:
+        - in: path
+          name: apiKey
+          required: true
+          schema:
+            type: string
+          description: GLOBAL_API_KEY ou apiKey de instância
+      responses:
+        '200':
+          description: Resposta JSON-RPC / HTTP Streaming MCP
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+

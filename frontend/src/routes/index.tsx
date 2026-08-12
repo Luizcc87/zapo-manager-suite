@@ -21,6 +21,7 @@ import { Openai } from "@/pages/instance/Openai";
 import { Proxy } from "@/pages/instance/Proxy";
 import { Rabbitmq } from "@/pages/instance/Rabbitmq";
 import { Settings } from "@/pages/instance/Settings";
+import { McpPage } from "@/pages/instance/Mcp";
 import { Sqs } from "@/pages/instance/Sqs";
 import { Typebot } from "@/pages/instance/Typebot";
 import { Contacts } from "@/pages/instance/Contacts";
@@ -108,6 +109,16 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: "/manager/instance/:instanceId/mcp",
+    element: (
+      <ProtectedRoute>
+        <InstanceLayout>
+          <McpPage />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: "/manager/instance/:instanceId/openai",
     element: (
       <ProtectedRoute feature="openai">
@@ -123,6 +134,136 @@ const router = createBrowserRouter([
       <ProtectedRoute feature="openai">
         <InstanceLayout>
           <Openai />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/dify",
+    element: (
+      <ProtectedRoute feature="dify">
+        <InstanceLayout>
+          <Dify />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/dify/:botId",
+    element: (
+      <ProtectedRoute feature="dify">
+        <InstanceLayout>
+          <Dify />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/typebot",
+    element: (
+      <ProtectedRoute feature="typebot">
+        <InstanceLayout>
+          <Typebot />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/typebot/:typebotId",
+    element: (
+      <ProtectedRoute feature="typebot">
+        <InstanceLayout>
+          <Typebot />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/evolutionBot",
+    element: (
+      <ProtectedRoute feature="evolutionBot">
+        <InstanceLayout>
+          <EvolutionBot />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/evolutionBot/:evolutionBotId",
+    element: (
+      <ProtectedRoute feature="evolutionBot">
+        <InstanceLayout>
+          <EvolutionBot />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/evoai",
+    element: (
+      <ProtectedRoute feature="evoai">
+        <InstanceLayout>
+          <Evoai />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/evoai/:evoaiId",
+    element: (
+      <ProtectedRoute feature="evoai">
+        <InstanceLayout>
+          <Evoai />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/flowise",
+    element: (
+      <ProtectedRoute feature="flowise">
+        <InstanceLayout>
+          <Flowise />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/flowise/:flowiseId",
+    element: (
+      <ProtectedRoute feature="flowise">
+        <InstanceLayout>
+          <Flowise />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/n8n",
+    element: (
+      <ProtectedRoute feature="n8n">
+        <InstanceLayout>
+          <N8n />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/n8n/:n8nId",
+    element: (
+      <ProtectedRoute feature="n8n">
+        <InstanceLayout>
+          <N8n />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/manager/instance/:instanceId/chatwoot",
+    element: (
+      <ProtectedRoute feature="chatwoot">
+        <InstanceLayout>
+          <Chatwoot />
         </InstanceLayout>
       </ProtectedRoute>
     ),
@@ -168,146 +309,6 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "/manager/instance/:instanceId/chatwoot",
-    element: (
-      <ProtectedRoute feature="chatwoot">
-        <InstanceLayout>
-          <Chatwoot />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/typebot",
-    element: (
-      <ProtectedRoute feature="typebot">
-        <InstanceLayout>
-          <Typebot />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/typebot/:typebotId",
-    element: (
-      <ProtectedRoute feature="typebot">
-        <InstanceLayout>
-          <Typebot />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/dify",
-    element: (
-      <ProtectedRoute feature="dify">
-        <InstanceLayout>
-          <Dify />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/dify/:difyId",
-    element: (
-      <ProtectedRoute feature="dify">
-        <InstanceLayout>
-          <Dify />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/n8n",
-    element: (
-      <ProtectedRoute feature="n8n">
-        <InstanceLayout>
-          <N8n />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/n8n/:n8nId",
-    element: (
-      <ProtectedRoute feature="n8n">
-        <InstanceLayout>
-          <N8n />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/evoai",
-    element: (
-      <ProtectedRoute feature="evoai">
-        <InstanceLayout>
-          <Evoai />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/evoai/:evoaiId",
-    element: (
-      <ProtectedRoute feature="evoai">
-        <InstanceLayout>
-          <Evoai />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/evolutionBot",
-    element: (
-      <ProtectedRoute feature="evolutionBot">
-        <InstanceLayout>
-          <EvolutionBot />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/evolutionBot/:evolutionBotId",
-    element: (
-      <ProtectedRoute feature="evolutionBot">
-        <InstanceLayout>
-          <EvolutionBot />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/flowise",
-    element: (
-      <ProtectedRoute feature="flowise">
-        <InstanceLayout>
-          <Flowise />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/flowise/:flowiseId",
-    element: (
-      <ProtectedRoute feature="flowise">
-        <InstanceLayout>
-          <Flowise />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/manager/instance/:instanceId/notifications",
-    element: (
-      <ProtectedRoute>
-        <InstanceLayout>
-          <Notifications />
-        </InstanceLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
     path: "/manager/instance/:instanceId/proxy",
     element: (
       <ProtectedRoute feature="proxy">
@@ -318,12 +319,22 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "/manager/embed-chat",
-    element: <EmbedChat />,
+    path: "/manager/instance/:instanceId/notifications",
+    element: (
+      <InstanceLayout>
+        <Notifications />
+      </InstanceLayout>
+    ),
   },
   {
-    path: "/manager/embed-chat/:remoteJid",
-    element: <EmbedChat />,
+    path: "/manager/instance/:instanceId/embedChat",
+    element: (
+      <ProtectedRoute feature="chat">
+        <InstanceLayout>
+          <EmbedChat />
+        </InstanceLayout>
+      </ProtectedRoute>
+    ),
   },
 ]);
 

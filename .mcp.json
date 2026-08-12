@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "zapo-docs": {
+      "type": "http",
+      "url": "https://zapo.to/mcp",
+      "description": "Zapo Official Documentation MCP Server — read-only, safe for production agents"
+    },
+    "zapo-live-dev": {
+      "command": "npx",
+      "args": ["-y", "@zapo-js/mcp-server@^1.2.0"],
+      "description": "⚠️  DEV / SANDBOX ONLY — exposes a live WaClient to the AI agent. Never run against production accounts.",
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "MCP_SESSION_ID": "dev-session",
+        "MCP_AUTH_PATH": "./.auth/mcp-state.sqlite",
+        "MCP_LOG_LEVEL": "info",
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}

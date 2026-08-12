@@ -614,12 +614,16 @@ router.delete('/logout/:instanceName', checkInstanceApiKey, async (req: Request,
   }
 });
 
-// 6. Excluir Instância
-router.delete('/delete/:instanceName', checkGlobalApiKey, async (req: Request, res: Response) => {
+// 7. Revogar e Recriar Token/API Key da Instância
+router.post('/rotate-key/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;
-    await ZapoManager.deleteClient(instanceName);
-    return res.status(200).json({ status: 'success', message: 'Instance deleted' });
+    const newApiKey = require('crypto').randomBytes(16).toString('hex');
+    const updated = await prisma.instance.update({
+      where: { instanceName },
+      data: { apiKey: newApiKey },
+    });
+    return res.status(200).json({ status: 'success', instanceName, apiKey: updated.apiKey });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
