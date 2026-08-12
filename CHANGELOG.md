@@ -4,6 +4,8 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+## [1.6.26] - 2026-08-12
+
 ### Chat: botões para colapsar sidebar global e ficha do contato
 
 Padrão de referência: `PanelRightOpen`/`PanelRightClose` do wacrm-multi-ling (botão único no header, não par de estados duplicados).
