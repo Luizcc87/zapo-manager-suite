@@ -12,12 +12,20 @@ interface IParams {
 
 const queryKey = (params: Partial<IParams>) => ["chats", "findMessages", JSON.stringify(params)];
 
+const mergeReactions = (current: Reaction[] = [], grouped: Reaction[] = []) => {
+  const bySender = new Map<string, Reaction>();
+  for (const reaction of [...current, ...grouped]) {
+    bySender.set(reaction.sender, reaction);
+  }
+  return Array.from(bySender.values());
+};
+
 /**
  * Agrupa reactionMessage e protocolMessage(REVOKE) recebidos como
  * metadados anexados à mensagem-alvo (por key.id), em vez de renderizá-los
  * como bolhas próprias na timeline.
  */
-function groupReactionsAndRevokes(rawMessages: Message[]): (Message & { reactions?: Reaction[]; isDeleted?: boolean })[] {
+export function groupReactionsAndRevokes(rawMessages: Message[]): (Message & { reactions?: Reaction[]; isDeleted?: boolean })[] {
   const reactionsByTargetId = new Map<string, Reaction[]>();
   const deletedIds = new Set<string>();
 
@@ -48,8 +56,8 @@ function groupReactionsAndRevokes(rawMessages: Message[]): (Message & { reaction
     .filter((msg) => msg.messageType !== "reactionMessage" && msg.messageType !== "protocolMessage")
     .map((msg) => ({
       ...msg,
-      reactions: reactionsByTargetId.get(msg.key.id),
-      isDeleted: deletedIds.has(msg.key.id),
+      reactions: mergeReactions(msg.reactions, reactionsByTargetId.get(msg.key.id)),
+      isDeleted: deletedIds.has(msg.key.id) || msg.isDeleted,
     }));
 }
 

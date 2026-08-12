@@ -4,6 +4,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Chat: reações visíveis e fundo estilo WACRM
+
+**Frontend**
+- `frontend/src/pages/instance/Chat/messages.tsx`: reações enviadas pela própria UI passam a aparecer imediatamente no chat, reações ficam fora do quadro da mensagem como no WACRM e o painel de mensagens recebeu o fundo `inbox-doodle.svg`.
+- `frontend/src/lib/queries/chat/findMessages.ts`: agrupamento de `reactionMessage`/`protocolMessage` reaplicado após merge com mensagens realtime e preserva reações já existentes sem duplicar por remetente.
+- `frontend/src/types/evolution.types.ts`: adicionados campos opcionais `reactions` e `isDeleted` em `Message`.
+- `frontend/public/inbox-doodle.svg`: asset de fundo do inbox replicado do WACRM.
+
 ## [v1.6.25] — 2026-08-11
 
 ### Configuração MCP Nativo e Guia de Integração para Agentes de IA

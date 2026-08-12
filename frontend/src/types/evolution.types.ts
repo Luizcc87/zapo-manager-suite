@@ -123,6 +123,8 @@ export type Message = {
   messageTimestamp: string;
   instanceId: string;
   source: string;
+  reactions?: Reaction[];
+  isDeleted?: boolean;
 };
 
 export type SendText = {

@@ -12,12 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useInstance } from "@/contexts/InstanceContext";
 
 import { useFindChat } from "@/lib/queries/chat/findChat";
-import { useFindMessages } from "@/lib/queries/chat/findMessages";
+import { groupReactionsAndRevokes, useFindMessages } from "@/lib/queries/chat/findMessages";
 import { useDeleteMessageForMe, useRevokeMessage, useSendMessage, useSendMedia, useSendReaction } from "@/lib/queries/chat/sendMessage";
 import { getChatMediaKind, MEDIA_CAPTION_MAX } from "@/lib/chat/media-support";
 import { getToken, TOKEN_ID } from "@/lib/queries/token";
 
-import { Message } from "@/types/evolution.types";
+import { Message, Reaction } from "@/types/evolution.types";
 
 import { connectSocket } from "@/services/websocket/socket";
 import { toast } from "react-toastify";
@@ -368,6 +368,36 @@ const ReplyQuote = ({ authorLabel, preview, onClear }: { authorLabel: string; pr
   </div>
 );
 
+const MessageReactions = ({ reactions, fromMe }: { reactions?: Reaction[]; fromMe: boolean }) => {
+  if (!reactions?.length) return null;
+
+  const grouped = reactions.reduce(
+    (acc, reaction) => {
+      acc[reaction.emoji] = acc[reaction.emoji] ?? { emoji: reaction.emoji, count: 0 };
+      acc[reaction.emoji].count += 1;
+      return acc;
+    },
+    {} as Record<string, { emoji: string; count: number }>,
+  );
+
+  const visible = Object.values(grouped).slice(0, 3);
+
+  return (
+    <div className={`pointer-events-none absolute -bottom-3.5 z-20 flex ${fromMe ? "right-0" : "left-0"}`}>
+      <div className="flex min-h-5 items-center rounded-full border border-border bg-background px-1.5 py-0.5 text-xs shadow-sm">
+        {visible.map((reaction) => (
+          <span key={reaction.emoji} className="leading-none">
+            {reaction.emoji}
+          </span>
+        ))}
+        {reactions.length > 1 && <span className="ml-1 text-[11px] leading-none text-muted-foreground">{reactions.length}</span>}
+      </div>
+    </div>
+  );
+};
+
+const DOODLE_BG_CLASSES = "bg-background bg-[url('/inbox-doodle.svg')] bg-repeat";
+
 // Component to render different message types based on messageType
 const MessageContent = ({ message }: { message: Message }) => {
   const messageType = message.messageType as string;
@@ -583,6 +613,38 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
         data: { key: message.key, reaction: emoji },
       },
       {
+        onSuccess: (response: any) => {
+          const responseKey = response?.key ?? response?.message?.key;
+          const reactionId = responseKey?.id ?? `local-reaction-${message.key.id}-${Date.now()}`;
+          const reactionMessage: Message = {
+            id: reactionId,
+            key: responseKey ?? {
+              remoteJid: message.key.remoteJid,
+              fromMe: true,
+              id: reactionId,
+            },
+            pushName: "",
+            messageType: "reactionMessage",
+            message: {
+              reactionMessage: {
+                key: message.key,
+                text: emoji,
+              },
+            },
+            messageTimestamp: String(Math.floor(Date.now() / 1000)),
+            instanceId: instance.name,
+            source: "local",
+          };
+
+          setRealtimeMessages((prevMessages) => {
+            const withoutSameReaction = prevMessages.filter((msg) => {
+              if (msg.messageType !== "reactionMessage") return true;
+              const targetId = msg.message?.reactionMessage?.key?.id;
+              return targetId !== message.key.id || msg.key.fromMe !== true;
+            });
+            return [...withoutSameReaction, reactionMessage];
+          });
+        },
         onError: () => toast.error(t("chat.toast.error")),
       },
     );
@@ -757,7 +819,7 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
       messageMap.set(message.key.id, message);
     });
 
-    return Array.from(messageMap.values());
+    return groupReactionsAndRevokes(Array.from(messageMap.values()));
   }, [messages, realtimeMessages]);
 
   // Add websocket functionality for real-time message updates
@@ -893,7 +955,7 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
   }, [remoteJid]);
 
   const renderBubbleRight = (message: Message) => (
-    <div key={message.id} className="mb-4">
+    <div key={message.id} className={message.reactions?.length ? "mb-7" : "mb-4"}>
       <MessageActions
         message={message}
         canDeleteForEveryone={message.key.fromMe && instance?.integration !== "WHATSAPP-BUSINESS"}
@@ -902,15 +964,16 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
         onDeleteForMe={handleDeleteMessageForMe}
         onDeleteForEveryone={handleDeleteMessageForEveryone}
       >
-        <div className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
+        <div className="relative rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
           <MessageContent message={message} />
+          <div className="mt-1 flex justify-end">
+            <span className="text-[11px] text-primary-foreground/70">
+              {formatMessageTime(getMessageTimestamp(message), locale)}
+            </span>
+          </div>
+          <MessageReactions reactions={message.reactions} fromMe={true} />
         </div>
       </MessageActions>
-      <div className="flex justify-end">
-        <span className="mt-0.5 block px-1 text-right text-[11px] text-muted-foreground">
-          {formatMessageTime(getMessageTimestamp(message), locale)}
-        </span>
-      </div>
     </div>
   );
 
@@ -921,7 +984,7 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
     const senderName = message.pushName || (participant ? participant.split("@")[0] : "");
 
     return (
-      <div key={message.id} className="mb-4">
+      <div key={message.id} className={message.reactions?.length ? "mb-7" : "mb-4"}>
         <div className="max-w-[70%]">
           {isGroup && senderName && (
             <div className="mb-1 text-xs font-semibold" style={{ color: getSenderColor(senderKey) }}>
@@ -937,15 +1000,16 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
           onDeleteForMe={handleDeleteMessageForMe}
           onDeleteForEveryone={handleDeleteMessageForEveryone}
         >
-          <div className="rounded-lg border bg-muted px-3 py-2 text-sm text-foreground">
+          <div className="relative rounded-lg border bg-muted px-3 py-2 text-sm text-foreground">
             <MessageContent message={message} />
+            <div className="mt-1 flex justify-start">
+              <span className="text-[11px] text-muted-foreground">
+                {formatMessageTime(getMessageTimestamp(message), locale)}
+              </span>
+            </div>
+            <MessageReactions reactions={message.reactions} fromMe={false} />
           </div>
         </MessageActions>
-        <div className="flex justify-start">
-          <span className="mt-0.5 block px-1 text-[11px] text-muted-foreground">
-            {formatMessageTime(getMessageTimestamp(message), locale)}
-          </span>
-        </div>
       </div>
     );
   };
@@ -969,7 +1033,7 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
           </div>
         </div>
       </div>
-      <div className="flex w-full flex-1 flex-col overflow-y-auto px-4 py-4">
+      <div className={`flex w-full flex-1 flex-col overflow-y-auto px-4 py-4 ${DOODLE_BG_CLASSES}`}>
         {groupedMessages.map((group, groupIndex) => (
           <div key={groupIndex}>
             <DateSeparator date={group.date} />
