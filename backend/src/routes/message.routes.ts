@@ -414,15 +414,19 @@ function saveTempFile(buffer: Buffer, originalname: string): string {
 }
 
 // Gera vCard 3.0 simples (nome + telefone + organização opcional)
+function escapeVCardValue(value: string): string {
+  return value.replace(/[\\;,\n\r]/g, (m) => '\\' + (m === '\n' || m === '\r' ? 'n' : m));
+}
+
 function buildVCard(fullName: string, phoneNumber: string, organization?: string): string {
   const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
   const lines = [
     'BEGIN:VCARD',
     'VERSION:3.0',
-    `FN:${fullName}`,
+    `FN:${escapeVCardValue(fullName)}`,
     `TEL;type=CELL;waid=${cleanPhone.replace(/^\+/, '')}:${cleanPhone}`,
   ];
-  if (organization) lines.push(`ORG:${organization}`);
+  if (organization) lines.push(`ORG:${escapeVCardValue(organization)}`);
   lines.push('END:VCARD');
   return lines.join('\n');
 }
@@ -1450,7 +1454,7 @@ router.post(
       const stickers = stickerFiles.map((file) => {
         const tempPath = saveTempFile(file.buffer, file.originalname);
         tempPaths.push(tempPath);
-        return { image: tempPath };
+        return { media: tempPath, fileName: file.originalname, emojis: [] };
       });
       const coverPath = saveTempFile(coverFile.buffer, coverFile.originalname);
       tempPaths.push(coverPath);
@@ -1462,7 +1466,7 @@ router.post(
         publisher,
         stickers,
         coverThumbnail: coverPath,
-        trayIcon: { fileName: 'tray.webp' },
+        trayIcon: { media: coverPath, fileName: coverFile.originalname },
       };
 
       console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=sticker-pack, to=${jid}, stickerPackId=${stickerPackId}, count=${stickers.length}`);

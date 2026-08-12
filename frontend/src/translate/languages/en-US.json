@@ -287,7 +287,8 @@
       "react": "React"
     },
     "toast": {
-      "error": "Error processing message"
+      "error": "Error processing message",
+      "sendError": "Error sending message"
     }
   },
   "sidebar": {

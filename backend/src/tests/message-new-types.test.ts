@@ -367,6 +367,16 @@ describe('Message routes — new types', () => {
       assert.strictEqual(lastSendCall?.content.stickerPackId, 'pack-001');
       assert.strictEqual(lastSendCall?.content.name, 'Meu Pacote');
       assert.strictEqual(lastSendCall?.content.stickers.length, 2);
+
+      const sticker0 = lastSendCall?.content.stickers[0];
+      assert.ok(sticker0.media, 'sticker deve ter campo media');
+      assert.strictEqual(sticker0.fileName, 'sticker1.webp');
+      assert.deepStrictEqual(sticker0.emojis, []);
+      assert.strictEqual(sticker0.image, undefined, 'sticker não deve ter campo image (contrato antigo)');
+
+      const trayIcon = lastSendCall?.content.trayIcon;
+      assert.ok(trayIcon.media, 'trayIcon deve ter campo media');
+      assert.strictEqual(trayIcon.fileName, 'cover.webp');
     });
 
     test('retorna 400 quando number ausente', async () => {
