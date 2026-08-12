@@ -169,6 +169,24 @@ describe('Chat Corrections Test Suite', () => {
       ZapoManager.getMessageList = originalGetMessageList;
     });
 
+    test('POST /chat/findChats/:instanceName -> deve tratar JIDs BR com e sem nono dígito como o mesmo contato', async () => {
+      const mockChats = [
+        { remoteJid: '555599703107@s.whatsapp.net', pushName: 'Luiz' },
+      ];
+      const originalGetChatList = ZapoManager.getChatList;
+      ZapoManager.getChatList = async () => mockChats;
+
+      const res = await request(app)
+        .post(`/chat/findChats/${mockInstanceName}`)
+        .set('apikey', mockApiKey)
+        .send({ where: { remoteJid: '5555999703107@s.whatsapp.net' } });
+
+      assert.strictEqual(res.status, 200);
+      assert.deepStrictEqual(res.body, mockChats);
+
+      ZapoManager.getChatList = originalGetChatList;
+    });
+
     test('POST /chat/* -> Sem apikey no header deve retornar 401', async () => {
       const res = await request(app)
         .post(`/chat/findChats/${mockInstanceName}`)
@@ -176,6 +194,45 @@ describe('Chat Corrections Test Suite', () => {
 
       assert.strictEqual(res.status, 401);
       assert.strictEqual(res.body.error, 'Unauthorized: Invalid API Key');
+    });
+
+    test('ZapoManager.getMessageList -> busca mensagens em aliases BR com e sem nono dígito', async () => {
+      const originalSaveData = process.env.SAVE_DATA_NEW_MESSAGE;
+      const originalFindMany = prisma.message.findMany;
+      process.env.SAVE_DATA_NEW_MESSAGE = 'true';
+
+      let whereArg: any;
+      (prisma.message.findMany as any) = async (args: any) => {
+        whereArg = args.where;
+        return [{
+          messageId: 'AC4C29835C2EE47A099AB0B5F66EC9CC',
+          remoteJid: '555599703107@s.whatsapp.net',
+          fromMe: false,
+          pushName: 'Luiz Carlos C.',
+          messageType: 'conversation',
+          message: { conversation: 'Opa' },
+          messageTimestamp: '1785895286',
+          instanceName: mockInstanceName,
+          source: 'baileys',
+        }];
+      };
+
+      const records = await ZapoManager.getMessageList(mockInstanceName, '5555999703107@s.whatsapp.net');
+
+      assert.deepStrictEqual(whereArg, {
+        instanceName: mockInstanceName,
+        remoteJid: { in: ['5555999703107@s.whatsapp.net', '555599703107@s.whatsapp.net'] },
+      });
+      assert.strictEqual(records.length, 1);
+      assert.strictEqual(records[0].message.conversation, 'Opa');
+      assert.strictEqual(records[0].key.remoteJid, '555599703107@s.whatsapp.net');
+
+      prisma.message.findMany = originalFindMany;
+      if (originalSaveData === undefined) {
+        delete process.env.SAVE_DATA_NEW_MESSAGE;
+      } else {
+        process.env.SAVE_DATA_NEW_MESSAGE = originalSaveData;
+      }
     });
   });
 

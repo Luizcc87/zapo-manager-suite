@@ -9,6 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import { useEmbedColors } from "@/contexts/EmbedColorsContext";
 
+import { getChatMediaKind, getChatMediaSizeLimit, PICKER_ACCEPT } from "@/lib/chat/media-support";
+
 import { Instance } from "@/types/evolution.types";
 
 import { ContactPicker } from "./contact-picker";
@@ -42,40 +44,19 @@ const MediaOptions = ({ setSelectedMedia }: MediaOptionsProps) => {
       return;
     }
 
-    // Validação de tamanho e tipo de arquivo
-    const fileType = file.type.split("/")[0];
-    const fileSize = file.size / (1024 * 1024); // Converter para MB
+    const mediaKind = getChatMediaKind(file);
+    const maxBytes = getChatMediaSizeLimit(file);
 
-    // Validar por tipo
-    switch (fileType) {
-      case "audio":
-        if (fileSize > 16) {
-          toast.error(t("chat.media.errors.audioSize"));
-          return;
-        }
-        break;
-      case "image":
-        if (fileSize > 5) {
-          toast.error(t("chat.media.errors.imageSize"));
-          return;
-        }
-        break;
-      case "video":
-        if (fileSize > 16) {
-          toast.error(t("chat.media.errors.videoSize"));
-          return;
-        }
-        break;
-      case "application":
-      case "text":
-        if (fileSize > 100) {
-          toast.error(t("chat.media.errors.documentSize"));
-          return;
-        }
-        break;
-      default:
-        toast.error(t("chat.media.errors.unsupportedType"));
-        return;
+    if (!mediaKind || !maxBytes) {
+      toast.error(t("chat.media.errors.unsupportedType"));
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > maxBytes) {
+      toast.error(t(`chat.media.errors.${mediaKind}Size`));
+      e.target.value = "";
+      return;
     }
 
     setSelectedMedia(file);
@@ -95,20 +76,6 @@ const MediaOptions = ({ setSelectedMedia }: MediaOptionsProps) => {
     }
   };
 
-  const allowedDocumentTypes = [
-    "text/plain",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/zip",
-    "application/x-rar-compressed",
-    "application/x-7z-compressed",
-  ];
-
   return (
     <>
       <DropdownMenu open={openDropdown} onOpenChange={setOpenDropdown}>
@@ -119,12 +86,12 @@ const MediaOptions = ({ setSelectedMedia }: MediaOptionsProps) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <input ref={documentInputRef} type="file" accept={allowedDocumentTypes.join(", ")} onChange={handleMediaChange} className="hidden" />
+          <input ref={documentInputRef} type="file" accept={PICKER_ACCEPT.document} onChange={handleMediaChange} className="hidden" />
           <DropdownMenuItem onClick={triggerDocumentInput}>
             <FilePlus className="mr-2 h-4 w-4" />
             {t("chat.media.document")}
           </DropdownMenuItem>
-          <input ref={MediaInputRef} type="file" accept="image/*, video/*" onChange={handleMediaChange} className="hidden" />
+          <input ref={MediaInputRef} type="file" accept={PICKER_ACCEPT.imageVideo} onChange={handleMediaChange} className="hidden" />
           <DropdownMenuItem onClick={triggerMediaInput}>
             <ImagesIcon className="mr-2 h-4 w-4" />
             {t("chat.media.photosAndVideos")}

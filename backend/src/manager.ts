@@ -28,6 +28,45 @@ const activeClients = new Map<string, {
 const chatMessages = new Map<string, Map<string, any[]>>(); // instanceName -> remoteJid -> messages[]
 const chatList     = new Map<string, Map<string, any>>();    // instanceName -> remoteJid -> chat
 
+function getBrazilMobileJidAliases(remoteJid: string): string[] {
+  const match = remoteJid.match(/^(\d+)@s\.whatsapp\.net$/);
+  if (!match) return [remoteJid];
+
+  const digits = match[1];
+  const aliases = new Set<string>([remoteJid]);
+
+  if (digits.startsWith('55')) {
+    if (digits.length === 12) {
+      aliases.add(`${digits.slice(0, 4)}9${digits.slice(4)}@s.whatsapp.net`);
+    } else if (digits.length === 13 && digits[4] === '9') {
+      aliases.add(`${digits.slice(0, 4)}${digits.slice(5)}@s.whatsapp.net`);
+    }
+  }
+
+  return Array.from(aliases);
+}
+
+function getBrazilMobileChatGroupKey(remoteJid: string): string {
+  const aliases = getBrazilMobileJidAliases(remoteJid).sort((a, b) => a.length - b.length);
+  return aliases[0] ?? remoteJid;
+}
+
+function mergeChatEntries(current: any | undefined, incoming: any): any {
+  if (!current) return incoming;
+
+  const currentTime = new Date(current.updatedAt ?? 0).getTime();
+  const incomingTime = new Date(incoming.updatedAt ?? 0).getTime();
+  const latest = incomingTime >= currentTime ? incoming : current;
+  const fallback = latest === incoming ? current : incoming;
+
+  return {
+    ...latest,
+    pushName: latest.pushName || fallback.pushName || '',
+    profilePicUrl: latest.profilePicUrl || fallback.profilePicUrl || '',
+    labels: latest.labels ?? fallback.labels ?? null,
+  };
+}
+
 // Socket.io emitter — set by main.ts after server startup
 let _socketEmitter: ((event: string, payload: any) => void) | null = null;
 
@@ -401,10 +440,10 @@ export class ZapoManager {
       orderBy: { updatedAt: 'desc' },
     }).catch(() => []);
 
-    // Constrói mapa a partir do banco
+    // Constrói mapa a partir do banco, consolidando celulares BR com/sem nono dígito.
     const map = new Map<string, any>();
     for (const row of dbRows) {
-      map.set(row.remoteJid, {
+      const entry = {
         id: row.remoteJid,
         remoteJid: row.remoteJid,
         pushName: row.pushName,
@@ -413,14 +452,17 @@ export class ZapoManager {
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         instanceId: instanceName,
-      });
+      };
+      const groupKey = getBrazilMobileChatGroupKey(row.remoteJid);
+      map.set(groupKey, mergeChatEntries(map.get(groupKey), entry));
     }
 
     // Overlay: entradas em memória (mais recentes) sobrescrevem o banco
     const byJid = chatList.get(instanceName);
     if (byJid) {
       for (const [jid, entry] of byJid.entries()) {
-        map.set(jid, entry);
+        const groupKey = getBrazilMobileChatGroupKey(jid);
+        map.set(groupKey, mergeChatEntries(map.get(groupKey), entry));
       }
     }
 
@@ -430,12 +472,13 @@ export class ZapoManager {
   }
 
   static async getMessageList(instanceName: string, remoteJid: string): Promise<any[]> {
-    const inMemory = chatMessages.get(instanceName)?.get(remoteJid) ?? [];
+    const aliases = getBrazilMobileJidAliases(remoteJid);
+    const inMemory = aliases.flatMap((jid) => chatMessages.get(instanceName)?.get(jid) ?? []);
 
     if (process.env.SAVE_DATA_NEW_MESSAGE !== 'true') return inMemory;
 
     const dbRows = await prisma.message.findMany({
-      where: { instanceName, remoteJid },
+      where: { instanceName, remoteJid: { in: aliases } },
       orderBy: { messageTimestamp: 'asc' },
     });
 
@@ -476,6 +519,37 @@ export class ZapoManager {
 
   public static recordSentMessage(instanceName: string, msgData: any) {
     this.storeMessage(instanceName, msgData);
+  }
+
+  static async deleteLocalMessage(instanceName: string, remoteJid: string, messageId: string): Promise<boolean> {
+    const aliases = getBrazilMobileJidAliases(remoteJid);
+    let removed = false;
+
+    const byJid = chatMessages.get(instanceName);
+    if (byJid) {
+      for (const jid of aliases) {
+        const msgs = byJid.get(jid);
+        if (!msgs) continue;
+        const next = msgs.filter((m: any) => m.id !== messageId && m.key?.id !== messageId);
+        if (next.length !== msgs.length) {
+          removed = true;
+          byJid.set(jid, next);
+        }
+      }
+    }
+
+    if (process.env.SAVE_DATA_NEW_MESSAGE === 'true') {
+      const result = await prisma.message.deleteMany({
+        where: {
+          instanceName,
+          remoteJid: { in: aliases },
+          messageId,
+        },
+      });
+      removed = removed || result.count > 0;
+    }
+
+    return removed;
   }
 
   private static persistMessageIfEnabled(instanceName: string, normalized: any, remoteJid: string) {

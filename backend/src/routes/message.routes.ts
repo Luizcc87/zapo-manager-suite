@@ -10,7 +10,54 @@ import { prisma } from '../lib/prisma';
 import { checkStrictInstanceApiKey } from '../middleware/auth';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+
+type SupportedMediaType = 'image' | 'video' | 'audio' | 'document';
+
+const MEDIA_CAPTION_MAX = 1024;
+const MEDIA_MAX_BYTES_BY_TYPE: Record<SupportedMediaType, number> = {
+  image: 5 * 1024 * 1024,
+  video: 16 * 1024 * 1024,
+  audio: 16 * 1024 * 1024,
+  document: 16 * 1024 * 1024,
+};
+
+const DOCUMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+]);
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MEDIA_MAX_BYTES_BY_TYPE.document } });
+
+function inferMediaType(mimetype: string, requestedType?: string): SupportedMediaType | null {
+  if (requestedType === 'image' || requestedType === 'video' || requestedType === 'audio' || requestedType === 'document') {
+    return requestedType;
+  }
+  if (mimetype === 'image/png' || mimetype === 'image/jpeg' || mimetype === 'image/webp') return 'image';
+  if (mimetype === 'video/mp4' || mimetype === 'video/3gpp') return 'video';
+  if (mimetype.startsWith('audio/')) return 'audio';
+  if (DOCUMENT_MIME_TYPES.has(mimetype)) return 'document';
+  return null;
+}
+
+function validateMediaInput(mediaType: SupportedMediaType, mimetype: string, sizeBytes?: number, caption?: string): string | null {
+  const inferred = inferMediaType(mimetype);
+  if (!inferred || inferred !== mediaType) {
+    return `Unsupported mimetype for ${mediaType}: ${mimetype || '(empty)'}`;
+  }
+  if (typeof sizeBytes === 'number' && sizeBytes > MEDIA_MAX_BYTES_BY_TYPE[mediaType]) {
+    return `${mediaType} exceeds max size of ${MEDIA_MAX_BYTES_BY_TYPE[mediaType]} bytes`;
+  }
+  if (mediaType !== 'audio' && caption && caption.length > MEDIA_CAPTION_MAX) {
+    return `caption must be at most ${MEDIA_CAPTION_MAX} characters`;
+  }
+  return null;
+}
 
 router.get('/status/:instanceName/:messageId', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
@@ -290,6 +337,55 @@ async function buildSendTextContent(body: any): Promise<any> {
   return textInput;
 }
 
+function buildQuotedContextInfo(quoted: any): any | undefined {
+  if (!quoted?.key?.id || !quoted?.message) return undefined;
+  return {
+    stanzaId: quoted.key.id,
+    participant: quoted.key.participant || quoted.key.remoteJid,
+    quotedMessage: quoted.message,
+  };
+}
+
+function applyQuotedContext(content: any, quoted: any): any {
+  const contextInfo = buildQuotedContextInfo(quoted);
+  if (!contextInfo) return content;
+
+  if (typeof content === 'string') {
+    return {
+      type: 'text',
+      text: content,
+      contextInfo,
+    };
+  }
+
+  if (typeof content === 'object' && content !== null) {
+    return {
+      ...content,
+      contextInfo: {
+        ...(content.contextInfo ?? {}),
+        ...contextInfo,
+      },
+    };
+  }
+
+  return content;
+}
+
+function withContextInfo(messageContent: any, contextInfo: any | undefined): any {
+  if (!contextInfo || typeof messageContent !== 'object' || messageContent === null) return messageContent;
+  const [messageType] = Object.keys(messageContent);
+  if (!messageType || typeof messageContent[messageType] !== 'object' || messageContent[messageType] === null) {
+    return messageContent;
+  }
+  return {
+    ...messageContent,
+    [messageType]: {
+      ...messageContent[messageType],
+      contextInfo,
+    },
+  };
+}
+
 function sanitizeMessageLog(content: any): string {
   if (typeof content === 'string') return content;
   return JSON.stringify(content, (key, value) => {
@@ -513,7 +609,8 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
     }
 
     const jid = await resolveJid(active.client, number);
-    const content = await buildSendTextContent(req.body);
+    const quotedContextInfo = buildQuotedContextInfo(req.body.quoted);
+    const content = applyQuotedContext(await buildSendTextContent(req.body), req.body.quoted);
     const linkPreviewRequested = typeof content === 'object' && content !== null && 'linkPreview' in content;
     if (linkPreviewRequested) {
       console.log(`[MessageRoutes] sendText linkPreview requested for ${instanceName}`);
@@ -522,19 +619,23 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
     const sentMsg = await active.client.message.send(jid, content, options);
     console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=text, to=${jid}, id=${sentMsg.id}`);
 
+    const sentMessageContent = quotedContextInfo
+      ? { extendedTextMessage: { text: typeof text === 'object' && text !== null ? text.text : text, contextInfo: quotedContextInfo } }
+      : (typeof text === 'object' && text !== null ? {
+        extendedTextMessage: {
+          text: text.text,
+        }
+      } : {
+        conversation: text,
+      });
+
     const msgData = {
       key: {
         remoteJid: jid,
         fromMe: true,
         id: sentMsg.id,
       },
-      message: typeof text === 'object' && text !== null ? {
-        extendedTextMessage: {
-          text: text.text,
-        }
-      } : {
-        conversation: text,
-      },
+      message: sentMessageContent,
       messageTimestamp: Math.floor(Date.now() / 1000),
       pushName: undefined,
     };
@@ -547,9 +648,7 @@ router.post('/sendText/:instanceName', checkStrictInstanceApiKey, async (req: Re
         fromMe: true,
         id: sentMsg.id
       },
-      message: typeof text === 'object' && text !== null ? text : {
-        conversation: text
-      },
+      message: sentMessageContent,
       messageTimestamp: Math.floor(Date.now() / 1000),
       status: 'PENDING'
     });
@@ -566,9 +665,11 @@ router.post('/sendMedia/:instanceName', checkStrictInstanceApiKey, upload.single
     
     // Captura campos do Multipart ou do JSON Body
     const number = req.body.number;
-    const caption = req.body.caption || '';
-    const mimetype = req.body.mimetype || (req.file ? req.file.mimetype : '');
+    const caption = String(req.body.caption || '');
+    const mimetype = req.body.mimetype || req.body.mediaMessage?.mimetype || (req.file ? req.file.mimetype : '');
+    const requestedType = req.body.mediatype || req.body.mediaMessage?.mediatype;
     const mediaUrl = req.body.mediaUrl; // Se enviar via URL em JSON
+    const mediaBase64 = req.body.media || req.body.mediaMessage?.media;
 
     if (!number) {
       return res.status(400).json({ error: 'number is required' });
@@ -579,8 +680,25 @@ router.post('/sendMedia/:instanceName', checkStrictInstanceApiKey, upload.single
       return res.status(503).json({ error: 'Instance is disconnected or offline' });
     }
 
+    const mediaType = inferMediaType(mimetype, requestedType);
+    if (!mediaType) {
+      return res.status(400).json({ error: `Unsupported media mimetype: ${mimetype || '(empty)'}` });
+    }
+
+    const validationError = validateMediaInput(
+      mediaType,
+      mimetype,
+      req.file?.size,
+      caption,
+    );
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
+    }
+
     const jid = await resolveJid(active.client, number);
+    const quotedContextInfo = buildQuotedContextInfo(req.body.quoted);
     let mediaInput: any;
+    let mediaSizeBytes: number | undefined = req.file?.size;
 
     if (req.file) {
       // Se enviou arquivo físico, escreve temporariamente em disco para processamento
@@ -589,38 +707,51 @@ router.post('/sendMedia/:instanceName', checkStrictInstanceApiKey, upload.single
     } else if (mediaUrl) {
       // zapo-js só aceita paths locais ou Buffers — baixar a URL antes de enviar
       tempPath = await downloadMediaUrl(mediaUrl, mimetype);
+      mediaSizeBytes = fs.statSync(tempPath).size;
+      mediaInput = tempPath;
+    } else if (mediaBase64) {
+      const buffer = Buffer.from(String(mediaBase64).replace(/^data:[^;]+;base64,/, ''), 'base64');
+      mediaSizeBytes = buffer.length;
+      tempPath = saveTempFile(buffer, req.body.fileName || req.body.mediaMessage?.fileName || `media.${mimetype.split('/')[1]?.split(';')[0] || 'bin'}`);
       mediaInput = tempPath;
     } else {
-      return res.status(400).json({ error: 'Either file upload or mediaUrl is required' });
+      return res.status(400).json({ error: 'Either file upload, mediaUrl or media base64 is required' });
     }
 
-    // Determinar tipo do media baseado em Mimetype
-    let mediaType: 'image' | 'video' | 'audio' | 'document' = 'document';
-    if (mimetype.startsWith('image/')) mediaType = 'image';
-    else if (mimetype.startsWith('video/')) mediaType = 'video';
-    else if (mimetype.startsWith('audio/')) mediaType = 'audio';
+    const sizeValidationError = validateMediaInput(mediaType, mimetype, mediaSizeBytes, caption);
+    if (sizeValidationError) {
+      return res.status(400).json({ error: sizeValidationError });
+    }
 
     const sendPayload: any = {
       type: mediaType,
       media: mediaInput,
       mimetype: mimetype,
-      caption: caption
     };
+
+    if (mediaType !== 'audio' && caption) {
+      sendPayload.caption = caption;
+    }
+    if (quotedContextInfo) {
+      sendPayload.contextInfo = quotedContextInfo;
+    }
 
     if (mediaType === 'document') {
       // fileName com 'N' maiúsculo conforme AGENTS.md
-      sendPayload.fileName = req.file ? req.file.originalname : (mediaUrl ? mediaUrl.split('/').pop()?.split('?')[0] || 'document.bin' : 'document.bin');
+      sendPayload.fileName = req.file
+        ? req.file.originalname
+        : req.body.fileName || req.body.mediaMessage?.fileName || (mediaUrl ? mediaUrl.split('/').pop()?.split('?')[0] || 'document.bin' : 'document.bin');
     }
 
-    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=${mediaType}, to=${jid}, caption=${caption}, hasFile=${!!req.file}, hasUrl=${!!mediaUrl}`);
+    console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENDING] type=${mediaType}, to=${jid}, caption=${mediaType === 'audio' ? '' : caption}, hasFile=${!!req.file}, hasUrl=${!!mediaUrl}, hasBase64=${!!mediaBase64}`);
     const sentMsg = await active.client.message.send(jid, sendPayload);
     console.log(`[ZapoManager] [${instanceName}] [MESSAGE SENT] type=${mediaType}, to=${jid}, id=${sentMsg.id}`);
 
     const returnedMsg: any = {};
-    if (mediaType === 'image') returnedMsg.imageMessage = { caption };
-    else if (mediaType === 'video') returnedMsg.videoMessage = { caption };
-    else if (mediaType === 'audio') returnedMsg.audioMessage = {};
-    else returnedMsg.documentMessage = { caption, fileName: sendPayload.fileName };
+    if (mediaType === 'image') returnedMsg.imageMessage = { caption, ...(quotedContextInfo ? { contextInfo: quotedContextInfo } : {}) };
+    else if (mediaType === 'video') returnedMsg.videoMessage = { caption, ...(quotedContextInfo ? { contextInfo: quotedContextInfo } : {}) };
+    else if (mediaType === 'audio') returnedMsg.audioMessage = { ...(quotedContextInfo ? { contextInfo: quotedContextInfo } : {}) };
+    else returnedMsg.documentMessage = { caption, fileName: sendPayload.fileName, ...(quotedContextInfo ? { contextInfo: quotedContextInfo } : {}) };
 
     const msgData = {
       key: {
@@ -1299,6 +1430,29 @@ router.post('/sendPoll/:instanceName', checkStrictInstanceApiKey, async (req: Re
 });
 
 // 11. Apagar/Revogar Mensagem
+router.post('/deleteForMe/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { key } = req.body;
+
+    if (!key || !key.id || !key.remoteJid) {
+      return res.status(400).json({ error: 'key.id and key.remoteJid are required' });
+    }
+
+    const removed = await ZapoManager.deleteLocalMessage(instanceName, key.remoteJid, key.id);
+
+    return res.status(200).json({
+      accepted: true,
+      removed,
+      key,
+      status: 'LOCAL_DELETED',
+    });
+  } catch (err: any) {
+    console.error(`[MessageRoutes] deleteForMe error:`, err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/revoke/:instanceName', checkStrictInstanceApiKey, async (req: Request, res: Response) => {
   try {
     const { instanceName } = req.params;

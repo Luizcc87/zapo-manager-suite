@@ -128,6 +128,7 @@ export type Message = {
 export type SendText = {
   number: string;
   text: string;
+  quoted?: Message;
   options?: {
     delay?: number;
     presence?: string;
@@ -144,6 +145,7 @@ export type SendMedia = {
     media: string; // Base64 string
     fileName?: string;
   };
+  quoted?: Message;
   options?: {
     delay?: number;
     presence?: string;

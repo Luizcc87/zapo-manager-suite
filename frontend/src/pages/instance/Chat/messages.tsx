@@ -1,22 +1,26 @@
-import { Send, User } from "lucide-react";
-import { RefObject, useEffect, useMemo, useState } from "react";
+import { Copy, CornerUpLeft, SmilePlus, Send, Trash2, User, X } from "lucide-react";
+import { ReactNode, RefObject, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@evoapi/design-system/avatar";
 import { Button } from "@evoapi/design-system/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@evoapi/design-system/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useInstance } from "@/contexts/InstanceContext";
 
 import { useFindChat } from "@/lib/queries/chat/findChat";
 import { useFindMessages } from "@/lib/queries/chat/findMessages";
-import { useSendMessage, useSendMedia } from "@/lib/queries/chat/sendMessage";
+import { useDeleteMessageForMe, useRevokeMessage, useSendMessage, useSendMedia, useSendReaction } from "@/lib/queries/chat/sendMessage";
+import { getChatMediaKind, MEDIA_CAPTION_MAX } from "@/lib/chat/media-support";
 import { getToken, TOKEN_ID } from "@/lib/queries/token";
 
 import { Message } from "@/types/evolution.types";
 
 import { connectSocket } from "@/services/websocket/socket";
+import { toast } from "react-toastify";
 
 // Import components from EmbedChatMessage for attachment functionality
 import { MediaOptions } from "../EmbedChatMessage/InputMessage/media-options";
@@ -127,6 +131,181 @@ const getSenderColor = (key: string): string => {
   return SENDER_COLORS[Math.abs(hash) % SENDER_COLORS.length];
 };
 
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+type DeleteIntent = "me" | "everyone";
+
+type MessageActionsProps = {
+  message: Message;
+  canDeleteForEveryone: boolean;
+  onReact: (message: Message, emoji: string) => void;
+  onReply: (message: Message) => void;
+  onDeleteForMe: (message: Message) => void;
+  onDeleteForEveryone: (message: Message) => void;
+  children: ReactNode;
+};
+
+const MessageActions = ({ message, canDeleteForEveryone, onReact, onReply, onDeleteForMe, onDeleteForEveryone, children }: MessageActionsProps) => {
+  const [touchOpen, setTouchOpen] = useState(false);
+  const [reactionOpen, setReactionOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteIntent, setDeleteIntent] = useState<DeleteIntent | null>(null);
+  const fromMe = message.key.fromMe;
+  const toolbarOpen = touchOpen || reactionOpen || menuOpen || !!deleteIntent;
+
+  const handleContextMenu = (event: React.MouseEvent) => {
+    event.preventDefault();
+    setTouchOpen(true);
+  };
+
+  const handleReact = (emoji: string) => {
+    onReact(message, emoji);
+    setReactionOpen(false);
+    setTouchOpen(false);
+  };
+
+  const handleDeleteForMe = () => {
+    setMenuOpen(false);
+    setTouchOpen(false);
+    setDeleteIntent("me");
+  };
+
+  const handleReply = () => {
+    onReply(message);
+    setTouchOpen(false);
+  };
+
+  const handleDeleteForEveryone = () => {
+    setMenuOpen(false);
+    setTouchOpen(false);
+    setDeleteIntent("everyone");
+  };
+
+  const confirmDelete = () => {
+    if (deleteIntent === "me") onDeleteForMe(message);
+    if (deleteIntent === "everyone") onDeleteForEveryone(message);
+    setDeleteIntent(null);
+  };
+
+  const deleteTitle = deleteIntent === "everyone" ? "Apagar mensagem para todos?" : "Apagar mensagem para mim?";
+  const deleteDescription =
+    deleteIntent === "everyone"
+      ? "Esta ação tentará remover a mensagem para todos no WhatsApp. Depois de confirmada, não será possível desfazer pelo Zapo Manager."
+      : "Esta ação remove a mensagem apenas desta conversa no Zapo Manager. Ela não será apagada do WhatsApp do contato.";
+
+  const handleCopy = async () => {
+    const text = getMessageText(message.message);
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } finally {
+      setMenuOpen(false);
+      setTouchOpen(false);
+    }
+  };
+
+  return (
+    <>
+      <div className={`flex w-full ${fromMe ? "justify-end" : "justify-start"}`} onContextMenu={handleContextMenu} onBlur={() => setTouchOpen(false)}>
+        <div className="group/actions relative min-w-0 max-w-[75%]">
+          {children}
+          <div
+            data-open={toolbarOpen ? "true" : undefined}
+            className={`absolute -top-3 z-30 flex h-7 items-center gap-0.5 rounded-full border border-border bg-popover/95 px-1 shadow-md opacity-0 backdrop-blur-sm transition-opacity group-hover/actions:opacity-100 group-focus-within/actions:opacity-100 data-[open=true]:opacity-100 ${
+              fromMe ? "right-3" : "left-3"
+            }`}>
+            <DropdownMenu open={reactionOpen} onOpenChange={setReactionOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Reagir"
+                >
+                  <SmilePlus className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={fromMe ? "end" : "start"} sideOffset={6} className="flex w-auto flex-row gap-1 p-1.5">
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none transition-transform hover:scale-125 hover:bg-muted"
+                    onClick={() => handleReact(emoji)}
+                    aria-label={`Reagir com ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Copiar"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleReply}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Responder"
+            >
+              <CornerUpLeft className="h-3.5 w-3.5" />
+            </button>
+
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Opções de exclusão"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={fromMe ? "end" : "start"} sideOffset={6} className="border-border bg-popover">
+                <DropdownMenuItem onClick={handleDeleteForMe} className="cursor-pointer">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Apagar para mim
+                </DropdownMenuItem>
+                {canDeleteForEveryone && (
+                  <DropdownMenuItem onClick={handleDeleteForEveryone} className="cursor-pointer text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Apagar para todos
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+      <Dialog open={!!deleteIntent} onOpenChange={(open) => !open && setDeleteIntent(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              {deleteTitle}
+            </DialogTitle>
+            <DialogDescription>{deleteDescription}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setDeleteIntent(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" size="sm" variant="destructive" onClick={confirmDelete}>
+              Apagar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 // Helper function to extract text content from message
 const getMessageText = (messageObj: any): string => {
   if (!messageObj) return "";
@@ -143,16 +322,60 @@ const getMessageText = (messageObj: any): string => {
 
   // If it's already an object, extract conversation or text
   if (typeof messageObj === "object") {
-    return messageObj.conversation || messageObj.text || "";
+    return messageObj.conversation || messageObj.text || messageObj.extendedTextMessage?.text || "";
   }
 
   return String(messageObj);
 };
 
+const getContextInfo = (messageObj: any) => {
+  if (!messageObj || typeof messageObj !== "object") return null;
+  return (
+    messageObj.extendedTextMessage?.contextInfo ||
+    messageObj.imageMessage?.contextInfo ||
+    messageObj.videoMessage?.contextInfo ||
+    messageObj.audioMessage?.contextInfo ||
+    messageObj.documentMessage?.contextInfo ||
+    null
+  );
+};
+
+const buildReplyPreview = (messageObj: any): string => {
+  const text = getMessageText(messageObj);
+  if (text) return text;
+  if (messageObj?.imageMessage) return messageObj.imageMessage.caption || "Imagem";
+  if (messageObj?.videoMessage) return messageObj.videoMessage.caption || "Vídeo";
+  if (messageObj?.audioMessage) return "Áudio";
+  if (messageObj?.documentMessage) return messageObj.documentMessage.fileName || "Documento";
+  if (messageObj?.stickerMessage) return "Sticker";
+  if (messageObj?.locationMessage) return messageObj.locationMessage.name || "Localização";
+  if (messageObj?.contactMessage) return messageObj.contactMessage.displayName || "Contato";
+  return "Mensagem";
+};
+
+const ReplyQuote = ({ authorLabel, preview, onClear }: { authorLabel: string; preview: string; onClear?: () => void }) => (
+  <div className="relative flex min-w-0 items-center overflow-hidden rounded-md border bg-muted/40">
+    <div className="absolute left-0 h-full w-1 rounded-l-md bg-primary" />
+    <div className="min-w-0 flex-1 px-3 py-2 pl-4">
+      <div className="truncate text-xs font-semibold text-primary">{authorLabel}</div>
+      <div className="truncate text-xs text-muted-foreground">{preview}</div>
+    </div>
+    {onClear && (
+      <button type="button" className="mr-1 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground" onClick={onClear} aria-label="Remover resposta">
+        <X className="h-4 w-4" />
+      </button>
+    )}
+  </div>
+);
+
 // Component to render different message types based on messageType
 const MessageContent = ({ message }: { message: Message }) => {
   const messageType = message.messageType as string;
   const { t } = useTranslation();
+  const contextInfo = getContextInfo(message.message);
+  const quotedMessage = contextInfo?.quotedMessage;
+  const quotedPreview = quotedMessage ? buildReplyPreview(quotedMessage) : "";
+  const content = (() => {
 
   switch (messageType) {
     case "conversation":
@@ -319,6 +542,19 @@ const MessageContent = ({ message }: { message: Message }) => {
         </div>
       );
   }
+  })();
+
+  if (!quotedMessage) return content;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <ReplyQuote
+        authorLabel={message.key.fromMe ? "Contato" : "Você"}
+        preview={quotedPreview}
+      />
+      {content}
+    </div>
+  );
 };
 
 function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessageRef, scrollToBottom }: MessagesProps) {
@@ -328,11 +564,62 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
   const [messageText, setMessageText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<File | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
   const { sendText: sendTextMutation } = useSendMessage();
   const { sendMedia: sendMediaMutation } = useSendMedia();
+  const { sendReaction } = useSendReaction();
+  const { revokeMessage } = useRevokeMessage();
+  const { deleteMessageForMe } = useDeleteMessageForMe();
 
   const { remoteJid } = useParams<{ remoteJid: string }>();
+
+  const handleReactMessage = (message: Message, emoji: string) => {
+    if (!instance?.name || !instance?.token) return;
+    sendReaction(
+      {
+        instanceName: instance.name,
+        token: instance.token,
+        data: { key: message.key, reaction: emoji },
+      },
+      {
+        onError: () => toast.error(t("chat.toast.error")),
+      },
+    );
+  };
+
+  const handleReplyMessage = (message: Message) => {
+    setReplyTo(message);
+    textareaRef.current?.focus();
+  };
+
+  const handleDeleteMessageForMe = (message: Message) => {
+    if (!instance?.name || !instance?.token) return;
+    deleteMessageForMe(
+      {
+        instanceName: instance.name,
+        token: instance.token,
+        data: { key: message.key },
+      },
+      {
+        onError: () => toast.error(t("chat.toast.error")),
+      },
+    );
+  };
+
+  const handleDeleteMessageForEveryone = (message: Message) => {
+    if (!instance?.name || !instance?.token || !message.key.fromMe) return;
+    revokeMessage(
+      {
+        instanceName: instance.name,
+        token: instance.token,
+        data: { key: message.key },
+      },
+      {
+        onError: () => toast.error(t("chat.toast.error")),
+      },
+    );
+  };
 
   // Handle sending text messages
   const sendTextMessage = async () => {
@@ -346,11 +633,13 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
         data: {
           number: remoteJid,
           text: messageText.trim(),
+          quoted: replyTo ?? undefined,
         },
       });
 
       // Clear the input after sending
       setMessageText("");
+      setReplyTo(null);
       if (textareaRef.current) {
         textareaRef.current.value = "";
         handleTextareaChange(); // Reset height
@@ -368,6 +657,13 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
 
     try {
       setIsSending(true);
+      const mediaKind = getChatMediaKind(selectedMedia);
+      if (!mediaKind) {
+        toast.error(t("chat.media.errors.unsupportedType"));
+        return;
+      }
+
+      const caption = mediaKind === "audio" ? undefined : messageText.trim().slice(0, MEDIA_CAPTION_MAX) || undefined;
 
       // Convert media to base64
       const base64Data = await new Promise<string>((resolve, reject) => {
@@ -388,18 +684,20 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
         data: {
           number: remoteJid,
           mediaMessage: {
-            mediatype: selectedMedia.type.split("/")[0] === "application" ? "document" : (selectedMedia.type.split("/")[0] as "audio" | "video" | "image" | "document"),
+            mediatype: mediaKind,
             mimetype: selectedMedia.type,
-            caption: messageText.trim(),
+            caption,
             media: base64Data,
-            fileName: selectedMedia.name,
+            fileName: mediaKind === "document" ? selectedMedia.name : undefined,
           },
+          quoted: replyTo ?? undefined,
         },
       });
 
       // Clear the input and media after sending
       setSelectedMedia(null);
       setMessageText("");
+      setReplyTo(null);
       if (textareaRef.current) {
         textareaRef.current.value = "";
         handleTextareaChange(); // Reset height
@@ -585,6 +883,7 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
   // Clear selected media and real-time messages when switching chats
   useEffect(() => {
     setSelectedMedia(null);
+    setReplyTo(null);
     setMessageText("");
     setRealtimeMessages([]); // Clear real-time messages when switching chats
     if (textareaRef.current) {
@@ -594,11 +893,20 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
   }, [remoteJid]);
 
   const renderBubbleRight = (message: Message) => (
-    <div key={message.id} className="mb-4 flex justify-end">
-      <div className="max-w-[70%]">
+    <div key={message.id} className="mb-4">
+      <MessageActions
+        message={message}
+        canDeleteForEveryone={message.key.fromMe && instance?.integration !== "WHATSAPP-BUSINESS"}
+        onReact={handleReactMessage}
+        onReply={handleReplyMessage}
+        onDeleteForMe={handleDeleteMessageForMe}
+        onDeleteForEveryone={handleDeleteMessageForEveryone}
+      >
         <div className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
           <MessageContent message={message} />
         </div>
+      </MessageActions>
+      <div className="flex justify-end">
         <span className="mt-0.5 block px-1 text-right text-[11px] text-muted-foreground">
           {formatMessageTime(getMessageTimestamp(message), locale)}
         </span>
@@ -613,16 +921,27 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
     const senderName = message.pushName || (participant ? participant.split("@")[0] : "");
 
     return (
-      <div key={message.id} className="mb-4 flex justify-start">
+      <div key={message.id} className="mb-4">
         <div className="max-w-[70%]">
           {isGroup && senderName && (
             <div className="mb-1 text-xs font-semibold" style={{ color: getSenderColor(senderKey) }}>
               {senderName}
             </div>
           )}
+        </div>
+        <MessageActions
+          message={message}
+          canDeleteForEveryone={false}
+          onReact={handleReactMessage}
+          onReply={handleReplyMessage}
+          onDeleteForMe={handleDeleteMessageForMe}
+          onDeleteForEveryone={handleDeleteMessageForEveryone}
+        >
           <div className="rounded-lg border bg-muted px-3 py-2 text-sm text-foreground">
             <MessageContent message={message} />
           </div>
+        </MessageActions>
+        <div className="flex justify-start">
           <span className="mt-0.5 block px-1 text-[11px] text-muted-foreground">
             {formatMessageTime(getMessageTimestamp(message), locale)}
           </span>
@@ -666,6 +985,15 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
           {selectedMedia && (
             <div className="border-b border-border bg-muted/30 px-3 py-2">
               <SelectedMedia selectedMedia={selectedMedia} setSelectedMedia={setSelectedMedia} />
+            </div>
+          )}
+          {replyTo && (
+            <div className="border-b border-border bg-muted/30 px-3 py-2">
+              <ReplyQuote
+                authorLabel={replyTo.key.fromMe ? "Você" : chat?.pushName || "Contato"}
+                preview={buildReplyPreview(replyTo.message)}
+                onClear={() => setReplyTo(null)}
+              />
             </div>
           )}
           <div className="flex items-center gap-2 px-2 py-1.5">

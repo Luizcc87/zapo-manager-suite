@@ -13,6 +13,7 @@ import { useEmbedColors } from "@/contexts/EmbedColorsContext";
 import { useEmbedInstance } from "@/contexts/EmbedInstanceContext";
 import { ReplyMessageContext } from "@/contexts/ReplyingMessage/ReplyingMessageContext";
 
+import { getChatMediaKind, MEDIA_CAPTION_MAX } from "@/lib/chat/media-support";
 import { useSendMessage, useSendMedia, useSendAudio } from "@/lib/queries/chat/sendMessage";
 
 import { Contact, Instance } from "@/types/evolution.types";
@@ -289,6 +290,14 @@ const InputMessage = ({ chat }: InputMessageProps) => {
     setIsSendingMessage(true);
 
     try {
+      const mediaKind = getChatMediaKind(selectedMedia);
+      if (!mediaKind) {
+        toast.error(t("chat.media.errors.unsupportedType"));
+        setIsSendingMessage(false);
+        return;
+      }
+      const caption = mediaKind === "audio" ? undefined : message.trim().slice(0, MEDIA_CAPTION_MAX) || undefined;
+
       // Convert media to base64
       const base64Data = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -308,11 +317,11 @@ const InputMessage = ({ chat }: InputMessageProps) => {
         data: {
           number: remoteJid,
           mediaMessage: {
-            mediatype: selectedMedia.type.split("/")[0] === "application" ? "document" : (selectedMedia.type.split("/")[0] as "audio" | "video" | "image" | "document"),
+            mediatype: mediaKind,
             mimetype: selectedMedia.type,
-            caption: message,
+            caption,
             media: base64Data, // Send as base64 string instead of File
-            fileName: selectedMedia.name,
+            fileName: mediaKind === "document" ? selectedMedia.name : undefined,
           },
         },
       };

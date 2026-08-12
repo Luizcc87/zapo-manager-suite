@@ -4,6 +4,24 @@ import { checkInstanceApiKey } from '../middleware/auth';
 
 const router = Router();
 
+function getBrazilMobileJidAliases(remoteJid: string): string[] {
+  const match = remoteJid.match(/^(\d+)@s\.whatsapp\.net$/);
+  if (!match) return [remoteJid];
+
+  const digits = match[1];
+  const aliases = new Set<string>([remoteJid]);
+
+  if (digits.startsWith('55')) {
+    if (digits.length === 12) {
+      aliases.add(`${digits.slice(0, 4)}9${digits.slice(4)}@s.whatsapp.net`);
+    } else if (digits.length === 13 && digits[4] === '9') {
+      aliases.add(`${digits.slice(0, 4)}${digits.slice(5)}@s.whatsapp.net`);
+    }
+  }
+
+  return Array.from(aliases);
+}
+
 // POST /chat/findChats/:instanceName
 // body: { where: {} } or { where: { remoteJid: string } }
 router.post('/findChats/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
@@ -14,7 +32,8 @@ router.post('/findChats/:instanceName', checkInstanceApiKey, async (req: Request
     let chats = await ZapoManager.getChatList(instanceName);
 
     if (where.remoteJid) {
-      chats = chats.filter((c) => c.remoteJid === where.remoteJid);
+      const aliases = new Set(getBrazilMobileJidAliases(where.remoteJid));
+      chats = chats.filter((c) => aliases.has(c.remoteJid));
     }
 
     return res.json(chats);

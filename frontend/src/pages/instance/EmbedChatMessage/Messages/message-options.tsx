@@ -56,7 +56,7 @@ const MessageOptions = ({ message, fromMe }: { message: Message; fromMe: boolean
   };
 
   return (
-    <div className="invisible absolute right-0 top-0 z-50 flex gap-1 opacity-0 transition-all duration-300 group-hover:visible group-hover:opacity-100">
+    <div className="absolute right-0 top-0 z-50 flex gap-1 opacity-100 transition-all duration-300 sm:invisible sm:opacity-0 sm:group-hover:visible sm:group-hover:opacity-100 sm:group-focus-within:visible sm:group-focus-within:opacity-100">
       <DropdownMenu open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
         <DropdownMenuTrigger asChild>
           <Button

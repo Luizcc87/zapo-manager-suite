@@ -8,6 +8,7 @@ import { Message, Chat, Reaction } from "@/types/evolution.types";
 // Removed contact-colors import - using simple color logic
 
 import { MessageBubble } from "./message-bubble";
+import { MessageOptions } from "./message-options";
 import { MessageRenderer } from "./message-renderer";
 import { QuotedMessage } from "./quoted-message";
 
@@ -202,6 +203,7 @@ export function MessageContent({ message, quotedMessage, chat, fromMe, onQuoteCl
 
   return (
     <MessageBubble.Content fromMe={fromMe}>
+      <MessageOptions message={message} fromMe={fromMe} />
       {renderReactions()}
       {quotedMessage && <QuotedMessage message={message} quotedMessage={quotedMessage} chat={chat} onQuoteClick={() => onQuoteClick?.(quotedMessage.key.id)} />}
 

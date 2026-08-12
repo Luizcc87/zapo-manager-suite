@@ -4,6 +4,18 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Chat: ações por mensagem, respostas e anexos alinhados ao WACRM
+
+**Backend**
+- `backend/src/manager.ts` e `backend/src/routes/chat.routes.ts`: consolidação de chats/mensagens para celulares BR com e sem nono dígito, evitando conversas duplicadas para o mesmo contato.
+- `backend/src/routes/message.routes.ts`: `sendMedia` passa a aceitar mídia em base64 enviada pela UI, valida mimetype/tamanho por tipo, aplica `contextInfo` para respostas e adiciona `POST /message/deleteForMe/:instanceName` para exclusão local.
+- `backend/src/tests/chat-corrections.test.ts`: cobertura para aliases de JID em chats/mensagens.
+
+**Frontend**
+- `frontend/src/pages/instance/Chat/messages.tsx`: toolbar flutuante no estilo WACRM com reagir, responder, copiar e apagar; exclusão exige confirmação e separa "apagar para mim" de "apagar para todos".
+- `frontend/src/pages/instance/Chat/messages.tsx` e `frontend/src/lib/queries/chat/sendMessage.ts`: envio e renderização de respostas com quote/contexto em texto e mídia.
+- `frontend/src/lib/chat/media-support.ts` e composer de mídia: tipos e limites de anexos alinhados ao WACRM.
+
 ## [v1.6.24] — 2026-08-11
 
 ### Cobertura completa de tipos de mensagem no Chat

@@ -51,6 +51,12 @@ interface RevokeMessageParams {
   data: RevokeMessage;
 }
 
+interface DeleteMessageForMeParams {
+  instanceName: string;
+  token: string;
+  data: RevokeMessage;
+}
+
 interface SendEventParams {
   instanceName: string;
   token: string;
@@ -83,6 +89,7 @@ const sendMedia = async ({ instanceName, token, data }: SendMediaParams) => {
       caption: data.mediaMessage.caption,
       media: data.mediaMessage.media, // Base64 string
       fileName: data.mediaMessage.fileName,
+      quoted: data.quoted,
     };
 
     const response = await api.post(`/message/sendMedia/${instanceName}`, jsonData, {
@@ -154,6 +161,13 @@ const sendPoll = async ({ instanceName, token, data }: SendPollParams) => {
 
 const revokeMessage = async ({ instanceName, token, data }: RevokeMessageParams) => {
   const response = await api.post(`/message/revoke/${instanceName}`, data, {
+    headers: { apikey: token, "content-type": "application/json" },
+  });
+  return response.data;
+};
+
+const deleteMessageForMe = async ({ instanceName, token, data }: DeleteMessageForMeParams) => {
+  const response = await api.post(`/message/deleteForMe/${instanceName}`, data, {
     headers: { apikey: token, "content-type": "application/json" },
   });
   return response.data;
@@ -252,6 +266,13 @@ export function useRevokeMessage() {
     invalidateKeys: MESSAGES_INVALIDATE_KEYS,
   });
   return { revokeMessage: revokeMessageMutation };
+}
+
+export function useDeleteMessageForMe() {
+  const deleteMessageForMeMutation = useManageMutation(deleteMessageForMe, {
+    invalidateKeys: MESSAGES_INVALIDATE_KEYS,
+  });
+  return { deleteMessageForMe: deleteMessageForMeMutation };
 }
 
 export function useSendEvent() {
