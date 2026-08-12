@@ -192,7 +192,7 @@ app.get('/', (req, res, next) => {
     return next();
   }
   res.json({
-    version: process.env.APP_VERSION || '1.6.23',
+    version: process.env.APP_VERSION || '1.6.24',
     clientName: 'zapo-manager',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
@@ -205,7 +205,7 @@ app.get('/runtime/status', (req, res) => {
   res.json({
     ok: true,
     clientName: 'zapo-manager',
-    version: process.env.APP_VERSION || '1.6.23',
+    version: process.env.APP_VERSION || '1.6.24',
     zapoVersion: getZapoLibVersion(),
     defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en-US',
     runtimeEnvironment: getRuntimeEnvironment(req),

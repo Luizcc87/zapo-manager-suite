@@ -4,6 +4,8 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+## [v1.6.24] — 2026-08-11
+
 ### Cobertura completa de tipos de mensagem no Chat
 
 **Backend**

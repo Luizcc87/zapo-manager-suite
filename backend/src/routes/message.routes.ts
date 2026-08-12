@@ -1460,7 +1460,7 @@ router.post(
       tempPaths.push(coverPath);
 
       const stickerPackPayload = {
-        type: 'sticker-pack',
+        type: 'sticker-pack' as const,
         stickerPackId,
         name,
         publisher,
