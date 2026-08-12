@@ -4,6 +4,14 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### MCP: instruções de comportamento para agentes de IA (handoff)
+
+Servidor MCP nativo passa a declarar a regra de handoff bot/humano no próprio protocolo, para qualquer cliente que conectar (Hermes Agent, OpenClaw, Claude, Cursor, etc.), sem depender de o operador copiar texto de doc manualmente.
+
+- `backend/src/mcp/server.ts`: campo `instructions` (`ServerOptions` do SDK MCP) com a regra completa de handoff — checar `get_conversation_status` antes de enviar, nunca sobrescrever humano, como escalar via `update_conversation_status`.
+- `docs/AI-AGENTS-MCP-INTEGRATION.md`: nova seção "Fluxo de comportamento esperado (handoff)" com passo-a-passo numerado e exemplo de prompt pronto para configurar em agente externo.
+- `.claude/skills/zapo-mcp-agent/SKILL.md` (não versionado — `.claude/` está no `.gitignore` do projeto): skill local disparada em qualquer sessão Claude Code que for enviar mensagem via MCP tools do Zapo Manager.
+
 ### Chat: handoff bot/humano (status de conversa)
 
 Controle de quem responde a conversa — bot (agente de IA via MCP) ou humano (painel) — evitando os dois responderem ao mesmo tempo. Modelo inspirado no Chatwoot: `pending` (bot pode enviar) → `open` (humano assumiu, bot bloqueado) → `resolved` (encerrada).

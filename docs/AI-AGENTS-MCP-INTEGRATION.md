@@ -29,6 +29,25 @@ Este guia consolida os caminhos de integração do **Zapo Manager** e do ecossis
 
 > **Handoff bot/humano:** todo agente autônomo (Hermes Agent, OpenClaw, etc.) que enviar mensagens automáticas deve consultar `get_conversation_status` antes de responder. O backend também bloqueia o envio via `assertBotCanSend` quando o status não é `pending` — a checagem do agente é uma segunda camada, não a única.
 
+> **Onde isso vive:** o servidor MCP nativo (`backend/src/mcp/server.ts`) envia essas mesmas regras no campo `instructions` da resposta de inicialização MCP — qualquer cliente compatível com o protocolo recebe a orientação automaticamente, sem precisar copiar texto de um doc. As seções abaixo documentam o fluxo para quem está integrando manualmente ou revisando comportamento esperado.
+
+### 🔄 Fluxo de comportamento esperado (handoff)
+
+Todo agente que envia mensagens automáticas via `send_text_message`/`send_media_message` deve seguir este ciclo:
+
+1. **Antes de responder** uma conversa já iniciada: chame `get_conversation_status(instanceName, remoteJid)`.
+2. **Se `status: "pending"`** — pode responder normalmente.
+3. **Se `status: "open"`** — um humano já assumiu. **Não envie.** Pare silenciosamente (não é erro, é comportamento esperado).
+4. **Se `status: "resolved"`** — conversa encerrada. Não reabra sem instrução explícita do operador.
+5. **Ao escalar para humano** (cliente pediu atendente, ou o agente não sabe responder): chame `update_conversation_status(instanceName, remoteJid, "open")`. Isso bloqueia o próprio agente de continuar respondendo até um humano devolver o controle pelo painel.
+6. **Se o envio for rejeitado pelo backend** (erro de `assertBotCanSend`) mesmo após checar o status: trate como sinal definitivo de parar — nunca repita a chamada ou tente contornar.
+
+**Nunca** defina `status: "open"` para o próprio agente tentando reter o controle — `"open"` significa especificamente "humano no controle". Para pausar e depois retomar como agente, use `"pending"`.
+
+**Exemplo de prompt/instrução para configurar num agente externo (Hermes Agent, OpenClaw, etc.):**
+
+> "Antes de responder qualquer mensagem de WhatsApp, chame a tool `get_conversation_status`. Se o status retornado não for `pending`, não envie nada — um humano já está atendendo essa conversa. Quando precisar escalar para um atendente humano, chame `update_conversation_status` com `status: 'open'`."
+
 
 ---
 
