@@ -1717,6 +1717,8 @@
     "leadUpdated": "Lead atualizado com sucesso",
     "leadUpdateError": "Erro ao atualizar lead",
     "contactInfo": "Ficha do Contato",
+    "collapseContactInfo": "Recolher ficha do contato",
+    "expandContactInfo": "Expandir ficha do contato",
     "save": "Salvar"
   },
   "common": {

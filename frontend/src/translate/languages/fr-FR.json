@@ -1716,6 +1716,8 @@
     "leadUpdated": "Lead mis à jour avec succès",
     "leadUpdateError": "Erreur lors de la mise à jour du lead",
     "contactInfo": "Info Contact",
+    "collapseContactInfo": "Réduire la fiche contact",
+    "expandContactInfo": "Développer la fiche contact",
     "save": "Enregistrer"
   },
   "common": {

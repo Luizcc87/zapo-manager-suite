@@ -4,6 +4,17 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Chat: botões para colapsar sidebar global e ficha do contato
+
+Padrão de referência: `PanelRightOpen`/`PanelRightClose` do wacrm-multi-ling (botão único no header, não par de estados duplicados).
+
+**Frontend**
+- `frontend/src/components/sidebar.tsx`: sidebar de navegação global (`SidebarShell`) ganha botão de colapsar/expandir no cabeçalho; estado persistido em `localStorage` (`sidebar-collapsed`). Colapsada, vira coluna estreita (`w-14`) só com ícones — cada `NavItem` usa `title` (tooltip nativo) para mostrar o label ao passar o mouse, via `SidebarCollapsedContext` (evita prop-drilling pelos grupos de menu).
+- `frontend/src/pages/instance/Chat/messages.tsx`: botão de colapsar/expandir a ficha do contato (`Contact Info`) no header do chat, ao lado do badge de status — ícone único que alterna (`PanelRightOpen`/`PanelRightClose`), não dois botões separados.
+- `frontend/src/pages/instance/Chat/index.tsx`: estado do painel de contato (`contact-panel-open` em `localStorage`) controlado aqui, `<aside>` só renderiza quando aberto.
+- `frontend/src/pages/instance/Chat/ContactLead.tsx`: toggle removido do componente (fica só o conteúdo) — controle voltou pro pai/header, evitando dois estados de colapso independentes competindo.
+- 4 idiomas: chaves `chat.collapseContactInfo`/`chat.expandContactInfo`.
+
 ### Reposicionamento do projeto — handoff + CRM como diferencial (Épico 3)
 
 Descrição pública do projeto passa a refletir o diferencial construído nos Épicos 1 e 2 (controle seguro de agentes de IA sobre WhatsApp), não só "painel de gerenciamento". Iniciado somente após Épicos 1 e 2 validados end-to-end (REST + MCP + UI), conforme decidido em party mode.

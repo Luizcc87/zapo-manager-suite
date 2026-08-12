@@ -1,6 +1,9 @@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@evoapi/design-system/collapsible";
+import { Button } from "@evoapi/design-system/button";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleHelp,
   Cog,
   FileCode,
@@ -11,7 +14,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { useMemo } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation, useParams } from "react-router-dom";
 
@@ -43,55 +46,127 @@ type MenuGroup = {
 
 type Menu = MenuLeaf | MenuGroup;
 
+const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
+
+/** Propaga se a sidebar está colapsada para NavItem/Collapsible sem prop-drilling. */
+const SidebarCollapsedContext = createContext(false);
+const useIsSidebarCollapsed = () => useContext(SidebarCollapsedContext);
+
+function useSidebarCollapsed() {
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
+
+  const toggle = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  };
+
+  return { collapsed, toggle };
+}
+
 function SidebarShell({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
   const currentYear = new Date().getFullYear();
   const { appName, logoSrc, fullVersionTag } = useAppConfig();
+  const { collapsed, toggle } = useSidebarCollapsed();
+
+  if (collapsed) {
+    return (
+      <SidebarCollapsedContext.Provider value={true}>
+        <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-14 border-r border-sidebar-border">
+          <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggle}
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
+            {children}
+          </nav>
+
+          {footer && (
+            <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
+              {footer}
+            </div>
+          )}
+        </aside>
+      </SidebarCollapsedContext.Provider>
+    );
+  }
 
   return (
-    <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-56 border-r border-sidebar-border">
-      <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <img src={logoSrc} alt={appName} className="h-7" />
-      </div>
-
-      <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
-        {children}
-      </nav>
-
-      {footer && (
-        <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
-          {footer}
+    <SidebarCollapsedContext.Provider value={false}>
+      <aside className="hidden md:flex bg-sidebar text-sidebar-foreground flex-col w-56 border-r border-sidebar-border">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+          <img src={logoSrc} alt={appName} className="h-7" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
         </div>
-      )}
 
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="text-sm font-medium text-primary">{appName}</div>
-        <div className="text-xs text-muted-foreground mt-0.5">{fullVersionTag}</div>
-        <div className="mt-1 text-xs text-muted-foreground">© {currentYear} All rights reserved</div>
-      </div>
-    </aside>
+        <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
+          {children}
+        </nav>
+
+        {footer && (
+          <div className="border-t border-sidebar-border px-2 py-3 space-y-1">
+            {footer}
+          </div>
+        )}
+
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="text-sm font-medium text-primary">{appName}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">{fullVersionTag}</div>
+          <div className="mt-1 text-xs text-muted-foreground">© {currentYear} All rights reserved</div>
+        </div>
+      </aside>
+    </SidebarCollapsedContext.Provider>
   );
 }
 
 function NavItem({ to, icon: Icon, label, isExternal }: { to: string; icon?: typeof LayoutDashboard; label: string; isExternal?: boolean }) {
+  const collapsed = useIsSidebarCollapsed();
+
   if (isExternal) {
     return (
       <a
         href={to}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-accent hover:text-foreground"
+        title={collapsed ? label : undefined}
+        className={cn(
+          "flex items-center gap-3 rounded-md py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-accent hover:text-foreground",
+          collapsed ? "justify-center px-0" : "px-3",
+        )}
       >
         {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
-        <span>{label}</span>
+        {!collapsed && <span>{label}</span>}
       </a>
     );
   }
   return (
     <NavLink
       to={to}
+      title={collapsed ? label : undefined}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all",
+          "flex items-center gap-3 rounded-md py-2.5 text-sm font-medium transition-all",
+          collapsed ? "justify-center px-0" : "px-3",
           isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
         )
       }
@@ -99,7 +174,7 @@ function NavItem({ to, icon: Icon, label, isExternal }: { to: string; icon?: typ
       {({ isActive }) => (
         <>
           {Icon && <Icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-primary")} />}
-          <span>{label}</span>
+          {!collapsed && <span>{label}</span>}
         </>
       )}
     </NavLink>
@@ -134,6 +209,7 @@ function InstanceSidebar() {
   const { instance } = useInstance();
   const { pathname } = useLocation();
   const { instanceId } = useParams<{ instanceId: string }>();
+  const collapsed = useContext(SidebarCollapsedContext);
 
   const base = instance ? `/manager/instance/${instance.id}` : (instanceId ? `/manager/instance/${instanceId}` : "");
 
@@ -203,6 +279,23 @@ function InstanceSidebar() {
       {visibleMenus.map((menu) => {
         if ("children" in menu) {
           const groupActive = menu.children.some((c) => c.path && pathname.includes(c.path));
+
+          if (collapsed) {
+            // Colapsado: mostra só o ícone do grupo com tooltip; sem submenu expansível.
+            return (
+              <div
+                key={menu.title}
+                title={menu.title}
+                className={cn(
+                  "flex items-center justify-center rounded-md py-2.5",
+                  groupActive ? "bg-primary/10 text-primary" : "text-muted-foreground",
+                )}
+              >
+                <menu.icon className="h-5 w-5 flex-shrink-0" />
+              </div>
+            );
+          }
+
           return (
             <Collapsible key={menu.title} defaultOpen={groupActive}>
               <CollapsibleTrigger

@@ -19,6 +19,7 @@ interface ContactLeadProps {
  * Ficha lateral do contato — campos de CRM dinâmicos conforme o mapa da instância.
  * Usa useGetLeadRaw (valores por slotKey) para edição, não a versão resolvida por
  * label (essa é só leitura/exibição, e labels podem colidir entre slots).
+ * O toggle de exibir/recolher fica no header do chat (Messages), não aqui.
  */
 export function ContactLead({ remoteJid }: ContactLeadProps) {
   const { t } = useTranslation();
@@ -50,13 +51,21 @@ export function ContactLead({ remoteJid }: ContactLeadProps) {
   };
 
   if (isLoadingFields || isLoadingLead) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex h-full flex-col border-l bg-background p-4">
+        <h3 className="mb-2 font-semibold">{t('chat.contactInfo')}</h3>
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (!fieldsMap?.fields?.length) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">
-        {t('instance.settings.fieldsMapDescription')}
+      <div className="flex h-full flex-col border-l bg-background p-4">
+        <h3 className="mb-2 font-semibold">{t('chat.contactInfo')}</h3>
+        <p className="text-sm text-muted-foreground">
+          {t('instance.settings.fieldsMapDescription')}
+        </p>
       </div>
     );
   }

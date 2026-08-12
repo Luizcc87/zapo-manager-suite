@@ -29,6 +29,8 @@ const formatJid = (remoteJid: string): string => remoteJid.split("@")[0];
 
 type ChatKind = "contacts" | "groups";
 
+const CONTACT_PANEL_OPEN_KEY = "contact-panel-open";
+
 function Chat() {
   const { t } = useTranslation();
   const isMD = useMediaQuery("(min-width: 768px)");
@@ -42,6 +44,17 @@ function Chat() {
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<ChatKind>("contacts");
   const [modalOpen, setModalOpen] = useState(false);
+  const [contactPanelOpen, setContactPanelOpen] = useState(
+    () => localStorage.getItem(CONTACT_PANEL_OPEN_KEY) !== "false",
+  );
+
+  const handleToggleContactPanel = useCallback(() => {
+    setContactPanelOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem(CONTACT_PANEL_OPEN_KEY, String(next));
+      return next;
+    });
+  }, []);
 
   const { data: chats } = useFindChats({ instanceName: instance?.name });
 
@@ -315,6 +328,8 @@ function Chat() {
               textareaHeight={textareaHeight}
               lastMessageRef={lastMessageRef}
               scrollToBottom={scrollToBottom}
+              contactPanelOpen={contactPanelOpen}
+              onToggleContactPanel={handleToggleContactPanel}
             />
           </>
         ) : (
@@ -333,7 +348,7 @@ function Chat() {
       </main>
 
       {/* Right Sidebar - Contact Lead (CRM) */}
-      {remoteJid && isMD && (
+      {remoteJid && isMD && contactPanelOpen && (
         <aside className="hidden md:flex w-80 flex-col border-l bg-card/50 flex-shrink-0">
           <ContactLead remoteJid={remoteJid} />
         </aside>

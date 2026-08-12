@@ -302,6 +302,8 @@
     "leadUpdated": "Lead updated successfully",
     "leadUpdateError": "Error updating lead",
     "contactInfo": "Contact Info",
+    "collapseContactInfo": "Collapse contact info",
+    "expandContactInfo": "Expand contact info",
     "save": "Save"
   },
   "sidebar": {

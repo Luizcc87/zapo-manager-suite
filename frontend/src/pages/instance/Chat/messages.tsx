@@ -1,4 +1,4 @@
-import { Copy, CornerUpLeft, SmilePlus, Send, Trash2, User, X } from "lucide-react";
+import { Copy, CornerUpLeft, PanelRightClose, PanelRightOpen, SmilePlus, Send, Trash2, User, X } from "lucide-react";
 import { Dispatch, memo, ReactNode, RefObject, SetStateAction, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
@@ -16,6 +16,7 @@ import { groupReactionsAndRevokes, useFindMessages } from "@/lib/queries/chat/fi
 import { useDeleteMessageForMe, useRevokeMessage, useSendMessage, useSendMedia, useSendReaction } from "@/lib/queries/chat/sendMessage";
 import { getChatMediaKind, MEDIA_CAPTION_MAX } from "@/lib/chat/media-support";
 import { getToken, TOKEN_ID } from "@/lib/queries/token";
+import { cn } from "@/lib/utils";
 
 import { Message, Reaction } from "@/types/evolution.types";
 
@@ -33,6 +34,8 @@ type MessagesProps = {
   textareaHeight: string;
   lastMessageRef: RefObject<HTMLDivElement>;
   scrollToBottom: () => void;
+  contactPanelOpen?: boolean;
+  onToggleContactPanel?: () => void;
 };
 
 // Utility function to format dates like WhatsApp
@@ -768,7 +771,7 @@ const ChatComposer = memo(function ChatComposer({
   );
 });
 
-function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessageRef, scrollToBottom }: MessagesProps) {
+function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessageRef, scrollToBottom, contactPanelOpen, onToggleContactPanel }: MessagesProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const { instance } = useInstance();
@@ -1099,6 +1102,23 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
           </div>
           {instance?.name && remoteJid && (
             <ConversationStatusBadge instanceName={instance.name} remoteJid={remoteJid} />
+          )}
+          {onToggleContactPanel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onToggleContactPanel}
+              title={contactPanelOpen ? t("chat.collapseContactInfo") : t("chat.expandContactInfo")}
+              aria-pressed={contactPanelOpen}
+              className={cn("h-8 w-8", contactPanelOpen ? "text-primary" : "text-muted-foreground")}
+            >
+              {contactPanelOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+            </Button>
           )}
         </div>
       </div>
