@@ -17,6 +17,7 @@ import { useManageInstance } from "@/lib/queries/instance/manageInstance";
 import { useFetchSettings } from "@/lib/queries/instance/settingsFind";
 
 import { Settings as SettingsType } from "@/types/evolution.types";
+import { FieldsMapForm } from "./FieldsMapForm";
 
 const FormSchema = z.object({
   rejectCall: z.boolean(),
@@ -162,6 +163,7 @@ function Settings() {
           </div>
         </form>
       </Form>
+      <FieldsMapForm />
     </>
   );
 }

@@ -316,6 +316,16 @@
       "chats": "Chats",
       "messages": "Messages",
       "subtitle": "Gérez votre instance"
+    },
+    "settings": {
+      "fieldsMapUpdated": "Carte des champs mise à jour",
+      "fieldsMapUpdateError": "Erreur lors de la mise à jour de la carte des champs",
+      "fieldsMap": "Carte des Champs",
+      "fieldsMapDescription": "Configurez les champs personnalisés pour les contacts.",
+      "slotKey": "Clé",
+      "label": "Étiquette",
+      "fieldType": "Type",
+      "addField": "Ajouter un Champ"
     }
   },
   "settings": {
@@ -1702,7 +1712,11 @@
     "toast": {
       "error": "Erreur lors du traitement du message",
       "sendError": "Erreur lors de l'envoi du message"
-    }
+    },
+    "leadUpdated": "Lead mis à jour avec succès",
+    "leadUpdateError": "Erreur lors de la mise à jour du lead",
+    "contactInfo": "Info Contact",
+    "save": "Enregistrer"
   },
   "common": {
     "search": "Rechercher..."

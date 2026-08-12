@@ -26,6 +26,9 @@ Este guia consolida os caminhos de integração do **Zapo Manager** e do ecossis
 6. `get_qr_or_pairing_code`: Retorna o QR Code ou código de 8 dígitos para pareamento.
 7. `get_conversation_status`: Consulta o status de handoff bot/humano (`pending`/`open`/`resolved`) de uma conversa — **chame antes de enviar mensagem automática**. Se o status não for `pending`, um humano já assumiu; não envie.
 8. `update_conversation_status`: Atualiza o status de handoff. Use `pending` para devolver o controle ao bot, ou `resolved` para encerrar. Não defina `open` a menos que o agente esteja de fato escalando para um humano.
+9. `update_fields_map`: Define/renomeia os slots de campo de CRM (`slotKey`, `label`, `fieldType`) de uma instância — equivalente ao `updateFieldsMap` da Uazapi.
+10. `get_lead`: Consulta os valores de CRM já cadastrados de um contato, resolvidos com label (ex: `{"Empresa": "Acme Ltda"}`) — use antes de responder para ter contexto do contato.
+11. `update_lead`: Atualiza valores de CRM de um contato (chaves são `slotKey`s já mapeados via `update_fields_map`) — equivalente ao `editLead` da Uazapi.
 
 > **Handoff bot/humano:** todo agente autônomo (Hermes Agent, OpenClaw, etc.) que enviar mensagens automáticas deve consultar `get_conversation_status` antes de responder. O backend também bloqueia o envio via `assertBotCanSend` quando o status não é `pending` — a checagem do agente é uma segunda camada, não a única.
 

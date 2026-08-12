@@ -23,6 +23,7 @@ import { Chat as ChatType } from "@/types/evolution.types";
 import { useMediaQuery } from "@/utils/useMediaQuery";
 
 import { Messages } from "./messages";
+import { ContactLead } from "./ContactLead";
 
 const formatJid = (remoteJid: string): string => remoteJid.split("@")[0];
 
@@ -330,6 +331,14 @@ function Chat() {
           </div>
         )}
       </main>
+
+      {/* Right Sidebar - Contact Lead (CRM) */}
+      {remoteJid && isMD && (
+        <aside className="hidden md:flex w-80 flex-col border-l bg-card/50 flex-shrink-0">
+          <ContactLead remoteJid={remoteJid} />
+        </aside>
+      )}
+
       <NewConversationDialog
         open={modalOpen}
         onOpenChange={setModalOpen}

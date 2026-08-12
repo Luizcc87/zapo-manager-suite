@@ -52,6 +52,7 @@ model ChatEntry {
   pushName         String    @default("")
   profilePicUrl    String    @default("")
   labels           Json?
+  leadFields       Json?
   /// Controle de handoff bot/humano: pending (bot pode responder), open (humano assumiu), resolved (encerrada).
   status           String    @default("pending")
   assignedUserId   String?
@@ -126,4 +127,18 @@ model WaCompanionDevice {
 
   @@unique([instanceName, deviceJid])
   @@map("wa_companion_devices")
+}
+
+/// Mapeamento de campos de CRM (slots) por instância
+model InstanceFieldMap {
+  id           String   @id @default(cuid())
+  instanceName String
+  slotKey      String   /// Ex: "field01", "empresa", "cpf"
+  label        String   /// Nome legível, ex: "Nome da Empresa"
+  fieldType    String   /// text, number, date, select
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([instanceName, slotKey])
+  @@map("wa_instance_field_map")
 }

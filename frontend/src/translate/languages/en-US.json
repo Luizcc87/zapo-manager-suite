@@ -298,7 +298,11 @@
     "toast": {
       "error": "Error processing message",
       "sendError": "Error sending message"
-    }
+    },
+    "leadUpdated": "Lead updated successfully",
+    "leadUpdateError": "Error updating lead",
+    "contactInfo": "Contact Info",
+    "save": "Save"
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -414,6 +418,16 @@
       "chats": "Chats",
       "messages": "Messages",
       "subtitle": "Manage your instance"
+    },
+    "settings": {
+      "fieldsMapUpdated": "Fields map updated successfully",
+      "fieldsMapUpdateError": "Error updating fields map",
+      "fieldsMap": "Fields Map",
+      "fieldsMapDescription": "Configure custom CRM fields for contacts.",
+      "slotKey": "Key",
+      "label": "Label",
+      "fieldType": "Type",
+      "addField": "Add Field"
     }
   },
   "settings": {

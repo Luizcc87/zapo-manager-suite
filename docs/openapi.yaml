@@ -1575,6 +1575,174 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /instance/fields-map/{instanceName}:
+    get:
+      tags: [Configuração]
+      summary: Listar mapa de campos de CRM
+      description: |
+        Retorna os slots de campo configurados para a instância (equivalente ao
+        `updateFieldsMap` da Uazapi). Cada slot tem uma chave livre (`slotKey`),
+        rótulo legível e tipo.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      responses:
+        '200':
+          description: Mapa de campos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  instanceName:
+                    type: string
+                  fields:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        slotKey:
+                          type: string
+                        label:
+                          type: string
+                        fieldType:
+                          type: string
+                          enum: [text, number, date, select]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Configuração]
+      summary: Atualizar mapa de campos de CRM
+      description: |
+        Substitui o mapa de campos completo da instância (overwrite idempotente).
+        Slots ausentes na lista enviada são removidos.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              fields:
+                - slotKey: "field01"
+                  label: "Empresa"
+                  fieldType: "text"
+                - slotKey: "field02"
+                  label: "Orçamento"
+                  fieldType: "number"
+            schema:
+              type: object
+              required: [fields]
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: object
+                    required: [slotKey, label, fieldType]
+                    properties:
+                      slotKey:
+                        type: string
+                        description: 'Chave livre, apenas letras/números/underscore (ex: field01)'
+                      label:
+                        type: string
+                      fieldType:
+                        type: string
+                        enum: [text, number, date, select]
+      responses:
+        '200':
+          description: Campos atualizados
+        '400':
+          description: Campo inválido (tipo ou slotKey mal formado)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /chat/{instanceName}/{remoteJid}/lead:
+    get:
+      tags: [Chat]
+      summary: Obter campos do CRM (Lead) do contato
+      description: |
+        Retorna os valores de CRM do contato. Por padrão resolvidos com o label
+        (`{"Empresa": "Acme Ltda"}`). Use `?raw=true` para obter os valores brutos
+        por `slotKey` (`{"field01": "Acme Ltda"}`) — usado por formulários editáveis.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+        - name: remoteJid
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "5511999999999@s.whatsapp.net"
+        - name: raw
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Se `true`, retorna valores por slotKey em vez de label
+      responses:
+        '200':
+          description: Campos do contato (resolvidos por label ou raw por slotKey)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Chat]
+      summary: Atualizar campos do CRM (Lead) do contato
+      description: |
+        Edita valores de CRM do contato (equivalente ao `editLead` da Uazapi).
+        Chaves em `fields` devem ser `slotKey`s já mapeados via `fields-map` —
+        slot não mapeado retorna 400.
+      parameters:
+        - $ref: '#/components/parameters/instanceName'
+        - name: remoteJid
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "5511999999999@s.whatsapp.net"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              fields:
+                field01: "Acme Ltda"
+                field02: "5000"
+              actor:
+                type: "human"
+                id: "luiz"
+            schema:
+              type: object
+              required: [fields, actor]
+              properties:
+                fields:
+                  type: object
+                  additionalProperties: true
+                  description: 'Pares slotKey -> valor'
+                actor:
+                  type: object
+                  required: [type, id]
+                  properties:
+                    type:
+                      type: string
+                      enum: [human, agent, webhook]
+                    id:
+                      type: string
+      responses:
+        '200':
+          description: Campos atualizados, resolvidos por label
+        '400':
+          description: Slot não mapeado na instância
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /mcp:
     post:
       tags: [MCP]

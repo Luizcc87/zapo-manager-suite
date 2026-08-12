@@ -24,6 +24,7 @@ import { countContactsByInstance } from '../services/contactStats';
 import { formatInstanceEventsSummary, listInstanceEvents, markInstanceEventRead, recordInstanceEvent, summarizeInstanceEvents } from '../services/instanceEvents';
 import { classifyProxyHealth, getChatActivityByInstance, getHistoryPersistence } from '../services/instanceOperational';
 import { sendTelegramAlert } from '../services/telegramAlerts';
+import { getFieldsMap, updateFieldsMap, FieldMapInput } from '../services/instanceFieldMap';
 
 const router = Router();
 
@@ -625,6 +626,34 @@ router.post('/rotate-key/:instanceName', checkInstanceApiKey, async (req: Reques
     });
     return res.status(200).json({ status: 'success', instanceName, apiKey: updated.apiKey });
   } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 8. Campos de CRM (Fields Map)
+router.get('/fields-map/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const fields = await getFieldsMap(instanceName);
+    return res.status(200).json({ status: 'success', instanceName, fields });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/fields-map/:instanceName', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    const { fields } = req.body;
+    if (!Array.isArray(fields)) {
+      return res.status(400).json({ error: 'fields must be an array of objects' });
+    }
+    const updated = await updateFieldsMap(instanceName, fields as FieldMapInput[]);
+    return res.status(200).json({ status: 'success', instanceName, fields: updated });
+  } catch (err: any) {
+    if (err.name === 'InvalidFieldError') {
+      return res.status(400).json({ error: err.message });
+    }
     return res.status(500).json({ error: err.message });
   }
 });

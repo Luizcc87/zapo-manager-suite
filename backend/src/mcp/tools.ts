@@ -8,6 +8,7 @@ import {
   InvalidStatusError,
   BotBlockedError,
 } from '../services/conversationStatus';
+import { getLead, updateLead, updateFieldsMap, InvalidFieldError } from '../services/instanceFieldMap';
 
 export interface McpContext {
   apiKey: string;
@@ -252,4 +253,68 @@ export const mcpTools = [
       }
     },
   },
+  {
+    name: 'update_fields_map',
+    description: 'Update the CRM fields mapping for a WhatsApp instance. Defines the expected slots like field01, field02.',
+    paramsSchema: z.object({
+      instanceName: z.string().describe('Name of the WhatsApp instance'),
+      fields: z.array(z.object({
+        slotKey: z.string(),
+        label: z.string(),
+        fieldType: z.enum(['text', 'number', 'date', 'select']),
+      })).describe('Array of field definitions'),
+    }),
+    execute: async (args: { instanceName: string; fields: any[] }, _ctx: McpContext) => {
+      const { instanceName, fields } = args;
+      try {
+        const updated = await updateFieldsMap(instanceName, fields);
+        return { instanceName, fields: updated };
+      } catch (err: any) {
+        if (err.name === 'InvalidFieldError') {
+          return { error: err.message };
+        }
+        throw err;
+      }
+    },
+  },
+  {
+    name: 'get_lead',
+    description: 'Get the populated CRM fields for a specific contact.',
+    paramsSchema: z.object({
+      instanceName: z.string().describe('Name of the WhatsApp instance'),
+      remoteJid: z.string().describe('Recipient JID or phone number'),
+    }),
+    execute: async (args: { instanceName: string; remoteJid: string }, _ctx: McpContext) => {
+      const { instanceName, remoteJid } = args;
+      const jid = formatJid(remoteJid);
+      return await getLead(instanceName, jid);
+    },
+  },
+  {
+    name: 'update_lead',
+    description: 'Update the CRM field values for a specific contact. Use the exact slotKeys defined in the fields_map.',
+    paramsSchema: z.object({
+      instanceName: z.string().describe('Name of the WhatsApp instance'),
+      remoteJid: z.string().describe('Recipient JID or phone number'),
+      fields: z.record(z.string(), z.any()).describe('Key-value pairs of slotKey to value'),
+    }),
+    execute: async (args: { instanceName: string; remoteJid: string; fields: Record<string, any> }, ctx: McpContext) => {
+      const { instanceName, remoteJid, fields } = args;
+      const jid = formatJid(remoteJid);
+      try {
+        const updated = await updateLead(
+          instanceName,
+          jid,
+          fields,
+          { type: 'agent', id: ctx.instanceName ? `mcp:${ctx.instanceName}` : 'mcp:global' }
+        );
+        return updated;
+      } catch (err: any) {
+        if (err.name === 'InvalidFieldError') {
+          return { error: err.message };
+        }
+        throw err;
+      }
+    },
+  }
 ];

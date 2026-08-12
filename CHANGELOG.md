@@ -4,6 +4,40 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### CRM leve por contato (Épico 2 — Uazapi-style)
+
+Campos de CRM configuráveis por instância (slots livres, tipo Uazapi `updateFieldsMap`/`editLead`), persistentes por contato — sobrevivem ao fim da conversa, diferente do handoff (Épico 1) que é por atendimento. Lidos/editados por UI, REST e agentes de IA via MCP.
+
+Implementado com apoio do Antigravity CLI (Gemini) em modo paralelo, seguindo os padrões do Épico 1 como referência; revisado e corrigido nesta sessão (ver detalhes abaixo).
+
+**Backend**
+- `backend/prisma/schema.prisma` e `backend/prisma/migrations/20260812000002_add_instance_field_map/`: novo model `InstanceFieldMap` (tabela `wa_instance_field_map`: `instanceName`, `slotKey` livre sem limite artificial, `label`, `fieldType`), campo `leadFields Json?` em `ChatEntry`/`wa_chats`.
+- `backend/src/services/instanceFieldMap.ts` (novo): `getFieldsMap`, `updateFieldsMap` (overwrite idempotente via transação), `getLead` (resolvido por label), `getLeadRaw` (por slotKey, uso interno/formulário), `updateLead` (valida slots mapeados, rejeita slot desconhecido com `InvalidFieldError`).
+- `backend/src/routes/instance.routes.ts`: `GET`/`PATCH /instance/fields-map/:instanceName`.
+- `backend/src/routes/chat.routes.ts`: `GET`/`PATCH /chat/:instanceName/:remoteJid/lead`; `GET` aceita `?raw=true` para retornar valores por `slotKey` em vez de label (necessário para formulário editável, já que dois slots podem ter o mesmo label).
+- `backend/src/mcp/tools.ts`: MCP tools `update_fields_map`, `get_lead`, `update_lead`.
+- `backend/src/tests/instance-field-map.test.ts` (novo): validação de tipo/slotKey inválido.
+- `docs/openapi.yaml` e `docs/AI-AGENTS-MCP-INTEGRATION.md`: endpoints e tools documentados.
+
+**Frontend**
+- `frontend/src/lib/queries/chat/findLead.ts`, `manageLead.tsx`, `frontend/src/lib/queries/instance/findFieldsMap.ts`, `manageFieldsMap.tsx` (novos): query/mutation React Query.
+- `frontend/src/pages/instance/Chat/ContactLead.tsx` (novo): ficha lateral do contato no chat, campos dinâmicos conforme mapa da instância, editável inline.
+- `frontend/src/pages/instance/Settings/FieldsMapForm.tsx` (novo): tela de configuração de slots (adicionar/renomear/remover, definir tipo).
+- `frontend/src/pages/instance/Chat/index.tsx`, `frontend/src/pages/instance/Settings/index.tsx`: integração dos componentes novos.
+- 4 idiomas (`pt-BR`, `en-US`, `es-ES`, `fr-FR`): chaves `chat.contactInfo`/`chat.save`/`chat.leadUpdated*` e `instance.settings.fieldsMap*`.
+
+**Correções aplicadas após a entrega do Antigravity** (revisão manual, ver validação):
+- Removidos casts `as any` desnecessários em `instanceFieldMap.ts` — client Prisma já tinha os tipos gerados.
+- `ContactLead.tsx` importava `useProfile` de um módulo inexistente (`@/lib/queries/profile/findProfile`) — trocado por `actor: { type: "human", id: "painel" }`, mesmo padrão hardcoded já usado em `conversation-status.tsx` (Épico 1), já que o painel não tem sessão de usuário.
+- `findLead.ts` importava `InstanceType` de um módulo inexistente — trocado por `Instance` de `@/types/evolution.types`.
+- `manageLead.tsx` e `manageFieldsMap.tsx` importavam `toast` de `sonner`, pacote não instalado no projeto — trocado por `react-toastify`, padrão real usado em todo o resto do código.
+- `ContactLead.tsx` e `FieldsMapForm.tsx` usavam `FormInput` com props `type`/`placeholder` diretas — o componente real exige o input como `children` (ex: `<FormInput name="x"><Input placeholder="..." /></FormInput>`); corrigido nos dois arquivos.
+- Adicionado `useGetLeadRaw`/`?raw=true` porque `getLead` resolve valores por *label* (não `slotKey`) — necessário para edição, já que labels podem colidir entre slots.
+- Removido `update_i18n.js`, script de uso único deixado na raiz do repo pelo agente (já executado, sem valor mantê-lo versionado).
+- **Nota de processo:** o `tsc --noEmit` rodado na raiz do `frontend/` (sem `-p tsconfig.app.json`) retorna sucesso falso-positivo neste projeto — ele usa `"files": []` com `references`, então não compila nada de fato sem `-b` ou apontar o `tsconfig.app.json` explicitamente. Os problemas acima só apareceram ao rodar `npx tsc --noEmit -p tsconfig.app.json`, que é o type-check real. Usar esse comando em validações futuras deste projeto.
+
+**Validação:** `tsc --noEmit -p tsconfig.app.json` limpo (frontend), `tsc --noEmit` limpo (backend), suíte de testes 85/85, `eslint` sem erro novo. Testado manualmente ponta a ponta contra a instância real `teste-web-luiz`: REST (`fields-map`, `lead` resolvido e `?raw=true`), MCP (`update_fields_map`, `get_lead`, `update_lead` via protocolo real), validação de slot não mapeado retornando 400.
+
 ### Fix: lint do frontend quebrado por hoisting incorreto de eslint-plugin-n
 
 `npm run lint` falhava com "ESLint couldn't find the plugin eslint-plugin-n" — o pacote existia só aninhado em `node_modules/@herowcode/eslint-config/node_modules/`, não no top-level. `npm install` corrigiu o hoisting.

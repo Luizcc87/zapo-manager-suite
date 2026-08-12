@@ -317,6 +317,16 @@
       "chats": "Chats",
       "messages": "Mensajes",
       "subtitle": "Administre su instancia"
+    },
+    "settings": {
+      "fieldsMapUpdated": "Mapa de campos actualizado",
+      "fieldsMapUpdateError": "Error al actualizar mapa de campos",
+      "fieldsMap": "Mapa de Campos",
+      "fieldsMapDescription": "Configure campos personalizados para los contactos.",
+      "slotKey": "Clave",
+      "label": "Etiqueta",
+      "fieldType": "Tipo",
+      "addField": "Añadir Campo"
     }
   },
   "settings": {
@@ -1703,7 +1713,11 @@
     "toast": {
       "error": "Error al procesar el mensaje",
       "sendError": "Error al enviar el mensaje"
-    }
+    },
+    "leadUpdated": "Lead actualizado con éxito",
+    "leadUpdateError": "Error al actualizar lead",
+    "contactInfo": "Información del Contacto",
+    "save": "Guardar"
   },
   "common": {
     "search": "Buscar..."

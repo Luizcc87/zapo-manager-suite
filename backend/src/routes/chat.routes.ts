@@ -7,6 +7,7 @@ import {
   InvalidStatusError,
   type SetStatusActor,
 } from '../services/conversationStatus';
+import { getLead, getLeadRaw, updateLead, InvalidFieldError } from '../services/instanceFieldMap';
 
 const router = Router();
 
@@ -110,6 +111,53 @@ router.patch('/:instanceName/:remoteJid/status', checkInstanceApiKey, async (req
     return res.json(updated);
   } catch (err: any) {
     if (err instanceof InvalidStatusError) {
+      return res.status(400).json({ error: err.message });
+    }
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /chat/:instanceName/:remoteJid/lead
+// ?raw=true retorna valores por slotKey (uso interno de formulário); default retorna resolvido por label.
+router.get('/:instanceName/:remoteJid/lead', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName, remoteJid } = req.params;
+    const jid = decodeURIComponent(remoteJid);
+    const lead = req.query.raw === 'true'
+      ? await getLeadRaw(instanceName, jid)
+      : await getLead(instanceName, jid);
+    return res.json(lead);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /chat/:instanceName/:remoteJid/lead
+router.patch('/:instanceName/:remoteJid/lead', checkInstanceApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName, remoteJid } = req.params;
+    const { fields, actor } = req.body ?? {};
+
+    if (!fields || typeof fields !== 'object') {
+      return res.status(400).json({ error: 'fields must be an object' });
+    }
+    if (!actor || typeof actor.type !== 'string' || typeof actor.id !== 'string') {
+      return res.status(400).json({ error: 'actor { type, id } is required' });
+    }
+    if (!['human', 'agent', 'webhook'].includes(actor.type)) {
+      return res.status(400).json({ error: "actor.type must be 'human', 'agent' or 'webhook'" });
+    }
+
+    const updated = await updateLead(
+      instanceName,
+      decodeURIComponent(remoteJid),
+      fields,
+      actor as { type: 'human' | 'agent' | 'webhook'; id: string }
+    );
+
+    return res.json(updated);
+  } catch (err: any) {
+    if (err instanceof InvalidFieldError || err.name === 'InvalidFieldError') {
       return res.status(400).json({ error: err.message });
     }
     return res.status(500).json({ error: err.message });
