@@ -324,6 +324,7 @@
       "fieldsMap": "Mapa de Campos",
       "fieldsMapDescription": "Configure campos personalizados para los contactos.",
       "slotKey": "Clave",
+      "slotKeyHint": "Solo letras, números y guion bajo ( _ ). Sin espacios, acentos ni símbolos. Ej: empresa, presupuesto, ciudad_cliente.",
       "label": "Etiqueta",
       "fieldType": "Tipo",
       "addField": "Añadir Campo"

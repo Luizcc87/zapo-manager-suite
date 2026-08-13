@@ -324,6 +324,7 @@
       "fieldsMap": "Mapa de Campos (CRM)",
       "fieldsMapDescription": "Configure os campos personalizados dos contatos.",
       "slotKey": "Chave",
+      "slotKeyHint": "Apenas letras, números e underscore ( _ ). Sem espaços, acentos ou símbolos. Ex: empresa, orcamento, cidade_cliente.",
       "label": "Rótulo",
       "fieldType": "Tipo",
       "addField": "Adicionar Campo"

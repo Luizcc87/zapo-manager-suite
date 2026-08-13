@@ -49,6 +49,7 @@ export function FieldsMapForm() {
     <div className="mt-8">
       <h3 className="mb-1 text-lg font-medium">{t('instance.settings.fieldsMap')}</h3>
       <p className="text-sm text-muted-foreground">{t('instance.settings.fieldsMapDescription')}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{t('instance.settings.slotKeyHint')}</p>
       <Separator className="my-4" />
 
       <Form {...form}>

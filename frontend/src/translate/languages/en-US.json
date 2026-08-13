@@ -427,6 +427,7 @@
       "fieldsMap": "Fields Map",
       "fieldsMapDescription": "Configure custom CRM fields for contacts.",
       "slotKey": "Key",
+      "slotKeyHint": "Letters, numbers and underscore ( _ ) only. No spaces, accents or symbols. E.g.: company, budget, client_city.",
       "label": "Label",
       "fieldType": "Type",
       "addField": "Add Field"

@@ -323,6 +323,7 @@
       "fieldsMap": "Carte des Champs",
       "fieldsMapDescription": "Configurez les champs personnalisés pour les contacts.",
       "slotKey": "Clé",
+      "slotKeyHint": "Lettres, chiffres et underscore ( _ ) uniquement. Sans espaces, accents ni symboles. Ex : entreprise, budget, ville_client.",
       "label": "Étiquette",
       "fieldType": "Type",
       "addField": "Ajouter un Champ"
