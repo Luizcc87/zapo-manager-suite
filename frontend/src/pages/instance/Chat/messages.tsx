@@ -1,7 +1,8 @@
 import { Copy, CornerUpLeft, PanelRightClose, PanelRightOpen, SmilePlus, Send, Trash2, User, X } from "lucide-react";
-import { Dispatch, memo, ReactNode, RefObject, SetStateAction, useEffect, useMemo, useState } from "react";
+import { Dispatch, memo, ReactNode, RefObject, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@evoapi/design-system/avatar";
 import { Button } from "@evoapi/design-system/button";
@@ -32,8 +33,6 @@ type MessagesProps = {
   textareaRef: RefObject<HTMLTextAreaElement>;
   handleTextareaChange: () => void;
   textareaHeight: string;
-  lastMessageRef: RefObject<HTMLDivElement>;
-  scrollToBottom: () => void;
   contactPanelOpen?: boolean;
   onToggleContactPanel?: () => void;
 };
@@ -771,7 +770,7 @@ const ChatComposer = memo(function ChatComposer({
   );
 });
 
-function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessageRef, scrollToBottom, contactPanelOpen, onToggleContactPanel }: MessagesProps) {
+function Messages({ textareaRef, handleTextareaChange, textareaHeight, contactPanelOpen, onToggleContactPanel }: MessagesProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const { instance } = useInstance();
@@ -1006,11 +1005,31 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
     return grouped;
   }, [allMessages, t, locale]);
 
+  // Flatten date groups into a single list for virtualization (Virtuoso needs a flat item array).
+  type VirtualItem = { kind: "date"; date: string } | { kind: "message"; message: Message };
+  const virtualItems = useMemo<VirtualItem[]>(() => {
+    const items: VirtualItem[] = [];
+    groupedMessages.forEach((group) => {
+      items.push({ kind: "date", date: group.date });
+      group.messages.forEach((message) => items.push({ kind: "message", message }));
+    });
+    return items;
+  }, [groupedMessages]);
+
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+
   useEffect(() => {
-    if (isSuccess && allMessages) {
-      scrollToBottom();
+    if (isSuccess && allMessages && virtualItems.length > 0) {
+      // scrollToIndex repetido: imagens (base64) mudam a altura dos itens conforme carregam,
+      // então a primeira chamada costuma parar antes do fim real. Reforça em alguns instantes.
+      const lastIndex = virtualItems.length - 1;
+      virtuosoRef.current?.scrollToIndex({ index: lastIndex, behavior: "auto" });
+      const timers = [100, 400, 1000].map((delay) =>
+        setTimeout(() => virtuosoRef.current?.scrollToIndex({ index: lastIndex, behavior: "auto" }), delay),
+      );
+      return () => timers.forEach(clearTimeout);
     }
-  }, [isSuccess, allMessages, scrollToBottom]);
+  }, [isSuccess, allMessages, virtualItems.length]);
 
   // Clear selected media and real-time messages when switching chats
   useEffect(() => {
@@ -1122,17 +1141,24 @@ function Messages({ textareaRef, handleTextareaChange, textareaHeight, lastMessa
           )}
         </div>
       </div>
-      <div className={`flex w-full flex-1 flex-col overflow-y-auto px-4 py-4 ${DOODLE_BG_CLASSES}`}>
-        {groupedMessages.map((group, groupIndex) => (
-          <div key={groupIndex}>
-            <DateSeparator date={group.date} />
-            {group.messages.map((message) =>
-              message.key.fromMe ? renderBubbleRight(message) : renderBubbleLeft(message),
+      <Virtuoso
+        ref={virtuosoRef}
+        className={`w-full flex-1 ${DOODLE_BG_CLASSES}`}
+        data={virtualItems}
+        followOutput="auto"
+        increaseViewportBy={{ top: 600, bottom: 600 }}
+        itemContent={(_index, item) => (
+          <div className="px-4">
+            {item.kind === "date" ? (
+              <DateSeparator date={item.date} />
+            ) : item.message.key.fromMe ? (
+              renderBubbleRight(item.message)
+            ) : (
+              renderBubbleLeft(item.message)
             )}
           </div>
-        ))}
-        <div ref={lastMessageRef as never} />
-      </div>
+        )}
+      />
       {instance && (
         <ChatComposer
           key={remoteJid}

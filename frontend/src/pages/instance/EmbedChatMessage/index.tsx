@@ -55,7 +55,6 @@ function EmbedChatMessage() {
 
   const [chats, setChats] = useState<ChatType[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const [selectedChat, setSelectedChat] = useState<ChatType | null>(null);
   const [isNewChatDialogOpen, setIsNewChatDialogOpen] = useState(false);
 
@@ -394,12 +393,6 @@ function EmbedChatMessage() {
                   textareaRef={textareaRef}
                   handleTextareaChange={() => {}}
                   textareaHeight="auto"
-                  lastMessageRef={lastMessageRef}
-                  scrollToBottom={() => {
-                    if (lastMessageRef.current) {
-                      lastMessageRef.current.scrollIntoView({ behavior: "smooth" });
-                    }
-                  }}
                 />
 
                 <InputMessage chat={selectedChat as any} />

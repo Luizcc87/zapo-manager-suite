@@ -34,7 +34,6 @@ const CONTACT_PANEL_OPEN_KEY = "contact-panel-open";
 function Chat() {
   const { t } = useTranslation();
   const isMD = useMediaQuery("(min-width: 768px)");
-  const lastMessageRef = useRef<HTMLDivElement | null>(null);
   const [textareaHeight] = useState("auto");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { instance } = useInstance();
@@ -134,10 +133,6 @@ function Chat() {
     };
   }, [instance, instance?.name, queryClient]);
 
-
-  const scrollToBottom = useCallback(() => {
-    lastMessageRef.current?.scrollIntoView({});
-  }, []);
 
   const handleTextareaChange = () => {
     if (!textareaRef.current) return;
@@ -326,8 +321,6 @@ function Chat() {
               textareaRef={textareaRef}
               handleTextareaChange={handleTextareaChange}
               textareaHeight={textareaHeight}
-              lastMessageRef={lastMessageRef}
-              scrollToBottom={scrollToBottom}
               contactPanelOpen={contactPanelOpen}
               onToggleContactPanel={handleToggleContactPanel}
             />

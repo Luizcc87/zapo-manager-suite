@@ -4,6 +4,17 @@ Registro cronológico reverso de implementações e alterações relevantes.
 
 ## [Unreleased]
 
+### Chat: virtualização da lista de mensagens (perf)
+
+**Causa raiz de lentidão relatada em produção (VPS):** em chats com muitas mensagens, digitar no composer e abrir o dropdown de anexo (`+`) ficavam perceptivelmente lentos — não era rede/CPU da VPS (confirmado: mesmo sintoma isolado nesses dois elementos, resto do chat fluido), e sim a lista inteira de mensagens (`Messages`) renderizando centenas/milhares de nós DOM de uma vez, cada um com botões (reagir/copiar/responder/excluir), saturando o main thread do browser a cada re-render.
+
+- `frontend/src/pages/instance/Chat/messages.tsx`: lista de mensagens trocada de `.map()` direto para `react-virtuoso` (`Virtuoso`) — renderiza só os itens visíveis + margem (`increaseViewportBy`), não a lista inteira. Grupos por data (`groupedMessages`) achatados em `virtualItems` (lista linear `{kind: "date"|"message", ...}`) porque Virtuoso exige item array flat.
+  - Scroll-to-bottom: `lastMessageRef`/`scrollToBottom` (manual, via `scrollIntoView`) substituídos por `virtuosoRef.scrollToIndex()`. Como mensagens com mídia (imagens base64) mudam de altura após carregar, uma única chamada não garante chegar ao fim real — reforçada com `setTimeout` em `[100, 400, 1000]`ms.
+  - Padding lateral das bolhas movido do `style` do componente `Virtuoso` (causava overflow horizontal, ~16px de scroll indevido) para dentro do wrapper de `itemContent` (`<div className="px-4">`).
+- `frontend/src/pages/instance/EmbedChatMessage/index.tsx`: mesmo componente `Messages` usado no chat embeddável — removidas as props `lastMessageRef`/`scrollToBottom` (não existem mais na interface).
+- Dependência nova: `react-virtuoso`.
+- Validado: `tsc -p tsconfig.app.json` limpo, `npm run build` limpo, `eslint` sem erros novos (5 avisos pré-existentes não tocados nesta mudança), testado no browser (digitação instantânea, dropdown `+` abre sem delay, reações/scroll/grupos por data preservados).
+
 ## [1.6.26] - 2026-08-12
 
 ### Chat: botões para colapsar sidebar global e ficha do contato
