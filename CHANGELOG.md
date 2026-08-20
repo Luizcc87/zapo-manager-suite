@@ -2,18 +2,23 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
-## [Unreleased]
+## [1.6.27] - 2026-08-20
 
-### Chat: virtualização da lista de mensagens (perf)
+### Upgrade Upstream `zapo-js` v1.8.0 & Pacotes de Store
 
-**Causa raiz de lentidão relatada em produção (VPS):** em chats com muitas mensagens, digitar no composer e abrir o dropdown de anexo (`+`) ficavam perceptivelmente lentos — não era rede/CPU da VPS (confirmado: mesmo sintoma isolado nesses dois elementos, resto do chat fluido), e sim a lista inteira de mensagens (`Messages`) renderizando centenas/milhares de nós DOM de uma vez, cada um com botões (reagir/copiar/responder/excluir), saturando o main thread do browser a cada re-render.
-
-- `frontend/src/pages/instance/Chat/messages.tsx`: lista de mensagens trocada de `.map()` direto para `react-virtuoso` (`Virtuoso`) — renderiza só os itens visíveis + margem (`increaseViewportBy`), não a lista inteira. Grupos por data (`groupedMessages`) achatados em `virtualItems` (lista linear `{kind: "date"|"message", ...}`) porque Virtuoso exige item array flat.
-  - Scroll-to-bottom: `lastMessageRef`/`scrollToBottom` (manual, via `scrollIntoView`) substituídos por `virtuosoRef.scrollToIndex()`. Como mensagens com mídia (imagens base64) mudam de altura após carregar, uma única chamada não garante chegar ao fim real — reforçada com `setTimeout` em `[100, 400, 1000]`ms.
-  - Padding lateral das bolhas movido do `style` do componente `Virtuoso` (causava overflow horizontal, ~16px de scroll indevido) para dentro do wrapper de `itemContent` (`<div className="px-4">`).
-- `frontend/src/pages/instance/EmbedChatMessage/index.tsx`: mesmo componente `Messages` usado no chat embeddável — removidas as props `lastMessageRef`/`scrollToBottom` (não existem mais na interface).
-- Dependência nova: `react-virtuoso`.
-- Validado: `tsc -p tsconfig.app.json` limpo, `npm run build` limpo, `eslint` sem erros novos (5 avisos pré-existentes não tocados nesta mudança), testado no browser (digitação instantânea, dropdown `+` abre sem delay, reações/scroll/grupos por data preservados).
+- **Core & Upstream Sync:**
+  - `zapo-js`: atualizado de `1.7.1` para `1.8.0` — traz suporte a contas WhatsApp Business via Mobile Transport (Android), handles `@username` no recebimento e privacidade, re-upload automático de mídias expiradas pela CDN e correção de decodificação de enquetes (PN/LID).
+  - `@zapo-js/store-postgres`: atualizado de `1.1.0` para `1.2.0`.
+  - `@zapo-js/store-redis`: atualizado de `1.2.0` para `1.3.0`.
+  - `@zapo-js/store-sqlite`: atualizado de `1.1.0` para `1.2.0`.
+- **Backend API & Rotas:**
+  - `backend/src/routes/instance.routes.ts`: adicionado endpoint `DELETE /instance/delete/:instanceName` emulando a Evolution API v2 para encerramento completo e destruição do store/banco de dados com segurança.
+- **Frontend & Compatibilidade:**
+  - 100% retrocompatível com o painel Evolution Manager v2 UI — testado e validado em 5 suites completas do Playwright UI (`test:manager:ui`).
+- **Validação de Testes:**
+  - `npx tsc --noEmit` limpo no backend.
+  - 7 testes de contrato de endpoints da Evolution API aprovados (`test:manager:api`).
+  - 5 testes de componentes de interface aprovados (`test:manager:ui`).
 
 ## [1.6.26] - 2026-08-12
 

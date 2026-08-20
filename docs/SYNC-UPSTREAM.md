@@ -200,7 +200,25 @@ Quando sair uma nova tag no upstream, use este checklist antes de tocar no backe
 3. Conferir se o comportamento já existe no repo local antes de implementar.
 4. Se a mudança tocar contrato público, atualizar `CHANGELOG.md` e `docs/openapi.yaml`.
 
+#### Release `v1.8.0` do Zapo
+
+Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.8.0`
+
+Mudanças relevantes e triadas:
+
+- `feat: support WhatsApp Business accounts over the mobile transport` (PR #247)
+  - Impacto local: suporte expandido a contas WA Business no pareamento Mobile TCP/Android.
+- `feat(media): request media reupload when the CDN blob expired` (PR #242)
+  - Impacto local: mídias antigas em `backend/src/routes/message.routes.ts` recebem auto-refresh sem expiração.
+- `feat(username): support username handles on receive, queries and privacy` (PR #250)
+  - Impacto local: identificação de contatos por `@username` suportada nativamente pelo client.
+- `fix: decrypt poll votes across PN and LID parent authors` (PR #230)
+  - Impacto local: descriptografia resiliente de votos em enquetes.
+- `fix(mailbox): persist live message fromMe flag` (PR #252) & `fix(message): unwrap group status wrappers` (PR #255)
+  - Impacto local: integridade dos webhooks `MESSAGES_UPSERT` e persistência do histórico no PostgreSQL.
+
 #### Release `v1.6.2` do Zapo
+
 
 Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.6.2`
 

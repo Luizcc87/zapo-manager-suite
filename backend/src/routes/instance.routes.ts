@@ -658,4 +658,16 @@ router.patch('/fields-map/:instanceName', checkInstanceApiKey, async (req: Reque
   }
 });
 
+// 9. Deletar Instância
+router.delete('/delete/:instanceName', checkGlobalApiKey, async (req: Request, res: Response) => {
+  try {
+    const { instanceName } = req.params;
+    await ZapoManager.deleteClient(instanceName);
+    return res.status(200).json({ status: 'SUCCESS', message: 'Instance deleted' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
+
