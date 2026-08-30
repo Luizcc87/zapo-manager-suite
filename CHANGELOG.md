@@ -2,6 +2,25 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
+## [1.6.28] - 2026-08-30
+
+### Upgrade `zapo-js` v1.8.2
+
+- **Core & Upstream Sync:**
+  - `backend/package.json` e `backend/package-lock.json`: atualizado o motor WhatsApp `zapo-js` de `1.8.0` para `1.8.2`.
+  - `zapo-js v1.8.1`: inclui correções no retry ladder de placeholder resend, envio de MP4 não streamable e autoria de mensagens persistidas a partir do participante de topo.
+  - `zapo-js v1.8.2`: inclui correções para drenar batches offline até esvaziar a fila e para crescer o buffer canônico de `phash` sem limitar participantes.
+- **Validação:**
+  - `npm --prefix backend run build` aprovado.
+  - `npm run build:all` aprovado.
+  - `npm run test:manager` aprovado em porta alternativa (`PLAYWRIGHT_BASE_URL=http://127.0.0.1:8082`) porque `8080` estava ocupada por GLPI local.
+  - `npm run test:manager:smoke:fake` aprovado parcialmente: 2 testes aprovados (QR fake + envio/persistência/inbound webhook; logout/reconnect), 2 skips explícitos para limitações atuais do harness FakeWaServer v1.3.0 (link-code/pairing code e companion hosting).
+- **Documentação:**
+  - `docs/ZAPO-JS-1.8.2-UPGRADE-PLAN.md`: plano de execução, impacto local e checklist de release.
+- **Testes:**
+  - `playwright.config.ts`: `webServer.port` agora deriva de `PLAYWRIGHT_BASE_URL` e injeta `PORT` no backend, permitindo rodar o gate local em porta alternativa quando `8080` ja esta ocupada por outro servico.
+  - `tests/zapo-smoke-fake.spec.ts` e `tests/helpers/fake-server-setup.ts`: smoke fake passa a iniciar o FakeWaServer antes do backend e a executar o pairing QR pela ordem atual do `FakePairingDriver`.
+
 ## [1.6.27] - 2026-08-20
 
 ### Upgrade Upstream `zapo-js` v1.8.0 & Pacotes de Store

@@ -217,6 +217,29 @@ Mudanças relevantes e triadas:
 - `fix(mailbox): persist live message fromMe flag` (PR #252) & `fix(message): unwrap group status wrappers` (PR #255)
   - Impacto local: integridade dos webhooks `MESSAGES_UPSERT` e persistência do histórico no PostgreSQL.
 
+#### Release `v1.8.2` do Zapo
+
+Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.8.2`
+
+Mudanças relevantes e triadas:
+
+- `v1.8.1`: `fix(retry): let the retry ladder reach count 3 before placeholder resend`
+  - Impacto local: confiabilidade de retry/placeholder resend em mensagens não baixadas; revisar logs e eventos em `backend/src/manager.ts` se houver regressão.
+- `v1.8.1`: `fix(media): skip the streaming sidecar for non-streamable mp4`
+  - Impacto local: envio e processamento de vídeo em `backend/src/routes/message.routes.ts`, especialmente MP4 baixado por URL e reenviado como Buffer/path local.
+- `v1.8.1`: `fix(history): resolve the stored message author from the top-level participant`
+  - Impacto local: autoria de mensagens históricas de grupo e integridade de `participant` quando `syncFullHistory=true`.
+- `v1.8.2`: `fix(offline): request the next offline batch until the queue drains`
+  - Impacto local: sincronização offline pode entregar mais batches na retomada; validar persistência e volume de eventos.
+- `v1.8.2`: `fix(phash): grow the canonical buffer instead of capping participants`
+  - Impacto local: grupos/listas com muitos participantes devem manter hashing de participantes sem truncamento.
+
+Leitura prática para o projeto local:
+
+- Upgrade estreito: atualizar `zapo-js` para `1.8.2`; os pacotes auxiliares `@zapo-js/*` permanecem nas versões publicadas atuais.
+- Sem mudança esperada no contrato REST da Evolution API v2; atualizar `docs/openapi.yaml` apenas se testes ou diff upstream mostrarem alteração de payload público.
+- Rodar `npm run test:manager:smoke:fake` além dos gates API/UI para cobrir o FakeWaServer offline.
+
 #### Release `v1.6.2` do Zapo
 
 

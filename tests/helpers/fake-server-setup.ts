@@ -35,13 +35,29 @@ export async function startFakeWaServer(): Promise<FakeServerHarness> {
   };
 }
 
-export async function pairManagerClientWithQr(server: FakeWaServer, qr: string, deviceJid: string) {
-  const pipeline = await server.waitForAuthenticatedPipeline(20_000);
+export async function pairManagerClientWithQr(server: FakeWaServer, qr: string, deviceJid: string, pipeline?: Awaited<ReturnType<FakeWaServer['waitForAuthenticatedPipeline']>>) {
+  const activePipeline = pipeline ?? await server.waitForAuthenticatedPipeline(20_000);
   const parsed = parsePairingQrString(qr);
-  await server.runPairing(pipeline, { deviceJid }, async () => ({
+  await server.runPairing(activePipeline, { deviceJid }, async () => ({
     advSecretKey: parsed.advSecretKey,
     identityPublicKey: parsed.identityPublicKey,
   }));
+  return server.waitForNextAuthenticatedPipeline(20_000);
+}
+
+export async function pairManagerClientWithQrPromise(
+  server: FakeWaServer,
+  qrPromise: Promise<string>,
+  deviceJid: string,
+  pipeline: Awaited<ReturnType<FakeWaServer['waitForAuthenticatedPipeline']>>,
+) {
+  await server.runPairing(pipeline, { deviceJid }, async () => {
+    const parsed = parsePairingQrString(await qrPromise);
+    return {
+      advSecretKey: parsed.advSecretKey,
+      identityPublicKey: parsed.identityPublicKey,
+    };
+  });
   return server.waitForNextAuthenticatedPipeline(20_000);
 }
 

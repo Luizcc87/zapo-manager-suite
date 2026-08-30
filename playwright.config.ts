@@ -10,6 +10,19 @@ try {
   console.warn('[Playwright Config] Não foi possível carregar o .env da raiz:', e);
 }
 
+const backendBaseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8080';
+const backendPort = (() => {
+  try {
+    return Number(new URL(backendBaseURL).port || 80);
+  } catch {
+    return 8080;
+  }
+})();
+const backendCommand = process.platform === 'win32'
+  ? `powershell -NoProfile -Command "$env:PORT='${backendPort}'; npm run dev"`
+  : `PORT=${backendPort} npm run dev`;
+const isFakeSmokeRun = process.argv.some((arg) => arg.includes('zapo-smoke-fake.spec'));
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
@@ -19,13 +32,13 @@ export default defineConfig({
   reporter: 'list',
   globalSetup: require.resolve('./tests/global-setup'),
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8080',
+    baseURL: backendBaseURL,
     trace: 'on-first-retry',
   },
-  webServer: {
-    command: 'npm run dev',
+  webServer: isFakeSmokeRun ? undefined : {
+    command: backendCommand,
     cwd: './backend',
-    port: 8080,
+    port: backendPort,
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
     stderr: 'pipe',
@@ -38,4 +51,3 @@ export default defineConfig({
     },
   ],
 });
-
