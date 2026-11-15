@@ -217,6 +217,31 @@ Mudanças relevantes e triadas:
 - `fix(mailbox): persist live message fromMe flag` (PR #252) & `fix(message): unwrap group status wrappers` (PR #255)
   - Impacto local: integridade dos webhooks `MESSAGES_UPSERT` e persistência do histórico no PostgreSQL.
 
+#### Release `v1.11.0` do Zapo (acumulado `v1.9.0` a `v1.11.0`)
+
+Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.11.0`
+
+Mudanças relevantes e triadas:
+
+- `v1.9.0`: `feat(store-sqlite): add a node:sqlite driver and make better-sqlite3 optional` (PR #284)
+  - Impacto local: `@zapo-js/store-sqlite` atualizado para `1.3.0`; adiciona fallback `node:sqlite` mantendo compatibilidade total em disco com `better-sqlite3`.
+- `v1.9.0`: `feat(transport): support iOS in the mobile-primary login payload` (PR #285) & `feat(mobile): support HTTP proxy after SMS registration` (PR #276)
+  - Impacto local: suporte expandido para mobile transport (iOS e proxy HTTP pós-SMS).
+- `v1.10.0`: `feat(store): add an idle TTL to the cacheLayer L1` (PR #300)
+  - Impacto local: menor consumo de RAM em instâncias conectadas por longos períodos.
+- `v1.10.0`: `fix(client): never let ignoreKey drop peer messages from our own devices` (PR #294)
+  - Impacto local: preserva mensagens `fromMe` enviadas a partir de outros dispositivos/companions vinculados à mesma conta.
+- `v1.10.0`: `fix(message): send a group list as media next to its biz node` (PR #298)
+  - Impacto local: corrige entrega de listas interativas (`single_select`) em grupos.
+- `v1.11.0`: `fix(client): send history.requireFullSync in the pairing DeviceProps` (PR #326)
+  - Impacto local: a flag `history.requireFullSync` configurada em `backend/src/manager.ts` passa a ser enviada efetivamente no `DeviceProps` durante o pareamento.
+- `v1.11.0`: `fix(auth): register a pending pairing code again after a reconnect` (PR #327)
+  - Impacto local: re-registra código de pareamento pendente se o WebSocket reconectar; em `backend/src/manager.ts`, `auth_pairing_required` limpa `activeData.pairingCode` para permitir renovação caso o re-registro falhe.
+- `v1.11.0`: `fix(auth): wait for the server to restart the connection after pairing` (PR #328)
+  - Impacto local: aguarda `stream:error 515` após `pair-device-sign` antes de reconectar, evitando remoção precoce do companion. Exige `@zapo-js/fake-server@1.3.1` nos testes offline (`test:manager:smoke:fake`).
+- `v1.11.0`: `feat(signal): report a status for each phone number in the lid sync result` (PR #325)
+  - Impacto local: `getLidsByPhoneNumbers` usado em `resolveJid` (`backend/src/routes/message.routes.ts`) preserva `exists`/`invalid` e adiciona `status` detalhado (`in`, `out`, `invalid`, `error`, `unanswered`).
+
 #### Release `v1.8.2` do Zapo
 
 Fonte: `https://github.com/vinikjkkj/zapo/releases/tag/v1.8.2`

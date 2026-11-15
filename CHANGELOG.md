@@ -2,6 +2,27 @@
 
 Registro cronológico reverso de implementações e alterações relevantes.
 
+## [1.6.29] - 2026-11-15
+
+### Upgrade `zapo-js` v1.11.0, `@zapo-js/store-sqlite` v1.3.0 & `@zapo-js/fake-server` v1.3.1
+
+- **Core & Upstream Sync:**
+  - `backend/package.json` e `backend/package-lock.json`: atualizado o motor WhatsApp `zapo-js` de `1.8.2` para `1.11.0` (acumulando as releases `v1.9.0`, `v1.10.0` e `v1.11.0`), `@zapo-js/store-sqlite` de `1.2.0` para `1.3.0` e `@zapo-js/fake-server` de `1.3.0` para `1.3.1`.
+  - `zapo-js v1.9.0`: suporte a iOS no payload de login mobile-primary, proxy HTTP pós-SMS em transporte mobile e driver `node:sqlite` opcional em `@zapo-js/store-sqlite@1.3.0` mantendo compatibilidade total em disco com `better-sqlite3`.
+  - `zapo-js v1.10.0`: adição de TTL de ociosidade na camada L1 de cache do store, correção para `ignoreKey` não descartar mensagens `fromMe` enviadas por outros dispositivos vinculados à mesma conta e correção no envio de listas interativas (`single_select`) em grupos junto ao nó `biz`.
+  - `zapo-js v1.11.0`: envio efetivo de `history.requireFullSync` no `DeviceProps` durante o pareamento, re-registro automático de `pairingCode` pendente após reconexão, espera pelo sinal `stream:error 515` do servidor após `pair-device-sign` antes de reconectar (evitando remoção precoce do companion), vínculo estrito de sessões Noise ao socket de origem e relatório de `status` por número em `getLidsByPhoneNumbers`.
+- **Backend:**
+  - `backend/src/manager.ts`: ajustado listener `auth_pairing_required` para limpar `activeData.pairingCode` antes de solicitar renovação do código expirado ou invalidado após reconexão.
+- **Documentação:**
+  - `docs/ZAPO-JS-1.11.0-UPGRADE-PLAN.md`: plano formal de triagem, impacto em produção e checklist de validação.
+  - `docs/SYNC-UPSTREAM.md`: adicionada seção com o resumo técnico das releases `v1.9.0` a `v1.11.0`.
+- **Validação:**
+  - `npm --prefix backend run build` aprovado.
+  - 23 testes unitários e de migração do backend (`zapo-migration.test.ts` e `chat-corrections.test.ts`) aprovados.
+  - 7 testes de contrato de endpoints da API (`npm run test:manager:api`) aprovados.
+  - 5 testes de interface do Manager (`npm run test:manager:ui`) aprovados.
+  - Smoke test offline com `FakeWaServer` v1.3.1 (`npm run test:manager:smoke:fake`) aprovado (2 passed, 2 skipped).
+
 ## [1.6.28] - 2026-08-30
 
 ### Upgrade `zapo-js` v1.8.2

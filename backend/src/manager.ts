@@ -939,6 +939,7 @@ export class ZapoManager {
 
     client.on('auth_pairing_required', async () => {
       console.log(`[ZapoManager] [Connect] ${trace}[${instanceName}] Evento auth_pairing_required disparado.`);
+      activeData.pairingCode = undefined;
       await handlePairing();
     });
 
